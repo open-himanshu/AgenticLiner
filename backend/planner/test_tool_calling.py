@@ -9,16 +9,21 @@ from datetime import date as CalendarDate, timedelta
 import json
 import math
 import os
+import re
+import sqlite3
+import sys
 import time
 import urllib.error
 import urllib.request
 
-try:
-    from dotenv import load_dotenv
+if not __package__:
+    sys.path.insert(
+        0,
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    )
 
-    load_dotenv()
-except ImportError:
-    pass
+from backend.safety.checkout import checkout as sqlite_checkout
+from backend.safety.checkout import initialize_database
 
 TODAY = CalendarDate.today().isoformat()
 MAX_STEPS = 8
@@ -33,9 +38,9 @@ ORGANISER = "Himanshu"
 AUTO_ANSWER = None
 GEMINI_CLIENT = None
 ASK_USER_CALLS = 0
-BOOKINGS = []
 USER_ANSWERS = []
 STEP = {"n": 0}
+CHECKOUT_CONNECTION: sqlite3.Connection | None = None
 
 VENUES = {
     "AUD-A": {"name": "Auditorium A", "capacity": 400, "per_hour": 1500},
@@ -305,32 +310,121 @@ def recommend_from_history(event_type: str, headcount: int, organiser: str) -> d
     return result
 
 
+def create_demo_checkout_database() -> sqlite3.Connection:
+    connection = sqlite3.connect(
+        ":memory:",
+        isolation_level=None,
+        autocommit=sqlite3.LEGACY_TRANSACTION_CONTROL,
+    )
+    connection.execute("PRAGMA foreign_keys = ON")
+    initialize_database(connection)
+    connection.executemany(
+        "INSERT INTO venues (id, name, capacity, price_per_hour) "
+        "VALUES (?, ?, ?, ?)",
+        [
+            (venue_id, venue["name"], venue["capacity"], venue["per_hour"])
+            for venue_id, venue in VENUES.items()
+        ],
+    )
+    connection.executemany(
+        "INSERT INTO equipment (name, price, stock) VALUES (?, ?, ?)",
+        [
+            (name, price, stock)
+            for name, (stock, price) in STOCK.items()
+        ],
+    )
+    for (venue_id, booking_date), intervals in VENUE_BUSY.items():
+        for start_hour, end_hour in intervals:
+            connection.execute(
+                """
+                INSERT INTO bookings
+                    (id, request_id, venue_id, date, start_hour, end_hour,
+                     headcount, total_cost, equipment_json)
+                VALUES (?, 'seeded-availability', ?, ?, ?, ?, 1, 0, '{}')
+                """,
+                (
+                    f"seed-{venue_id}-{booking_date}-{start_hour}",
+                    venue_id,
+                    booking_date,
+                    start_hour,
+                    end_hour,
+                ),
+            )
+    return connection
+
+
+def get_checkout_connection() -> sqlite3.Connection:
+    global CHECKOUT_CONNECTION
+    if CHECKOUT_CONNECTION is None:
+        CHECKOUT_CONNECTION = create_demo_checkout_database()
+    return CHECKOUT_CONNECTION
+
+
+def reset_checkout_database() -> None:
+    global CHECKOUT_CONNECTION
+    if CHECKOUT_CONNECTION is not None:
+        CHECKOUT_CONNECTION.close()
+    CHECKOUT_CONNECTION = create_demo_checkout_database()
+
+
+def get_bookings() -> list[dict]:
+    rows = get_checkout_connection().execute(
+        """
+        SELECT venue_id, date, start_hour, end_hour, headcount,
+               equipment_json, total_cost
+        FROM bookings
+        WHERE request_id != 'seeded-availability'
+        ORDER BY rowid
+        """
+    ).fetchall()
+    return [
+        {
+            "venue_id": venue_id,
+            "date": booking_date,
+            "start_hour": start_hour,
+            "end_hour": end_hour,
+            "headcount": headcount,
+            "equipment": json.loads(equipment_json),
+            "total_cost": total_cost,
+        }
+        for (
+            venue_id,
+            booking_date,
+            start_hour,
+            end_hour,
+            headcount,
+            equipment_json,
+            total_cost,
+        ) in rows
+    ]
+
+
 def find_free_venues(
     date: str, start_hour: int, end_hour: int, min_capacity: int
 ) -> dict:
     # List venues that are free for the whole time window and large enough.
     free, busy = [], []
-    for venue_id, venue in VENUES.items():
-        if venue["capacity"] < min_capacity:
+    connection = get_checkout_connection()
+    venues = connection.execute(
+        "SELECT id, name, capacity, price_per_hour FROM venues ORDER BY id"
+    ).fetchall()
+    for venue_id, name, capacity, price_per_hour in venues:
+        if capacity < min_capacity:
             continue
-        clashes = any(
-            not (end_hour <= start or start_hour >= end)
-            for start, end in VENUE_BUSY.get((venue_id, date), [])
-        )
-        clashes = clashes or any(
-            booking["venue_id"] == venue_id
-            and booking["date"] == date
-            and not (
-                end_hour <= booking["start_hour"]
-                or start_hour >= booking["end_hour"]
-            )
-            for booking in BOOKINGS
-        )
+        clashes = connection.execute(
+            """
+            SELECT 1 FROM bookings
+            WHERE venue_id = ? AND date = ?
+              AND NOT (end_hour <= ? OR start_hour >= ?)
+            LIMIT 1
+            """,
+            (venue_id, date, start_hour, end_hour),
+        ).fetchone() is not None
         entry = {
             "venue_id": venue_id,
-            "name": venue["name"],
-            "capacity": venue["capacity"],
-            "price_per_hour": venue["per_hour"],
+            "name": name,
+            "capacity": capacity,
+            "price_per_hour": price_per_hour,
         }
         (busy if clashes else free).append(entry)
     return {"free": free, "busy_in_that_time": busy}
@@ -338,14 +432,19 @@ def find_free_venues(
 
 def check_equipment(item_names: list[str]) -> dict:
     # Return stock and unit prices for the requested equipment.
-    return {
-        name: (
-            {"in_stock": STOCK[name][0], "unit_price": STOCK[name][1]}
-            if name in STOCK
+    connection = get_checkout_connection()
+    results = {}
+    for name in item_names:
+        item = connection.execute(
+            "SELECT stock, price FROM equipment WHERE name = ?",
+            (name,),
+        ).fetchone()
+        results[name] = (
+            {"in_stock": item[0], "unit_price": item[1]}
+            if item is not None
             else "unknown item"
         )
-        for name in item_names
-    }
+    return results
 
 
 def book_items(
@@ -356,74 +455,22 @@ def book_items(
     equipment: dict[str, int],
     headcount: int,
 ) -> dict:
-    # Validate a booking against capacity, conflicts, stock, and the budget.
-    violations = []
-    valid_time = 0 <= start_hour < end_hour <= 24
-    if not valid_time:
-        violations.append("start_hour/end_hour must be a valid increasing time window")
-    try:
-        booking_date = CalendarDate.fromisoformat(date)
-        if booking_date <= CalendarDate.today():
-            violations.append("booking date must be after today")
-    except ValueError:
-        violations.append("date must be a valid YYYY-MM-DD date")
-    if venue_id not in VENUES:
-        violations.append(f"unknown venue: {venue_id}")
-    if headcount <= 0:
-        violations.append("headcount must be positive")
-    elif venue_id in VENUES and headcount > VENUES[venue_id]["capacity"]:
-        violations.append(
-            f"headcount {headcount} exceeds venue capacity "
-            f"{VENUES[venue_id]['capacity']}"
-        )
-
-    if valid_time and venue_id in VENUES:
-        reserved = list(VENUE_BUSY.get((venue_id, date), []))
-        reserved.extend(
-            (booking["start_hour"], booking["end_hour"])
-            for booking in BOOKINGS
-            if booking["venue_id"] == venue_id and booking["date"] == date
-        )
-        if any(
-            not (end_hour <= start or start_hour >= end)
-            for start, end in reserved
-        ):
-            violations.append("venue overlaps an existing booking")
-
-    total_cost = 0
-    if valid_time and venue_id in VENUES:
-        total_cost += VENUES[venue_id]["per_hour"] * (end_hour - start_hour)
-    for name, quantity in equipment.items():
-        if name not in STOCK:
-            violations.append(f"unknown equipment: {name}")
-        elif quantity <= 0:
-            violations.append(f"quantity for {name} must be greater than zero")
-        elif quantity > STOCK[name][0]:
-            violations.append(
-                f"requested {quantity} {name}, but only {STOCK[name][0]} in stock"
-            )
-        else:
-            total_cost += quantity * STOCK[name][1]
-
-    if total_cost > BUDGET:
-        violations.append(f"total cost {total_cost} exceeds budget {BUDGET}")
-    if violations:
-        return {"status": "rejected", "violations": violations}
-
-    for name, quantity in equipment.items():
-        stock, price = STOCK[name]
-        STOCK[name] = (stock - quantity, price)
-    booking = {
-        "venue_id": venue_id,
-        "date": date,
-        "start_hour": start_hour,
-        "end_hour": end_hour,
-        "equipment": dict(equipment),
-        "headcount": headcount,
-        "total_cost": total_cost,
-    }
-    BOOKINGS.append(booking)
-    return {"status": "committed", "total_cost": total_cost}
+    # Keep the tool response stable while SQLite performs all validation.
+    result = sqlite_checkout(
+        {
+            "venue_id": venue_id,
+            "date": date,
+            "start_hour": start_hour,
+            "end_hour": end_hour,
+            "equipment": equipment,
+            "headcount": headcount,
+            "budget": BUDGET,
+        },
+        get_checkout_connection(),
+    )
+    if result["status"] == "rolled_back":
+        return {"status": "rejected", "violations": result["violations"]}
+    return {"status": "committed", "total_cost": result["total_cost"]}
 
 
 TOOL_FUNCTIONS = {
@@ -523,6 +570,16 @@ def ollama_messages(messages: list[dict]) -> list[dict]:
     return converted
 
 
+def safe_error_body(body: str, api_key: str = "") -> str:
+    if api_key:
+        body = body.replace(api_key, "[REDACTED]")
+    return re.sub(
+        r"(?im)authorization\s*[:=][^\r\n,;}]*",
+        "Authorization: [REDACTED]",
+        body,
+    )
+
+
 def call_ollama(messages: list[dict], tools: list[dict]) -> dict:
     # Request one assistant turn from Ollama's local chat API.
     request_data = json.dumps({
@@ -535,14 +592,18 @@ def call_ollama(messages: list[dict], tools: list[dict]) -> dict:
     request = urllib.request.Request(
         "http://localhost:11434/api/chat",
         data=request_data,
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "AgenticLiner/0.1",
+        },
         method="POST",
     )
     try:
         with urllib.request.urlopen(request, timeout=120) as response:
             payload = json.load(response)
     except urllib.error.HTTPError as error:
-        details = error.read().decode("utf-8", errors="replace")
+        details = safe_error_body(error.read().decode("utf-8", errors="replace"))
+        error.close()
         raise RuntimeError(f"Ollama returned HTTP {error.code}: {details}") from None
     except urllib.error.URLError:
         raise RuntimeError(
@@ -658,6 +719,11 @@ def call_gemini(messages: list[dict], tools: list[dict]) -> dict:
         except errors.APIError as error:
             code = getattr(error, "code", None)
             status_code = getattr(error, "status_code", None)
+            error_body = safe_error_body(
+                getattr(error, "message", "API error"),
+                api_key,
+            )
+            http_status = status_code or code
             status = str(getattr(error, "status", "")).upper()
             temporary = (
                 code in (429, 503)
@@ -667,16 +733,16 @@ def call_gemini(messages: list[dict], tools: list[dict]) -> dict:
             )
             if not temporary:
                 raise RuntimeError(
-                    f"Gemini request failed (HTTP {status_code or code}): "
-                    f"{getattr(error, 'message', 'API error')}"
+                    f"Gemini request failed (HTTP {http_status}): {error_body}"
                 ) from None
             if attempt == len(GEMINI_RETRY_DELAYS):
                 raise RuntimeError(
-                    "Gemini unavailable, try PROVIDER=ollama"
+                    f"Gemini request failed (HTTP {http_status}): {error_body}"
                 ) from None
             delay = GEMINI_RETRY_DELAYS[attempt]
             print(
-                f"Gemini temporarily unavailable; retry "
+                f"Gemini temporarily unavailable (HTTP {http_status}): "
+                f"{error_body}; retry "
                 f"{attempt + 1}/3 in {delay}s."
             )
             time.sleep(delay)
@@ -762,6 +828,7 @@ def call_groq(messages: list[dict], tools: list[dict]) -> dict:
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
+            "User-Agent": "AgenticLiner/0.1",
         },
         method="POST",
     )
@@ -773,19 +840,23 @@ def call_groq(messages: list[dict], tools: list[dict]) -> dict:
             break
         except urllib.error.HTTPError as error:
             status_code = error.code
-            error.read()
+            error_body = safe_error_body(
+                error.read().decode("utf-8", errors="replace"),
+                api_key,
+            )
             error.close()
             if status_code not in (429, 503):
                 raise RuntimeError(
-                    f"Groq request failed (HTTP {status_code})."
+                    f"Groq request failed (HTTP {status_code}): {error_body}"
                 ) from None
             if attempt == len(GROQ_RETRY_DELAYS):
                 raise RuntimeError(
-                    f"Groq unavailable (HTTP {status_code}) after 3 retries."
+                    f"Groq request failed (HTTP {status_code}): {error_body}"
                 ) from None
             delay = GROQ_RETRY_DELAYS[attempt]
             print(
-                f"Groq temporarily unavailable (HTTP {status_code}); "
+                f"Groq temporarily unavailable (HTTP {status_code}): "
+                f"{error_body}; "
                 f"retry {attempt + 1}/3 in {delay}s."
             )
             time.sleep(delay)
@@ -892,9 +963,10 @@ def run_agent(prompt: str, organiser: str) -> str:
 def fallback_report() -> str:
     # Build a non-empty report from bookings, costs, budget, and user answers.
     lines = []
-    if BOOKINGS:
+    bookings = get_bookings()
+    if bookings:
         lines.append("Bookings:")
-        for booking in BOOKINGS:
+        for booking in bookings:
             items = ", ".join(
                 f"{name} x{quantity}"
                 for name, quantity in booking["equipment"].items()
@@ -907,7 +979,7 @@ def fallback_report() -> str:
             )
     else:
         lines.append("No booking was committed.")
-    total = sum(booking["total_cost"] for booking in BOOKINGS)
+    total = sum(booking["total_cost"] for booking in bookings)
     lines.append(f"Total cost: {total} vs budget {BUDGET}.")
     if USER_ANSWERS:
         lines.append("User answers: " + "; ".join(USER_ANSWERS))
@@ -919,11 +991,16 @@ def fallback_report() -> str:
 def selftest() -> None:
     # Exercise the mock event tools and all required booking rejections.
     global ASK_USER_CALLS, AUTO_ANSWER, BUDGET
+    safe_body = safe_error_body(
+        '{"error":"bad authorization","Authorization":"Bearer test-secret"}',
+        "test-secret",
+    )
+    assert "bad authorization" in safe_body
+    assert "test-secret" not in safe_body
     original_budget = BUDGET
-    original_stock = STOCK.copy()
     original_auto_answer = AUTO_ANSWER
     future_date = (CalendarDate.today() + timedelta(days=1)).isoformat()
-    BOOKINGS.clear()
+    reset_checkout_database()
     USER_ANSWERS.clear()
     STEP["n"] = 0
     ASK_USER_CALLS = 0
@@ -1021,7 +1098,11 @@ def selftest() -> None:
                 "date": (CalendarDate.today() + timedelta(days=4)).isoformat(),
                 "start_hour": 18,
                 "end_hour": 20,
-                "equipment": {"stage lights": STOCK["stage lights"][0] + 1},
+                "equipment": {
+                    "stage lights": check_equipment(["stage lights"])["stage lights"][
+                        "in_stock"
+                    ] + 1
+                },
                 "headcount": 150,
             },
         )
@@ -1117,9 +1198,7 @@ def selftest() -> None:
         BUDGET = original_budget
         AUTO_ANSWER = original_auto_answer
         ASK_USER_CALLS = 0
-        STOCK.clear()
-        STOCK.update(original_stock)
-        BOOKINGS.clear()
+        reset_checkout_database()
 
 
 def main() -> int:
@@ -1136,13 +1215,20 @@ def main() -> int:
         selftest()
         return 0
 
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv()
+    except ImportError:
+        pass
+
     PROVIDER = os.getenv("PROVIDER", "ollama").strip().lower()
     if PROVIDER not in ("gemini", "ollama", "groq"):
         print('PROVIDER must be "gemini", "ollama", or "groq".')
         return 2
     BUDGET, ORGANISER = args.budget, args.organiser
     AUTO_ANSWER = args.auto_answer
-    BOOKINGS.clear()
+    reset_checkout_database()
     USER_ANSWERS.clear()
     STEP["n"] = 0
     ASK_USER_CALLS = 0
@@ -1181,7 +1267,7 @@ def main() -> int:
         return 1
     print("\n=== FINAL REPORT ===")
     print(report.strip() or fallback_report())
-    print("\nBookings in memory:", json.dumps(BOOKINGS, indent=2))
+    print("\nBookings in SQLite:", json.dumps(get_bookings(), indent=2))
     return 0
 
 

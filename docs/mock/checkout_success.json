@@ -1,0 +1,21 @@
+{
+  "api_version": "v1",
+  "status": "committed",
+  "checkout_id": "checkout_01",
+  "booking": {
+    "venue_id": "STG-C",
+    "venue_name": "Open Stage C",
+    "date": "2026-11-06",
+    "start_hour": 18,
+    "end_hour": 20,
+    "headcount": 150,
+    "equipment": {
+      "stage lights": 4,
+      "sound system": 1,
+      "wireless mic": 2
+    },
+    "total_cost": 6300
+  },
+  "budget": 20000,
+  "budget_remaining": 13700
+}

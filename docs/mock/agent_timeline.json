@@ -1,0 +1,37 @@
+[
+  {
+    "step": 1,
+    "tool": "get_event_checklist",
+    "status": "success",
+    "summary": "Loaded the dance event checklist.",
+    "budget_used": 0
+  },
+  {
+    "step": 2,
+    "tool": "recommend_from_history",
+    "status": "success",
+    "summary": "Suggested equipment based on similar events.",
+    "budget_used": 0
+  },
+  {
+    "step": 3,
+    "tool": "find_free_venues",
+    "status": "success",
+    "summary": "Found Open Stage C available for the requested time.",
+    "budget_used": 0
+  },
+  {
+    "step": 4,
+    "tool": "check_equipment",
+    "status": "success",
+    "summary": "Confirmed requested equipment is in stock.",
+    "budget_used": 0
+  },
+  {
+    "step": 5,
+    "tool": "book_items",
+    "status": "committed",
+    "summary": "Booked Open Stage C and equipment for 6,300 rupees.",
+    "budget_used": 6300
+  }
+]

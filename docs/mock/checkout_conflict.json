@@ -1,0 +1,14 @@
+{
+  "api_version": "v1",
+  "status": "rolled_back",
+  "checkout_id": "checkout_02",
+  "committed": false,
+  "violations": [
+    "The venue overlaps an existing booking.",
+    "Requested 9 stage lights, but only 8 are in stock."
+  ],
+  "suggestions": [
+    "Choose a different time or venue.",
+    "Reduce stage lights to 8 or fewer."
+  ]
+}

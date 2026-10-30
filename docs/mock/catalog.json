@@ -1,0 +1,56 @@
+{
+  "api_version": "v1",
+  "categories": [
+    "venues",
+    "audio_visual",
+    "staffing",
+    "safety",
+    "utilities"
+  ],
+  "items": [
+    {"id": "AUD-A", "category": "venues", "name": "Auditorium A", "price": 1500, "stock": 1, "suggested_by_ai": true},
+    {"id": "SEM-B", "category": "venues", "name": "Seminar Hall B", "price": 600, "stock": 1, "suggested_by_ai": false},
+    {"id": "STG-C", "category": "venues", "name": "Open Stage C", "price": 800, "stock": 1, "suggested_by_ai": true},
+    {"id": "venue-d", "category": "venues", "name": "Courtyard D", "price": 700, "stock": 1, "suggested_by_ai": false},
+    {"id": "venue-e", "category": "venues", "name": "Lecture Hall E", "price": 500, "stock": 1, "suggested_by_ai": false},
+    {"id": "venue-f", "category": "venues", "name": "Studio F", "price": 900, "stock": 1, "suggested_by_ai": false},
+    {"id": "venue-g", "category": "venues", "name": "Conference Room G", "price": 400, "stock": 1, "suggested_by_ai": false},
+    {"id": "venue-h", "category": "venues", "name": "Lawn H", "price": 1000, "stock": 1, "suggested_by_ai": false},
+
+    {"id": "stage-lights", "category": "audio_visual", "name": "stage lights", "price": 400, "stock": 8, "suggested_by_ai": true},
+    {"id": "sound-system", "category": "audio_visual", "name": "sound system", "price": 2500, "stock": 2, "suggested_by_ai": true},
+    {"id": "wireless-mic", "category": "audio_visual", "name": "wireless mic", "price": 300, "stock": 6, "suggested_by_ai": true},
+    {"id": "projector", "category": "audio_visual", "name": "projector", "price": 500, "stock": 3, "suggested_by_ai": true},
+    {"id": "led-screen", "category": "audio_visual", "name": "LED screen", "price": 1800, "stock": 2, "suggested_by_ai": false},
+    {"id": "mixing-console", "category": "audio_visual", "name": "mixing console", "price": 1200, "stock": 2, "suggested_by_ai": false},
+    {"id": "spotlight", "category": "audio_visual", "name": "spotlight", "price": 350, "stock": 6, "suggested_by_ai": false},
+    {"id": "camera-kit", "category": "audio_visual", "name": "camera kit", "price": 900, "stock": 3, "suggested_by_ai": false},
+
+    {"id": "volunteer", "category": "staffing", "name": "volunteer", "price": 100, "stock": 30, "suggested_by_ai": true},
+    {"id": "photographer", "category": "staffing", "name": "photographer", "price": 1500, "stock": 2, "suggested_by_ai": true},
+    {"id": "stage-manager", "category": "staffing", "name": "stage manager", "price": 1200, "stock": 3, "suggested_by_ai": false},
+    {"id": "security-staff", "category": "staffing", "name": "security staff", "price": 800, "stock": 10, "suggested_by_ai": false},
+    {"id": "emcee", "category": "staffing", "name": "emcee", "price": 1000, "stock": 2, "suggested_by_ai": false},
+    {"id": "usher", "category": "staffing", "name": "usher", "price": 250, "stock": 12, "suggested_by_ai": false},
+    {"id": "technician", "category": "staffing", "name": "AV technician", "price": 700, "stock": 4, "suggested_by_ai": false},
+    {"id": "cleanup-crew", "category": "staffing", "name": "cleanup crew member", "price": 300, "stock": 8, "suggested_by_ai": false},
+
+    {"id": "first-aid-kit", "category": "safety", "name": "first-aid kit", "price": 150, "stock": 3, "suggested_by_ai": true},
+    {"id": "fire-extinguisher", "category": "safety", "name": "fire extinguisher", "price": 200, "stock": 6, "suggested_by_ai": false},
+    {"id": "safety-barrier", "category": "safety", "name": "safety barrier", "price": 100, "stock": 20, "suggested_by_ai": false},
+    {"id": "emergency-sign", "category": "safety", "name": "emergency sign", "price": 50, "stock": 12, "suggested_by_ai": false},
+    {"id": "water-station", "category": "safety", "name": "water station", "price": 250, "stock": 5, "suggested_by_ai": false},
+    {"id": "medical-attendant", "category": "safety", "name": "medical attendant", "price": 900, "stock": 2, "suggested_by_ai": false},
+    {"id": "crowd-control-kit", "category": "safety", "name": "crowd control kit", "price": 400, "stock": 4, "suggested_by_ai": false},
+    {"id": "exit-light", "category": "safety", "name": "portable exit light", "price": 300, "stock": 6, "suggested_by_ai": false},
+
+    {"id": "green-room", "category": "utilities", "name": "green room", "price": 500, "stock": 2, "suggested_by_ai": true},
+    {"id": "backup-power", "category": "utilities", "name": "backup power", "price": 700, "stock": 2, "suggested_by_ai": true},
+    {"id": "extension-cable", "category": "utilities", "name": "extension cable", "price": 100, "stock": 10, "suggested_by_ai": false},
+    {"id": "folding-table", "category": "utilities", "name": "folding table", "price": 150, "stock": 15, "suggested_by_ai": false},
+    {"id": "chair", "category": "utilities", "name": "chair", "price": 40, "stock": 200, "suggested_by_ai": false},
+    {"id": "waste-bin", "category": "utilities", "name": "waste bin", "price": 80, "stock": 20, "suggested_by_ai": false},
+    {"id": "water-dispenser", "category": "utilities", "name": "water dispenser", "price": 350, "stock": 4, "suggested_by_ai": false},
+    {"id": "cable-cover", "category": "utilities", "name": "cable cover", "price": 120, "stock": 12, "suggested_by_ai": false}
+  ]
+}
