@@ -5,10 +5,12 @@ Gemini requires google-genai plus GEMINI_API_KEY and GEMINI_MODEL in .env.
 Set PROVIDER to "ollama" or "gemini"; Ollama defaults to qwen3.5:9b.
 """
 import argparse
-from datetime import date as CalendarDate, timedelta
+from datetime import date as CalendarDate, datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 import json
 import math
 import os
+from pathlib import Path
 import re
 import sqlite3
 import sys
@@ -26,11 +28,15 @@ from backend.safety.checkout import checkout as sqlite_checkout
 from backend.safety.checkout import initialize_database
 
 TODAY = CalendarDate.today().isoformat()
+TODAY_DATE = CalendarDate.today()
+NEXT_FRIDAY = (
+    TODAY_DATE + timedelta(days=(4 - TODAY_DATE.weekday()) % 7 or 7)
+).isoformat()
 MAX_STEPS = 8
 MAX_ASK_USER_CALLS = 2
+MAX_RATE_LIMIT_RETRIES = 6
 DEFAULT_OLLAMA_MODEL = "qwen3.5:9b"
-GEMINI_RETRY_DELAYS = (2, 5, 10)
-GROQ_RETRY_DELAYS = (2, 5, 10)
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 PROVIDER = os.getenv("PROVIDER", "ollama").strip().lower()
 ACTIVE_MODEL = ""
 BUDGET = 20000
@@ -41,6 +47,19 @@ ASK_USER_CALLS = 0
 USER_ANSWERS = []
 STEP = {"n": 0}
 CHECKOUT_CONNECTION: sqlite3.Connection | None = None
+LAST_LLM_CALL_AT: float | None = None
+TOTAL_TOKEN_USAGE = {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0,
+}
+READ_ONLY_TOOLS = frozenset({
+    "get_event_checklist",
+    "recommend_from_history",
+    "find_free_venues",
+    "check_equipment",
+})
+TOOL_RESULT_CACHE: dict[tuple[str, str], dict] = {}
 
 VENUES = {
     "AUD-A": {"name": "Auditorium A", "capacity": 400, "per_hour": 1500},
@@ -118,7 +137,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "ask_user",
-            "description": "Ask the organiser for missing information or booking confirmation.",
+            "description": "Ask one concise question about a missing fact or confirmation.",
             "parameters": {
                 "type": "object",
                 "properties": {"question": {"type": "string"}},
@@ -130,7 +149,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "get_event_checklist",
-            "description": "Return the usual needs and questions for an event type.",
+            "description": "Get standard needs and questions for an event type.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -147,7 +166,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "recommend_from_history",
-            "description": "Recommend items from similar past events.",
+            "description": "Suggest equipment from similar past events.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -166,7 +185,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "find_free_venues",
-            "description": "Find venues free for the full time window and large enough.",
+            "description": "Find venues free for this time and large enough.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -183,7 +202,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "check_equipment",
-            "description": "Check equipment stock and unit prices.",
+            "description": "Get stock and unit prices for requested items.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -200,7 +219,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "book_items",
-            "description": "Book the selected venue and equipment after confirmation.",
+            "description": "Book the chosen venue and equipment after confirmation.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -484,25 +503,37 @@ TOOL_FUNCTIONS = {
 
 
 def build_system_prompt(organiser: str, budget: int) -> str:
-    # Build the agent instructions with the request's organiser and budget.
-    return f"""You are a college event-booking agent. Today is {TODAY}.
-Friday means the next upcoming Friday after today.
-The organiser is {organiser}; the budget is {budget}.
-Decide venue, duration and equipment yourself using the tools. Ask the user only for facts that cannot be inferred, such as date or time.
-Today's date is {TODAY}.
-1. Use get_event_checklist and recommend_from_history. Ask at most 2 short questions and do not repeat information already given.
-2. Check venues and equipment before proposing a plan. Offer a concrete alternative if the requested time or venue is unavailable.
-3. Show the plan and total cost, then ask for confirmation with ask_user. Only book after the organiser says yes.
-4. Call book_items with venue_id, date, start_hour, end_hour, equipment (an item-to-quantity object), and headcount.
-5. Treat rejected bookings as a reason to re-plan. The booking code enforces the budget; never claim an uncommitted booking succeeded.
-6. Finish with a concise report describing bookings, assumptions, and anything still undecided.
-Reply in the organiser's language. All event data is synthetic."""
+    return f"""You plan college events using tools. All event data is synthetic.
+Known facts: today is {TODAY}; next Friday is {NEXT_FRIDAY}; date is {NEXT_FRIDAY}; headcount is 150; budget is {budget}; organiser is {organiser}.
+Use that date and headcount; do not invent alternatives for either. Do not invent other event facts.
+Use each read-only tool at most once, with its final arguments. Ask at most two questions, only for missing facts, and in English. Answer in English.
+Check needs, history, venue availability and stock before proposing a plan. Show the plan and cost, then ask for confirmation. Book only after a clear yes; never claim a rejected booking succeeded. Finish with a concise report and assumptions."""
 
 
-def format_short(value: object) -> str:
-    # Serialize a tool result compactly for the step timeline.
-    short = json.dumps(value, ensure_ascii=False, default=str)
-    return short if len(short) <= 220 else short[:217] + "..."
+def compact_tool_result(name: str, result: object) -> object:
+    if not isinstance(result, dict):
+        return result
+    if name == "recommend_from_history":
+        compact = {
+            key: value
+            for key, value in result.items()
+            if key in ("same_as_last_time", "similar_events")
+        }
+        if "similar_events" in compact:
+            compact["similar_events"] = compact["similar_events"][:3]
+        return compact
+    if name == "find_free_venues":
+        return {
+            group: [
+                {
+                    key: venue[key]
+                    for key in ("venue_id", "capacity", "price_per_hour")
+                }
+                for venue in venues
+            ]
+            for group, venues in result.items()
+        }
+    return result
 
 
 def invoke_tool(name: str, arguments: dict) -> object:
@@ -510,10 +541,22 @@ def invoke_tool(name: str, arguments: dict) -> object:
     global ASK_USER_CALLS
     STEP["n"] += 1
     was_asked = False
+    cache_key = None
     if name not in TOOL_FUNCTIONS:
         result = {"error": f"Unknown tool: {name}"}
     elif not isinstance(arguments, dict):
         result = {"error": "Tool arguments must be an object"}
+    elif name in READ_ONLY_TOOLS:
+        cache_key = (
+            name,
+            json.dumps(arguments, sort_keys=True, ensure_ascii=False, default=str),
+        )
+        if cache_key in TOOL_RESULT_CACHE:
+            result = {**TOOL_RESULT_CACHE[cache_key], "note": "already checked"}
+        else:
+            result = TOOL_FUNCTIONS[name](**arguments)
+            if isinstance(result, dict):
+                TOOL_RESULT_CACHE[cache_key] = result.copy()
     elif name == "ask_user" and ASK_USER_CALLS >= MAX_ASK_USER_CALLS:
         result = (
             "Do not ask again. Proceed with sensible assumptions and list them "
@@ -527,7 +570,7 @@ def invoke_tool(name: str, arguments: dict) -> object:
     print(
         f"[step {STEP['n']}] {name}("
         f"{json.dumps(arguments, ensure_ascii=False, default=str)}) -> "
-        f"{format_short(result)}"
+        f"{json.dumps(result, ensure_ascii=False, default=str)}"
     )
     if was_asked and isinstance(result, str):
         USER_ANSWERS.append(result)
@@ -580,6 +623,129 @@ def safe_error_body(body: str, api_key: str = "") -> str:
     )
 
 
+def get_api_key(environment_name: str) -> str:
+    # Normalize common dotenv quoting and line-ending artifacts before use.
+    api_key = os.getenv(environment_name, "").strip()
+    api_key = api_key.strip("\"'\ufeff\r\n").strip()
+    if api_key:
+        os.environ[environment_name] = api_key
+    return api_key
+
+
+def print_api_key_diagnostic(
+    provider: str,
+    existed_before_dotenv: dict[str, bool],
+) -> None:
+    credentials = {
+        "gemini": ("GEMINI_API_KEY", None),
+        "groq": ("GROQ_API_KEY", "gsk_"),
+        "ollama": (None, None),
+    }
+    environment_name, expected_prefix = credentials[provider]
+    api_key = get_api_key(environment_name) if environment_name else ""
+    if provider == "gemini":
+        print(f"Gemini API key length: {len(api_key)}")
+        return
+    prefix_matches = bool(expected_prefix and api_key.startswith(expected_prefix))
+    existed = (
+        existed_before_dotenv.get(environment_name, False)
+        if environment_name
+        else False
+    )
+    print(
+        "API key diagnostic: "
+        f"key present: {'yes' if api_key else 'no'}; "
+        f"key length: {len(api_key)}; "
+        f"starts with expected prefix: {'yes' if prefix_matches else 'no'}; "
+        f"environment variable existed before .env load: "
+        f"{'yes' if existed else 'no'}"
+    )
+
+
+def get_retry_delay_seconds(headers, message: str) -> float:
+    retry_after = headers.get("Retry-After") if headers else None
+    if retry_after is not None:
+        try:
+            delay = float(retry_after)
+        except (TypeError, ValueError):
+            try:
+                retry_time = parsedate_to_datetime(retry_after)
+                if retry_time.tzinfo is None:
+                    retry_time = retry_time.replace(tzinfo=timezone.utc)
+                delay = (retry_time - datetime.now(timezone.utc)).total_seconds()
+            except (TypeError, ValueError, OverflowError):
+                delay = None
+        if delay is not None:
+            return max(0.0, delay) + 1.0
+
+    retry_after_ms = headers.get("retry-after-ms") if headers else None
+    if retry_after_ms is not None:
+        try:
+            delay = float(retry_after_ms) / 1000
+            return max(0.0, delay) + 1.0
+        except (TypeError, ValueError):
+            pass
+
+    match = re.search(
+        r"try again in\s+(\d+(?:\.\d+)?)\s*(milliseconds?|msecs?|ms|minutes?|mins?|m|seconds?|secs?|s)\b",
+        message,
+        re.IGNORECASE,
+    )
+    if match is None:
+        delay = 0.0
+    else:
+        delay = float(match.group(1))
+        unit = match.group(2).lower()
+        if unit.startswith("m"):
+            delay = delay / 1000 if unit in ("ms", "msec", "msecs", "millisecond", "milliseconds") else delay * 60
+    return max(0.0, delay) + 1.0
+
+
+def get_error_headers(error):
+    response = getattr(error, "response", None)
+    return getattr(response, "headers", None) or getattr(error, "headers", None)
+
+
+def wait_for_call_slot() -> None:
+    global LAST_LLM_CALL_AT
+    try:
+        minimum_interval = max(
+            0.0,
+            float(os.getenv("LLM_MIN_SECONDS_BETWEEN_CALLS", "0").strip()),
+        )
+    except ValueError:
+        minimum_interval = 0.0
+    if LAST_LLM_CALL_AT is not None:
+        remaining = LAST_LLM_CALL_AT + minimum_interval - time.monotonic()
+        if remaining > 0:
+            time.sleep(remaining)
+    LAST_LLM_CALL_AT = time.monotonic()
+
+
+def record_token_usage(usage: dict | None) -> None:
+    usage = usage or {}
+    prompt_tokens = int(usage.get("prompt_tokens") or 0)
+    completion_tokens = int(usage.get("completion_tokens") or 0)
+    total_tokens = int(usage.get("total_tokens") or prompt_tokens + completion_tokens)
+    TOTAL_TOKEN_USAGE["prompt_tokens"] += prompt_tokens
+    TOTAL_TOKEN_USAGE["completion_tokens"] += completion_tokens
+    TOTAL_TOKEN_USAGE["total_tokens"] += total_tokens
+    print(
+        "Token usage: "
+        f"prompt_tokens={prompt_tokens}, "
+        f"completion_tokens={completion_tokens}, total={total_tokens}"
+    )
+
+
+def print_total_token_usage() -> None:
+    print(
+        "Total token usage: "
+        f"prompt_tokens={TOTAL_TOKEN_USAGE['prompt_tokens']}, "
+        f"completion_tokens={TOTAL_TOKEN_USAGE['completion_tokens']}, "
+        f"total={TOTAL_TOKEN_USAGE['total_tokens']}"
+    )
+
+
 def call_ollama(messages: list[dict], tools: list[dict]) -> dict:
     # Request one assistant turn from Ollama's local chat API.
     request_data = json.dumps({
@@ -599,6 +765,7 @@ def call_ollama(messages: list[dict], tools: list[dict]) -> dict:
         method="POST",
     )
     try:
+        wait_for_call_slot()
         with urllib.request.urlopen(request, timeout=120) as response:
             payload = json.load(response)
     except urllib.error.HTTPError as error:
@@ -625,6 +792,12 @@ def call_ollama(messages: list[dict], tools: list[dict]) -> dict:
         "text": assistant_message.get("content") or "",
         "tool_calls": calls,
         "native_content": None,
+        "usage": {
+            "prompt_tokens": payload.get("prompt_eval_count", 0),
+            "completion_tokens": payload.get("eval_count", 0),
+            "total_tokens": payload.get("prompt_eval_count", 0)
+            + payload.get("eval_count", 0),
+        },
     }
 
 
@@ -678,13 +851,19 @@ def call_gemini(messages: list[dict], tools: list[dict]) -> dict:
     from google import genai
     from google.genai import errors, types
 
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = get_api_key("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY is missing from .env.")
     if not ACTIVE_MODEL:
         raise RuntimeError("GEMINI_MODEL is missing from .env.")
     if GEMINI_CLIENT is None:
-        GEMINI_CLIENT = genai.Client(api_key=api_key)
+        GEMINI_CLIENT = genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(
+                timeout=60_000,
+                retry_options=types.HttpRetryOptions(attempts=1),
+            ),
+        )
 
     declarations = [
         types.FunctionDeclaration(
@@ -708,12 +887,18 @@ def call_gemini(messages: list[dict], tools: list[dict]) -> dict:
     )
     contents = gemini_contents(messages, types)
 
-    for attempt in range(len(GEMINI_RETRY_DELAYS) + 1):
+    for attempt in range(MAX_RATE_LIMIT_RETRIES + 1):
         try:
+            wait_for_call_slot()
+            call_started_at = time.monotonic()
+            print("calling gemini...")
             response = GEMINI_CLIENT.models.generate_content(
                 model=ACTIVE_MODEL,
                 contents=contents,
                 config=config,
+            )
+            print(
+                f"gemini replied in {time.monotonic() - call_started_at:.2f} seconds"
             )
             break
         except errors.APIError as error:
@@ -735,15 +920,17 @@ def call_gemini(messages: list[dict], tools: list[dict]) -> dict:
                 raise RuntimeError(
                     f"Gemini request failed (HTTP {http_status}): {error_body}"
                 ) from None
-            if attempt == len(GEMINI_RETRY_DELAYS):
+            if attempt == MAX_RATE_LIMIT_RETRIES:
                 raise RuntimeError(
                     f"Gemini request failed (HTTP {http_status}): {error_body}"
                 ) from None
-            delay = GEMINI_RETRY_DELAYS[attempt]
+            delay = get_retry_delay_seconds(
+                get_error_headers(error), error_body
+            )
             print(
                 f"Gemini temporarily unavailable (HTTP {http_status}): "
                 f"{error_body}; retry "
-                f"{attempt + 1}/3 in {delay}s."
+                f"{attempt + 1}/{MAX_RATE_LIMIT_RETRIES}; waiting {delay:g}s."
             )
             time.sleep(delay)
 
@@ -766,6 +953,17 @@ def call_gemini(messages: list[dict], tools: list[dict]) -> dict:
         "text": "\n".join(text_parts),
         "tool_calls": calls,
         "native_content": content,
+        "usage": {
+            "prompt_tokens": getattr(
+                response.usage_metadata, "prompt_token_count", 0
+            ),
+            "completion_tokens": getattr(
+                response.usage_metadata, "candidates_token_count", 0
+            ),
+            "total_tokens": getattr(
+                response.usage_metadata, "total_token_count", 0
+            ),
+        },
     }
 
 
@@ -809,19 +1007,25 @@ def groq_messages(messages: list[dict]) -> list[dict]:
 
 def call_groq(messages: list[dict], tools: list[dict]) -> dict:
     # Request a single tool-capable completion from Groq's OpenAI-compatible API.
-    api_key = os.getenv("GROQ_API_KEY")
+    api_key = get_api_key("GROQ_API_KEY")
     if not api_key:
         raise RuntimeError("GROQ_API_KEY is missing from .env.")
     if not ACTIVE_MODEL:
         raise RuntimeError("GROQ_MODEL is missing from .env.")
 
-    request_data = json.dumps({
+    request_payload = {
         "model": ACTIVE_MODEL,
         "messages": groq_messages(messages),
         "tools": tools,
         "tool_choice": "auto",
         "temperature": 0,
-    }).encode("utf-8")
+    }
+    if "gpt-oss" in ACTIVE_MODEL.lower():
+        effort = os.getenv("GROQ_REASONING_EFFORT", "low").strip().lower()
+        request_payload["reasoning_effort"] = (
+            effort if effort in ("low", "medium", "high") else "low"
+        )
+    request_data = json.dumps(request_payload).encode("utf-8")
     request = urllib.request.Request(
         "https://api.groq.com/openai/v1/chat/completions",
         data=request_data,
@@ -833,8 +1037,9 @@ def call_groq(messages: list[dict], tools: list[dict]) -> dict:
         method="POST",
     )
 
-    for attempt in range(len(GROQ_RETRY_DELAYS) + 1):
+    for attempt in range(MAX_RATE_LIMIT_RETRIES + 1):
         try:
+            wait_for_call_slot()
             with urllib.request.urlopen(request, timeout=120) as response:
                 payload = json.load(response)
             break
@@ -849,15 +1054,16 @@ def call_groq(messages: list[dict], tools: list[dict]) -> dict:
                 raise RuntimeError(
                     f"Groq request failed (HTTP {status_code}): {error_body}"
                 ) from None
-            if attempt == len(GROQ_RETRY_DELAYS):
+            if attempt == MAX_RATE_LIMIT_RETRIES:
                 raise RuntimeError(
                     f"Groq request failed (HTTP {status_code}): {error_body}"
                 ) from None
-            delay = GROQ_RETRY_DELAYS[attempt]
+            delay = get_retry_delay_seconds(error.headers, error_body)
             print(
                 f"Groq temporarily unavailable (HTTP {status_code}): "
                 f"{error_body}; "
-                f"retry {attempt + 1}/3 in {delay}s."
+                f"retry {attempt + 1}/{MAX_RATE_LIMIT_RETRIES}; "
+                f"waiting {delay:g}s."
             )
             time.sleep(delay)
         except urllib.error.URLError as error:
@@ -888,25 +1094,33 @@ def call_groq(messages: list[dict], tools: list[dict]) -> dict:
         "text": assistant_message.get("content") or "",
         "tool_calls": calls,
         "native_content": None,
+        "usage": payload.get("usage", {}),
     }
 
 
 def call_llm(messages: list[dict], tools: list[dict]) -> dict:
-    # Dispatch one model turn to the selected provider.
-    print("waiting for model...")
+    # Dispatch one model turn and account for its provider-reported usage.
     if PROVIDER == "gemini":
-        return call_gemini(messages, tools)
-    if PROVIDER == "ollama":
-        return call_ollama(messages, tools)
-    if PROVIDER == "groq":
-        return call_groq(messages, tools)
-    raise RuntimeError('PROVIDER must be "gemini", "ollama", or "groq".')
+        response = call_gemini(messages, tools)
+    elif PROVIDER == "ollama":
+        response = call_ollama(messages, tools)
+    elif PROVIDER == "groq":
+        response = call_groq(messages, tools)
+    else:
+        raise RuntimeError('PROVIDER must be "gemini", "ollama", or "groq".')
+    record_token_usage(response.get("usage"))
+    return response
 
 
 def run_agent(prompt: str, organiser: str) -> str:
     # Run the tool loop until it books, answers, or reaches its step limit.
-    global ASK_USER_CALLS
+    global ASK_USER_CALLS, LAST_LLM_CALL_AT
     ASK_USER_CALLS = 0
+    LAST_LLM_CALL_AT = None
+    TOOL_RESULT_CACHE.clear()
+    for key in TOTAL_TOKEN_USAGE:
+        TOTAL_TOKEN_USAGE[key] = 0
+    print(f"Provider: {PROVIDER}; model: {ACTIVE_MODEL}")
     messages = [
         {
             "role": "system",
@@ -915,49 +1129,56 @@ def run_agent(prompt: str, organiser: str) -> str:
         {"role": "user", "content": prompt},
     ]
     final_text = ""
-    for _ in range(MAX_STEPS):
-        response = call_llm(messages, TOOLS)
-        final_text = response["text"] or ""
-        assistant_message = {
-            "role": "assistant",
-            "content": final_text,
-            "tool_calls": response["tool_calls"],
-        }
-        if response.get("native_content") is not None:
-            assistant_message["native_content"] = response["native_content"]
-        messages.append(assistant_message)
-        if not response["tool_calls"]:
-            break
-        for call in response["tool_calls"]:
-            name = call.get("name")
-            arguments = call.get("arguments", {})
-            ask_limit_reached = (
-                name == "ask_user" and ASK_USER_CALLS >= MAX_ASK_USER_CALLS
-            )
-            result = invoke_tool(name, arguments)
-            tool_message = {
-                "role": "tool",
-                "name": name,
-                "content": json.dumps(result, ensure_ascii=False, default=str),
+    try:
+        for _ in range(MAX_STEPS):
+            response = call_llm(messages, TOOLS)
+            final_text = response["text"] or ""
+            assistant_message = {
+                "role": "assistant",
+                "content": final_text,
+                "tool_calls": response["tool_calls"],
             }
-            if call.get("id"):
-                tool_message["tool_call_id"] = call["id"]
-            messages.append(tool_message)
-            if ask_limit_reached:
-                messages.append({
-                    "role": "user",
-                    "content": (
-                        "Do not ask again. Proceed with sensible assumptions "
-                        "and list them in the final report."
+            if response.get("native_content") is not None:
+                assistant_message["native_content"] = response["native_content"]
+            messages.append(assistant_message)
+            if not response["tool_calls"]:
+                break
+            for call in response["tool_calls"]:
+                name = call.get("name")
+                arguments = call.get("arguments", {})
+                ask_limit_reached = (
+                    name == "ask_user" and ASK_USER_CALLS >= MAX_ASK_USER_CALLS
+                )
+                result = invoke_tool(name, arguments)
+                tool_message = {
+                    "role": "tool",
+                    "name": name,
+                    "content": json.dumps(
+                        compact_tool_result(name, result),
+                        ensure_ascii=False,
+                        default=str,
                     ),
-                })
-            if (
-                name == "book_items"
-                and isinstance(result, dict)
-                and result.get("status") == "committed"
-            ):
-                return final_text
-    return final_text
+                }
+                if call.get("id"):
+                    tool_message["tool_call_id"] = call["id"]
+                messages.append(tool_message)
+                if ask_limit_reached:
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            "Do not ask again. Proceed with sensible assumptions "
+                            "and list them in the final report."
+                        ),
+                    })
+                if (
+                    name == "book_items"
+                    and isinstance(result, dict)
+                    and result.get("status") == "committed"
+                ):
+                    return final_text
+        return final_text
+    finally:
+        print_total_token_usage()
 
 
 def fallback_report() -> str:
@@ -991,6 +1212,13 @@ def fallback_report() -> str:
 def selftest() -> None:
     # Exercise the mock event tools and all required booking rejections.
     global ASK_USER_CALLS, AUTO_ANSWER, BUDGET
+    assert get_retry_delay_seconds({}, "Try again in 2 seconds") == 3
+    assert get_retry_delay_seconds(
+        {"Retry-After": "4"}, "Try again in 2 seconds"
+    ) == 5
+    assert get_retry_delay_seconds(
+        {"retry-after-ms": "1500"}, "Try again in 2 seconds"
+    ) == 2.5
     safe_body = safe_error_body(
         '{"error":"bad authorization","Authorization":"Bearer test-secret"}',
         "test-secret",
@@ -1009,6 +1237,10 @@ def selftest() -> None:
     try:
         checklist = invoke_tool("get_event_checklist", {"event_type": "dance"})
         assert checklist["needs"]
+        cached_checklist = invoke_tool(
+            "get_event_checklist", {"event_type": "dance"}
+        )
+        assert cached_checklist["note"] == "already checked"
         assert get_event_checklist("  DANCE performance ")["needs"]
         assert normalize_event_type(" Hackathon event ") == "hackathon"
         recommendation = invoke_tool(
@@ -1215,17 +1447,19 @@ def main() -> int:
         selftest()
         return 0
 
-    try:
-        from dotenv import load_dotenv
+    from dotenv import load_dotenv
 
-        load_dotenv()
-    except ImportError:
-        pass
+    key_environment_names = ("GEMINI_API_KEY", "GROQ_API_KEY")
+    existed_before_dotenv = {
+        name: name in os.environ for name in key_environment_names
+    }
+    load_dotenv(dotenv_path=REPOSITORY_ROOT / ".env", override=True)
 
     PROVIDER = os.getenv("PROVIDER", "ollama").strip().lower()
     if PROVIDER not in ("gemini", "ollama", "groq"):
         print('PROVIDER must be "gemini", "ollama", or "groq".')
         return 2
+    print_api_key_diagnostic(PROVIDER, existed_before_dotenv)
     BUDGET, ORGANISER = args.budget, args.organiser
     AUTO_ANSWER = args.auto_answer
     reset_checkout_database()
@@ -1233,7 +1467,7 @@ def main() -> int:
     STEP["n"] = 0
     ASK_USER_CALLS = 0
     if PROVIDER == "gemini":
-        if not os.getenv("GEMINI_API_KEY"):
+        if not get_api_key("GEMINI_API_KEY"):
             print("GEMINI_API_KEY is missing from .env.")
             return 2
         ACTIVE_MODEL = os.getenv("GEMINI_MODEL", "").strip()
@@ -1241,7 +1475,7 @@ def main() -> int:
             print("GEMINI_MODEL is missing from .env.")
             return 2
     elif PROVIDER == "groq":
-        if not os.getenv("GROQ_API_KEY"):
+        if not get_api_key("GROQ_API_KEY"):
             print("GROQ_API_KEY is missing from .env.")
             return 2
         ACTIVE_MODEL = os.getenv("GROQ_MODEL", "").strip()
@@ -1256,10 +1490,7 @@ def main() -> int:
     prompt = " ".join(args.prompt) or (
         "Dance performance, 150 students, Friday evening. Book everything."
     )
-    print(
-        f"Provider: {PROVIDER}\nModel: {ACTIVE_MODEL}\n"
-        f"Request: {prompt}\nBudget: {BUDGET}\n"
-    )
+    print(f"Request: {prompt}\nBudget: {BUDGET}\n")
     try:
         report = run_agent(prompt, ORGANISER)
     except RuntimeError as error:

@@ -37,6 +37,29 @@
    python backend\planner\test_tool_calling.py --selftest
    ```
 
+## LLM diagnostics
+
+Run the provider doctor to check network access, text generation, JSON output,
+and function calling. It loads the repo-root `.env` at runtime and makes live
+requests to the selected provider, so it is not an offline test:
+
+```powershell
+python -m backend.planner.llm_doctor --provider all
+```
+
+Use `--provider gemini`, `--provider groq`, or `--provider ollama` to check one
+provider. Missing credentials or model settings are reported as skipped without
+printing their values.
+
+The deterministic fallback books without an LLM by default:
+
+```powershell
+python -m backend.planner.fixed_pipeline --event-type dance --headcount 150 --date "next Friday" --start-hour 18 --end-hour 20 --budget 20000
+```
+
+`--use-llm` is optional and only asks the configured provider to polish the
+notice wording; a fixed template is used if that call fails.
+
 ## Choosing a provider
 
 Set `PROVIDER` in `.env` to one of `ollama`, `gemini`, or `groq`.
