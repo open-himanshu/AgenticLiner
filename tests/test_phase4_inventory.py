@@ -1,5 +1,6 @@
 import pytest
 import httpx
+from conftest import TEST_PASSWORDS
 from backend.api.main import app
 from backend.services.inventory_service import (
     create_venue,
@@ -92,7 +93,7 @@ async def test_api_inventory_endpoints():
         # First authenticate as data_manager
         login_res = await client.post(
             "/login",
-            data={"email": "datamanager@galgotias.edu", "password": "Data@123"},
+            data={"email": "datamanager@galgotias.edu", "password": TEST_PASSWORDS["DATA_MANAGER_PASSWORD"]},
             headers={"Accept": "text/html"}
         )
         assert login_res.status_code == 302
@@ -132,7 +133,7 @@ async def test_api_csv_export_downloads():
         # Authenticate as data_manager
         await client.post(
             "/login",
-            data={"email": "datamanager@galgotias.edu", "password": "Data@123"},
+            data={"email": "datamanager@galgotias.edu", "password": TEST_PASSWORDS["DATA_MANAGER_PASSWORD"]},
             headers={"Accept": "text/html"}
         )
 

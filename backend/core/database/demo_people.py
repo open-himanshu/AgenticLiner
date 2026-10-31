@@ -1,5 +1,6 @@
 HERO_SPEAKER = {
-    "name": "Dr. Kestrel Quill",
+    "id": "spk_01",
+    "name": "Dr. Neha Verma",
     "substitute_name": "Dr. Rowan Byte",
     "substitute_id": "spk_05",
     "substitute_department": "School of AI",

@@ -4,7 +4,13 @@
 ---
 
 ## 1. Overview
-The AgenticLiner backend exposes both REST API endpoints and interactive server-rendered web interfaces. All mutations are sandboxed and monitored by the **Kavach Safety Engine**.
+The AgenticLiner backend exposes both REST API endpoints and interactive server-rendered web interfaces. Event planning, supervisor approval/rejection, schedule-change notices, and outbox release are sandboxed and monitored by the **Kavach Safety Engine**.
+
+API endpoints require a signed-in session and an authorized role. Event planning, schedules, analytics, attendee operations, agents, and the outbox require an organiser or supervisor; catalog maintenance uses the data-manager or supervisor role; participant registration and feedback are tied to the signed-in participant. The Google/Firebase sign-in callback is public because it establishes the session, while certificate verification remains public and read-only.
+
+Certificate QR codes and the analytics-page “Verify QR” link use `GET /verify/{cert_id}`. Set `PUBLIC_BASE_URL` to the externally reachable application origin (for example, `https://events.example.edu`); when it is unset, certificate generation uses the incoming request origin.
+
+Event plans accept a numeric `budget`; each requisition may include a non-negative total `cost`, which is stored with its booking and checked against the event budget inside the Kavach savepoint. Kavach limits recipients using `KAVACH_MAX_RECIPIENTS` (default `500`), and planner requests that still violate invariants after three retries (four total attempts) appear in the supervisor-only `GET /api/human-review` response.
 
 ---
 

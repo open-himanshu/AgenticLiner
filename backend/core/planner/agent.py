@@ -33,7 +33,7 @@ class AutopilotAgent:
         self.timeline.append(step_entry)
         return step_entry
 
-    def run_autopilot(self, prompt: str, date: str = "2026-11-25", start_time: str = "09:00:00", end_time: str = "17:00:00") -> Dict[str, Any]:
+    def run_autopilot(self, prompt: str, date: str = "2026-11-25", start_time: str = "09:00:00", end_time: str = "17:00:00", budget: float = 25000) -> Dict[str, Any]:
         """
         Executes autonomous campus event planning:
         1. Adaptive Intake & Entity Extraction (Event Type, headcount, timing)
@@ -148,6 +148,7 @@ class AutopilotAgent:
             date=date,
             start_time=start_time,
             end_time=end_time,
+            budget=budget,
             event_details={
                 "name": event_name,
                 "brief": prompt,

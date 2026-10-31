@@ -1,5 +1,6 @@
 import pytest
 import httpx
+from conftest import TEST_PASSWORDS
 from backend.api.main import app
 from backend.services.auth_service import (
     get_user_by_email,
@@ -28,7 +29,7 @@ async def test_authenticated_settings_page():
         # Login as student
         login_res = await client.post(
             "/login",
-            data={"email": "student@galgotias.edu", "password": "Student@123"},
+            data={"email": "student@galgotias.edu", "password": TEST_PASSWORDS["PARTICIPANT_PASSWORD"]},
             headers={"Accept": "text/html"}
         )
         assert login_res.status_code == 302
@@ -47,7 +48,7 @@ async def test_update_user_profile_flow():
         # Login as organiser
         await client.post(
             "/login",
-            data={"email": "organiser@galgotias.edu", "password": "Organiser@123"},
+            data={"email": "organiser@galgotias.edu", "password": TEST_PASSWORDS["ORGANISER_PASSWORD"]},
             headers={"Accept": "text/html"}
         )
 
@@ -79,7 +80,7 @@ async def test_change_password_policy_and_verification():
         # Login as student
         await client.post(
             "/login",
-            data={"email": "student@galgotias.edu", "password": "Student@123"},
+            data={"email": "student@galgotias.edu", "password": TEST_PASSWORDS["PARTICIPANT_PASSWORD"]},
             headers={"Accept": "text/html"}
         )
 
@@ -99,7 +100,7 @@ async def test_change_password_policy_and_verification():
         weak_res = await client.post(
             "/settings/change-password",
             data={
-                "current_password": "Student@123",
+                "current_password": TEST_PASSWORDS["PARTICIPANT_PASSWORD"],
                 "new_password": "weak",
                 "confirm_password": "weak"
             }
@@ -111,7 +112,7 @@ async def test_change_password_policy_and_verification():
         success_res = await client.post(
             "/settings/change-password",
             data={
-                "current_password": "Student@123",
+                "current_password": TEST_PASSWORDS["PARTICIPANT_PASSWORD"],
                 "new_password": "Student@Updated2026!",
                 "confirm_password": "Student@Updated2026!"
             }
@@ -135,7 +136,7 @@ async def test_update_preferences_flow():
         # Login as supervisor
         await client.post(
             "/login",
-            data={"email": "admin@galgotias.edu", "password": "Admin@123"},
+            data={"email": "admin@galgotias.edu", "password": TEST_PASSWORDS["SUPERVISOR_PASSWORD"]},
             headers={"Accept": "text/html"}
         )
 

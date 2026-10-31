@@ -132,29 +132,9 @@
                     </div>
                 </div>
 
-                <!-- Live Feedback Ingestion Form -->
                 <div class="p-3 bg-light rounded border">
-                    <h6 class="fw-bold small mb-2"><i class="bi bi-send-plus me-1"></i>Live Feedback Ingestion Tester:</h6>
-                    <div class="row g-2 mb-2">
-                        <div class="col-4">
-                            <select class="form-select form-select-sm" id="fbRating">
-                                <option value="5" selected>⭐⭐⭐⭐⭐ (5)</option>
-                                <option value="4">⭐⭐⭐⭐ (4)</option>
-                                <option value="3">⭐⭐⭐ (3)</option>
-                                <option value="2">⭐⭐ (2)</option>
-                                <option value="1">⭐ (1)</option>
-                            </select>
-                        </div>
-                        <div class="col-8">
-                            <input type="text" class="form-control form-control-sm" id="fbComment" placeholder="Write feedback comment (e.g. Workshop was superb but audi AC was cold)...">
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <button class="btn btn-sm btn-primary fw-semibold" id="btnSubmitFeedback">
-                            <i class="bi bi-cpu me-1"></i> Classify Sentiment &amp; Ingest
-                        </button>
-                        <span id="feedbackResultTag" class="small"></span>
-                    </div>
+                    <h6 class="fw-bold small mb-2"><i class="bi bi-send-plus me-1"></i>Participant Feedback</h6>
+                    <p class="small text-muted mb-0">Participants submit feedback from their authenticated participant portal.</p>
                 </div>
             </div>
         </div>
@@ -240,7 +220,7 @@
                         <span class="badge bg-light text-muted border mt-1" style="font-size: 0.75rem;">Theme: {{ fb.theme or 'general' }}</span>
                     </div>
                     {% else %}
-                    <div class="text-muted py-3 text-center">No feedback submitted yet. Use the tester above to ingest live reviews!</div>
+                    <div class="text-muted py-3 text-center">No feedback submitted yet.</div>
                     {% endfor %}
                 </div>
             </div>
@@ -251,62 +231,6 @@
 
 {% block extra_scripts %}
 <script>
-    // Ingest Feedback
-    document.getElementById('btnSubmitFeedback').addEventListener('click', async () => {
-        const rating = parseInt(document.getElementById('fbRating').value);
-        const comment = document.getElementById('fbComment').value.trim();
-        const tag = document.getElementById('feedbackResultTag');
-        const btn = document.getElementById('btnSubmitFeedback');
-
-        if (!comment) {
-            alert('Please enter a feedback comment.');
-            return;
-        }
-
-        btn.disabled = true;
-        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Ingesting...`;
-
-        try {
-            const res = await fetch('/api/feedback/submit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ event_id: 'ev_001', rating, comment })
-            });
-            const data = await res.json();
-            btn.disabled = false;
-            btn.innerHTML = `<i class="bi bi-cpu me-1"></i> Classify Sentiment & Ingest`;
-
-            const sent = data.analysis.sentiment;
-            const badgeClass = sent === 'positive' ? 'bg-success' : (sent === 'negative' ? 'bg-danger' : 'bg-secondary');
-            tag.innerHTML = `<span class="badge ${badgeClass}">${sent.toUpperCase()} (Score: ${data.analysis.score}) | Theme: ${data.themes.join(', ')}</span>`;
-            document.getElementById('fbComment').value = '';
-
-            // Dynamically prepend to feed
-            const feed = document.getElementById('feedbackFeed');
-            const item = document.createElement('div');
-            item.className = 'list-group-item px-0 py-2 border-bottom';
-            item.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <div>
-                        <strong class="text-dark">Student Attendee</strong>
-                        <span class="text-warning ms-1">${'★'.repeat(rating)}</span>
-                    </div>
-                    <span class="badge ${sent === 'positive' ? 'bg-success-subtle text-success border border-success' : (sent === 'negative' ? 'bg-danger-subtle text-danger border border-danger' : 'bg-secondary-subtle text-secondary border')}">
-                        ${sent.toUpperCase()}
-                    </span>
-                </div>
-                <div class="text-dark">${comment}</div>
-                <span class="badge bg-light text-muted border mt-1" style="font-size: 0.75rem;">Theme: ${data.themes.join(', ')}</span>
-            `;
-            feed.prepend(item);
-
-        } catch (err) {
-            btn.disabled = false;
-            btn.innerHTML = `<i class="bi bi-cpu me-1"></i> Classify Sentiment & Ingest`;
-            alert('Error submitting feedback: ' + err);
-        }
-    });
-
     // Generate Certificate
     document.getElementById('btnGenerateCert').addEventListener('click', async () => {
         const studentName = document.getElementById('certStudentName').value.trim();

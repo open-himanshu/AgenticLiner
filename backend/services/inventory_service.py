@@ -12,7 +12,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Optional, Dict, Any, List
-from fastapi import UploadFile
+from fastapi import HTTPException, UploadFile
 
 from backend.core.database.connection import get_connection, fetch_all, fetch_one, execute_query
 
@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "static" / "uploads"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 # Default thematic placeholder graphics if no photo uploaded
 DEFAULT_PLACEHOLDERS = {
@@ -35,18 +37,34 @@ async def save_uploaded_photo(file: Optional[UploadFile], category: str = "equip
         return DEFAULT_PLACEHOLDERS.get(category, DEFAULT_PLACEHOLDERS["equipment"])
 
     ext = Path(file.filename).suffix.lower()
-    if ext not in [".jpg", ".jpeg", ".png", ".webp", ".svg"]:
-        ext = ".jpg"
+    if ext not in ALLOWED_IMAGE_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Unsupported image type.")
+
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Image upload exceeds the 5 MB limit.")
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded image is empty.")
+
+    valid_content = (
+        (ext in {".jpg", ".jpeg"} and content.startswith(b"\xff\xd8\xff"))
+        or (
+            ext == ".png"
+            and content.startswith(b"\x89PNG\r\n\x1a\n")
+            and content[12:16] == b"IHDR"
+        )
+        or (
+            ext == ".webp"
+            and content.startswith(b"RIFF")
+            and content[8:12] == b"WEBP"
+        )
+    )
+    if not valid_content:
+        raise HTTPException(status_code=400, detail="Uploaded content is not a valid supported image.")
 
     unique_filename = f"{category}_{uuid.uuid4().hex[:8]}{ext}"
     dest_path = UPLOADS_DIR / unique_filename
-
-    content = await file.read()
-    if len(content) == 0:
-        return DEFAULT_PLACEHOLDERS.get(category, DEFAULT_PLACEHOLDERS["equipment"])
-
-    with open(dest_path, "wb") as f:
-        f.write(content)
+    dest_path.write_bytes(content)
 
     return f"/static/uploads/{unique_filename}"
 

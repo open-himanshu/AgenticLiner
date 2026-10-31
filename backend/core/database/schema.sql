@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS events (
     brief TEXT NOT NULL,
     event_type TEXT DEFAULT 'general', -- hackathon, cultural, workshop, seminar
     expected_participants INTEGER DEFAULT 100,
+    budget REAL NOT NULL DEFAULT 0,
     organizer_department TEXT DEFAULT 'School of AI',
     approval_status TEXT DEFAULT 'auto_approved', -- auto_approved, pending_dean_approval, approved
     status TEXT DEFAULT 'planned', -- planned, allocated, completed, cancelled
@@ -117,6 +118,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     start_time TIMESTAMP,
     end_time TIMESTAMP,
     quantity INTEGER DEFAULT 1,
+    estimated_cost REAL NOT NULL DEFAULT 0,
     approval_status TEXT DEFAULT 'auto_approved', -- auto_approved, pending_dean_approval, approved
     status TEXT DEFAULT 'confirmed', -- confirmed, rolled_back, cancelled
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -213,7 +215,20 @@ CREATE TABLE IF NOT EXISTS audit_log (
     result TEXT -- 'SUCCESS', 'FAILED', 'BLOCKED'
 );
 
--- 14. Historical Events for ML Baseline / Training
+-- 14. Requests that exhausted automatic safety retries
+CREATE TABLE IF NOT EXISTS human_review_queue (
+    id TEXT PRIMARY KEY,
+    event_id TEXT,
+    actor TEXT NOT NULL,
+    operation_name TEXT NOT NULL,
+    request_json TEXT NOT NULL,
+    attempts INTEGER NOT NULL,
+    last_error TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 15. Historical Events for ML Baseline / Training
 CREATE TABLE IF NOT EXISTS historical_events (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,

@@ -75,7 +75,8 @@ async def login_page(request: Request, next: Optional[str] = None):
             "next": next or "",
             "google_client_id": google_client_id,
             "firebase_config": get_firebase_config(),
-            "smtp_configured": is_smtp_configured()
+            "smtp_configured": is_smtp_configured(),
+            "demo_login_enabled": os.getenv("ALLOW_PUBLIC_TUNNEL") != "1"
         }
     )
 
@@ -107,7 +108,8 @@ async def login_submit(
                     "next": "",
                     "google_client_id": google_client_id,
                     "firebase_config": get_firebase_config(),
-                    "smtp_configured": is_smtp_configured()
+                    "smtp_configured": is_smtp_configured(),
+                    "demo_login_enabled": os.getenv("ALLOW_PUBLIC_TUNNEL") != "1"
                 }
             )
         raise HTTPException(status_code=400, detail="Email and password are required.")
@@ -124,7 +126,8 @@ async def login_submit(
                     "next": "",
                     "google_client_id": google_client_id,
                     "firebase_config": get_firebase_config(),
-                    "smtp_configured": is_smtp_configured()
+                    "smtp_configured": is_smtp_configured(),
+                    "demo_login_enabled": os.getenv("ALLOW_PUBLIC_TUNNEL") != "1"
                 }
             )
         raise HTTPException(status_code=401, detail=error_msg or "Invalid credentials.")
@@ -162,7 +165,8 @@ async def signup_page(request: Request):
             "form_data": {},
             "google_client_id": google_client_id,
             "firebase_config": get_firebase_config(),
-            "smtp_configured": is_smtp_configured()
+            "smtp_configured": is_smtp_configured(),
+            "demo_login_enabled": os.getenv("ALLOW_PUBLIC_TUNNEL") != "1"
         }
     )
 
@@ -199,6 +203,8 @@ async def signup_submit(
         "role": role or "participant",
         "department": department or "School of AI"
     }
+    role = "participant"
+    form_data["role"] = role
 
     if not full_name or not email or not password:
         return templates.TemplateResponse(
@@ -208,7 +214,8 @@ async def signup_submit(
                 "error": "All fields are required.",
                 "form_data": form_data,
                 "google_client_id": google_client_id,
-                "smtp_configured": is_smtp_configured()
+                "smtp_configured": is_smtp_configured(),
+                "demo_login_enabled": os.getenv("ALLOW_PUBLIC_TUNNEL") != "1"
             }
         )
 
@@ -220,7 +227,8 @@ async def signup_submit(
                 "error": "Passwords do not match.",
                 "form_data": form_data,
                 "google_client_id": google_client_id,
-                "smtp_configured": is_smtp_configured()
+                "smtp_configured": is_smtp_configured(),
+                "demo_login_enabled": os.getenv("ALLOW_PUBLIC_TUNNEL") != "1"
             }
         )
 
@@ -234,7 +242,8 @@ async def signup_submit(
                 "error": pass_err,
                 "form_data": form_data,
                 "google_client_id": google_client_id,
-                "smtp_configured": is_smtp_configured()
+                "smtp_configured": is_smtp_configured(),
+                "demo_login_enabled": os.getenv("ALLOW_PUBLIC_TUNNEL") != "1"
             }
         )
 
@@ -248,7 +257,8 @@ async def signup_submit(
                 "error": f"An account with email '{email}' already exists. Please log in.",
                 "form_data": form_data,
                 "google_client_id": google_client_id,
-                "smtp_configured": is_smtp_configured()
+                "smtp_configured": is_smtp_configured(),
+                "demo_login_enabled": os.getenv("ALLOW_PUBLIC_TUNNEL") != "1"
             }
         )
 
@@ -437,19 +447,34 @@ async def google_auth_callback(request: Request):
     google_email = data.get("email")
     google_name = data.get("name")
 
-    if not is_demo and credential:
-        # If real Google ID token passed, verify with Google OAuth servers
+    if is_demo:
+        if os.getenv("ALLOW_PUBLIC_TUNNEL") == "1":
+            raise HTTPException(
+                status_code=403,
+                detail="Demo sign-in is disabled while public access is enabled."
+            )
+    else:
+        if not credential:
+            raise HTTPException(status_code=401, detail="A verified Google credential is required.")
         try:
             tokeninfo_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={credential}"
             req = urllib.request.Request(tokeninfo_url, headers={"User-Agent": "AgenticLiner-Auth"})
             with urllib.request.urlopen(req, timeout=5) as response:
-                if response.status == 200:
-                    token_data = json.loads(response.read().decode("utf-8"))
-                    google_email = token_data.get("email") or google_email
-                    google_name = token_data.get("name") or google_name
+                if response.status != 200:
+                    raise HTTPException(status_code=401, detail="Google credential verification failed.")
+                token_data = json.loads(response.read().decode("utf-8"))
+            expected_audience = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+            if expected_audience and token_data.get("aud") != expected_audience:
+                raise HTTPException(status_code=401, detail="Google credential audience is invalid.")
+            if token_data.get("email_verified") not in (True, "true"):
+                raise HTTPException(status_code=401, detail="Google email is not verified.")
+            google_email = token_data.get("email")
+            google_name = token_data.get("name") or google_name
+        except HTTPException:
+            raise
         except Exception as ex:
-            # If token verification times out or Firebase client already verified, fallback to provided email
-            logger.info(f"Token info note: {ex}")
+            logger.warning(f"Google credential verification failed: {ex}")
+            raise HTTPException(status_code=401, detail="Google credential verification failed.")
 
     if not google_email:
         raise HTTPException(status_code=400, detail="Missing verified email address.")
@@ -458,7 +483,7 @@ async def google_auth_callback(request: Request):
     user = create_user_from_google(
         email=google_email,
         full_name=google_name or google_email.split("@")[0],
-        role=role,
+        role=role if is_demo else "participant",
         department=department
     )
 

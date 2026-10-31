@@ -75,7 +75,7 @@ Unlike generic event software that relies on commercial billing or ticket sellin
   - **Auto-Promotion Engine**: When a confirmed student cancels, the system automatically promotes the next waitlisted student and stages a notification.
   - **CSV Export**: One-click download of the complete roster (`/api/attendees/export`).
 
-#### Screen #6: Transactional Outbox & Broadcast Center (`/notices`)
+#### Screen #6: Transactional Outbox & Broadcast Center (`/outbox`)
 - **Purpose**: Campus notification management implementing the **Transactional Outbox Pattern**.
 - **Features**:
   - Shows staged notices (e.g. Schedule Updates, Waitlist Promotions, Urgent Room Changes).

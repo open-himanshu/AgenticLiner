@@ -120,7 +120,7 @@
                             <a class="nav-link {% if request.url.path == '/attendees' %}active fw-bold{% endif %}" href="/attendees"><i class="bi bi-people me-1"></i> Attendees</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.url.path == '/notices' %}active fw-bold{% endif %}" href="/notices"><i class="bi bi-inbox me-1"></i> Outbox</a>
+                            <a class="nav-link {% if request.url.path in ['/outbox', '/notices'] %}active fw-bold{% endif %}" href="/outbox"><i class="bi bi-inbox me-1"></i> Outbox</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {% if request.url.path == '/autopilot' %}active fw-bold text-warning{% endif %}" href="/autopilot"><i class="bi bi-cpu me-1"></i> Assistant AI</a>
@@ -320,7 +320,7 @@
                                 <a href="/schedule" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-calendar3 me-1"></i> View Timetable
                                 </a>
-                                <a href="/notices" class="btn btn-sm btn-dark">
+                                <a href="/outbox" class="btn btn-sm btn-dark">
                                     <i class="bi bi-inbox me-1"></i> Outbox Notices
                                 </a>
                             </div>

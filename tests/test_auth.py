@@ -5,6 +5,7 @@ Automated Pytest Suite for Authentication, Strong Password Policy, OTP Verificat
 import pytest
 import httpx
 import uuid
+from conftest import TEST_PASSWORDS
 from backend.api.main import app
 from backend.services.auth_service import (
     hash_password,
@@ -58,7 +59,7 @@ def test_strong_password_policy():
     assert "special symbol" in err
 
 def test_authenticate_user_service():
-    user, err = authenticate_user("admin@galgotias.edu", "Admin@123")
+    user, err = authenticate_user("admin@galgotias.edu", TEST_PASSWORDS["SUPERVISOR_PASSWORD"])
     assert user is not None
     assert err is None
     assert user["role"] == "supervisor"
@@ -105,7 +106,7 @@ async def test_supervisor_login_and_access():
         # Login as supervisor
         res = await client.post(
             "/login",
-            data={"email": "admin@galgotias.edu", "password": "Admin@123"},
+            data={"email": "admin@galgotias.edu", "password": TEST_PASSWORDS["SUPERVISOR_PASSWORD"]},
             headers={"Accept": "text/html"}
         )
         assert res.status_code == 302
@@ -123,7 +124,7 @@ async def test_cross_role_access_forbidden():
         # Login as organiser
         res = await client.post(
             "/login",
-            data={"email": "organiser@galgotias.edu", "password": "Organiser@123"},
+            data={"email": "organiser@galgotias.edu", "password": TEST_PASSWORDS["ORGANISER_PASSWORD"]},
             headers={"Accept": "text/html"}
         )
         assert res.status_code == 302
@@ -149,7 +150,7 @@ async def test_data_manager_login_and_cross_role_blocked():
         # Login as data manager
         res = await client.post(
             "/login",
-            data={"email": "datamanager@galgotias.edu", "password": "Data@123"},
+            data={"email": "datamanager@galgotias.edu", "password": TEST_PASSWORDS["DATA_MANAGER_PASSWORD"]},
             headers={"Accept": "text/html"}
         )
         assert res.status_code == 302
@@ -169,7 +170,7 @@ async def test_logout():
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
         # Login as student
-        await client.post("/login", data={"email": "student@galgotias.edu", "password": "Student@123"})
+        await client.post("/login", data={"email": "student@galgotias.edu", "password": TEST_PASSWORDS["PARTICIPANT_PASSWORD"]})
         res = await client.get("/participant")
         assert res.status_code == 200
 
@@ -184,7 +185,10 @@ async def test_logout():
         assert "/login" in res.headers["location"]
 
 @pytest.mark.anyio
-async def test_signup_otp_and_verification_flow():
+async def test_signup_otp_and_verification_flow(monkeypatch):
+    from backend.api import auth_routes
+
+    monkeypatch.setattr(auth_routes, "is_smtp_configured", lambda: False)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
         # 1. Submit signup form with strong password
@@ -226,10 +230,10 @@ async def test_signup_otp_and_verification_flow():
             data={"email": new_email, "purpose": "signup", "otp_code": otp_code}
         )
         assert res_ok.status_code == 302
-        assert res_ok.headers["location"] == "/organiser"
+        assert res_ok.headers["location"] == "/participant"
 
-        # 4. Confirm newly registered user can access /organiser
-        res_dashboard = await client.get("/organiser")
+        # 4. Public sign-up cannot grant privileged roles.
+        res_dashboard = await client.get("/participant")
         assert res_dashboard.status_code == 200
         assert "Dr. Nova Example" in res_dashboard.text
 
@@ -253,7 +257,10 @@ async def test_signup_weak_password_rejected():
         assert "at least 8 characters" in res.text
 
 @pytest.mark.anyio
-async def test_forgot_and_reset_password_flow():
+async def test_forgot_and_reset_password_flow(monkeypatch):
+    from backend.api import auth_routes
+
+    monkeypatch.setattr(auth_routes, "is_smtp_configured", lambda: False)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
         target_email = "student@galgotias.edu"
@@ -307,8 +314,8 @@ async def test_google_auth_fast_login_and_role_access():
             "/auth/google",
             json={
                 "demo_google": True,
-                "email": "prof.pixel.hart@example.invalid",
-                "name": "Prof. Pixel Hart",
+                "email": "organiser@galgotias.edu",
+                "name": "Untrusted Name",
                 "role": "organiser",
                 "department": "Computer Science (CSE)"
             }
@@ -317,13 +324,13 @@ async def test_google_auth_fast_login_and_role_access():
         data = res.json()
         assert data["success"] is True
         assert data["redirect_url"] == "/organiser"
-        assert data["user"]["email"] == "prof.pixel.hart@example.invalid"
+        assert data["user"]["email"] == "organiser@galgotias.edu"
         assert data["user"]["role"] == "organiser"
 
         # Verify session cookie was issued and can access /organiser
         res_dash = await client.get("/organiser")
         assert res_dash.status_code == 200
-        assert "Prof. Pixel Hart" in res_dash.text
+        assert "Student Club Organiser" in res_dash.text
 
 @pytest.mark.anyio
 async def test_email_service_safety():

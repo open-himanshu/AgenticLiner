@@ -12,6 +12,9 @@ import csv
 import uuid
 from typing import Dict, Any, List, Optional
 from backend.core.database.connection import get_connection
+from backend.core.safety.kavach import KavachEngine
+
+kavach = KavachEngine()
 
 class AttendeeManager:
     def __init__(self):
@@ -88,6 +91,7 @@ class AttendeeManager:
 
             # Stage notice in Outbox
             outbox_id = f"notif_{uuid.uuid4().hex[:8]}"
+            kavach.verify_recipient_limit(conn, [email])
             cur.execute("""
                 INSERT INTO outbox (id, event_id, recipient, subject, message, type, status)
                 VALUES (?, ?, ?, ?, ?, 'confirmation', 'held')
@@ -152,6 +156,9 @@ class AttendeeManager:
                         f"Dear {waitlisted_candidate['name']},\n\n"
                         f"A seat has freed up for {target['event_name']}. The AgenticLiner Waitlist Engine has automatically promoted your status to CONFIRMED!\n\n"
                         "We look forward to seeing you at the event."
+                    )
+                    kavach.verify_recipient_limit(
+                        conn, [waitlisted_candidate["email"]]
                     )
                     cur.execute("""
                         INSERT INTO outbox (id, event_id, recipient, subject, message, type, status)

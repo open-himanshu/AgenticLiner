@@ -10,10 +10,10 @@ import uuid
 import logging
 from typing import Dict, Any, List, Optional
 
-from backend.core.database.connection import get_connection, fetch_all, fetch_one, execute_query
+from backend.core.database.connection import get_connection, fetch_all, fetch_one
 from backend.core.database.demo_people import DEMO_FACULTY, HERO_SPEAKER
 from backend.core.scheduler.solver import EventScheduler
-from backend.core.safety.kavach import KavachEngine
+from backend.core.safety.kavach import KavachEngine, InvariantViolation
 
 logger = logging.getLogger(__name__)
 kavach = KavachEngine()
@@ -39,7 +39,7 @@ DEFAULT_SESSIONS = [
         "id": "sess_02",
         "title": "Generative AI Systems Masterclass",
         "expected_attendance": 120,
-        "speaker_id": "spk_puri",
+        "speaker_id": HERO_SPEAKER["id"],
         "speaker_name": f"{HERO_SPEAKER['name']} (Associate Prof)",
         "depends_on": "sess_01",
         "track": "AI/ML"
@@ -174,31 +174,65 @@ def handle_hero_speaker_cancellation(event_id: Optional[str] = None) -> Dict[str
 
     solve_res = solve_timetable(sessions=reallocated_sessions, slots=slots, custom_rooms=rooms)
 
-    # Ensure event exists for Outbox staging
-    ev = fetch_one("SELECT id FROM events LIMIT 1")
+    ev = fetch_one("SELECT id FROM events WHERE id = ?", (event_id,)) if event_id else fetch_one("SELECT id FROM events LIMIT 1")
     target_event_id = event_id or (ev["id"] if ev else "ev_hero_schedule")
-    if not ev:
-        execute_query(
-            "INSERT OR IGNORE INTO events (id, name, brief, event_type) VALUES (?, 'Hero Schedule Summit', 'Clash-Free Timetable Demo', 'conference')",
-            (target_event_id,)
-        )
-
-    # Stage Outbox Announcement to all participants
     outbox_id = f"notif_change_{uuid.uuid4().hex[:6]}"
     outbox_msg = (
         f"Schedule Update: Keynote speaker {HERO_SPEAKER['name']} cancelled due to unavoidable conflict. "
         f"{substitute_name} has been allocated with zero timetable clashes. All session timings confirmed."
     )
-    execute_query("""
-        INSERT INTO outbox (id, event_id, recipient, subject, message, type, status)
-        VALUES (?, ?, 'all_registered_participants@galgotias.edu', 'Schedule Update: Substitute Speaker Allocated', ?, 'schedule_change', 'held')
-    """, (outbox_id, target_event_id, outbox_msg))
+    operation_id = f"op_{uuid.uuid4().hex}"
 
-    # Log to audit trail
-    execute_query(
-        "INSERT INTO audit_log (id, event_id, actor, action, details_json, result) VALUES (?, ?, 'autopilot_scheduler', 'SPEAKER_CANCELLATION_HANDLED', ?, 'SUCCESS')",
-        (f"aud_{uuid.uuid4().hex[:8]}", target_event_id, json.dumps({"cancelled": HERO_SPEAKER["name"], "substitute": substitute_name, "outbox_id": outbox_id}))
-    )
+    def stage_schedule_update(conn):
+        if not ev:
+            conn.execute(
+                """INSERT OR IGNORE INTO events (id, name, brief, event_type)
+                   VALUES (?, 'Hero Schedule Summit', 'Clash-Free Timetable Demo', 'conference')""",
+                (target_event_id,),
+            )
+        kavach.verify_recipient_limit(conn, 1)
+        conn.execute(
+            """INSERT INTO outbox
+               (id, event_id, recipient, subject, message, type, status, operation_id)
+               VALUES (?, ?, 'all_registered_participants@galgotias.edu',
+                       'Schedule Update: Substitute Speaker Allocated', ?,
+                       'schedule_change', 'held', ?)""",
+            (outbox_id, target_event_id, outbox_msg, operation_id),
+        )
+        kavach.log_audit(
+            conn,
+            actor="autopilot_scheduler",
+            action="SPEAKER_CANCELLATION_HANDLED",
+            result="SUCCESS",
+            event_id=target_event_id,
+            details={
+                "cancelled": HERO_SPEAKER["name"],
+                "substitute": substitute_name,
+                "outbox_id": outbox_id,
+            },
+        )
+        return {"outbox_id": outbox_id}
+
+    with get_connection() as conn:
+        result = kavach.execute_with_kavach(
+            conn,
+            target_event_id,
+            "autopilot_scheduler",
+            "speaker_cancellation_notice",
+            stage_schedule_update,
+            operation_id=operation_id,
+            release_staged_notices=False,
+        )
+    if result["status"] != "committed":
+        violation = result.get("violation")
+        if violation:
+            raise InvariantViolation(
+                violation["rule"],
+                violation["item"],
+                violation["detail"],
+                violation.get("suggestion"),
+            )
+        raise RuntimeError(result.get("error", "Could not stage schedule update."))
 
     return {
         "status": "re_planned",

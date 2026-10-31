@@ -19,9 +19,12 @@ from typing import Dict, Any, List, Optional
 
 from backend.core.database.connection import get_connection, fetch_one, fetch_all, execute_query
 from backend.core.database.demo_people import DEMO_FACULTY, HERO_SPEAKER
+from backend.core.safety.kavach import KavachEngine
 from backend.services.event_workflow_service import create_event_request
 from backend.services.schedule_service import solve_timetable, get_scheduling_rooms
 from backend.services.analytics_service import issue_verifiable_certificate, get_analytics_dashboard_data
+
+kavach = KavachEngine()
 
 logger = logging.getLogger(__name__)
 
@@ -266,7 +269,8 @@ def execute_autonomous_event_genesis(
         organizer_email=organizer_email,
         room_id=chosen_room["id"],
         start_time=start_time_str,
-        end_time=end_time_str
+        end_time=end_time_str,
+        budget=params["budget"],
     )
     event_id = event_res["event_id"]
 
@@ -325,10 +329,38 @@ def execute_autonomous_event_genesis(
         f"Campus Announcement: '{params['event_name']}' has been scheduled at {chosen_room['name']}. "
         f"Registration is now live with digital QR gate passes."
     )
-    execute_query("""
-        INSERT INTO outbox (id, event_id, recipient, subject, message, type, status)
-        VALUES (?, ?, 'all_students@galgotias.edu', ?, ?, 'event_launch', 'held')
-    """, (outbox_id, event_id, f"Invitation: {params['event_name']}", outbox_msg))
+    operation_id = f"op_{uuid.uuid4().hex}"
+
+    def stage_event_announcement(conn):
+        kavach.verify_recipient_limit(conn, 1)
+        conn.execute(
+            """INSERT INTO outbox
+               (id, event_id, recipient, subject, message, type, status, operation_id)
+               VALUES (?, ?, 'all_students@galgotias.edu', ?, ?, 'event_launch', 'held', ?)""",
+            (
+                outbox_id,
+                event_id,
+                f"Invitation: {params['event_name']}",
+                outbox_msg,
+                operation_id,
+            ),
+        )
+        return {"outbox_id": outbox_id}
+
+    with get_connection() as conn:
+        announcement_result = kavach.execute_with_kavach(
+            conn,
+            event_id,
+            "autonomous_genesis_agent",
+            "stage_event_announcement",
+            stage_event_announcement,
+            operation_id=operation_id,
+            release_staged_notices=False,
+        )
+    if announcement_result["status"] != "committed":
+        raise RuntimeError(
+            announcement_result.get("error", "Could not stage event announcement.")
+        )
 
     timeline.append({
         "step": 5,

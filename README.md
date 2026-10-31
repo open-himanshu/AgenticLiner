@@ -50,14 +50,14 @@ AgenticLiner/
 
 AgenticLiner enforces strict role-based access control on every route. The seed script (`python backend/services/seed_users.py`) creates exactly **one account per role** with bcrypt password hashing:
 
-| Role | Email Address | Password | Landing Dashboard | Authorized Access |
+| Role | Email Address | Landing Dashboard | Authorized Access |
 |---|---|---|---|---|
-| **Supervisor (University Admin)** | `admin@galgotias.edu` | `Admin@123` | `/supervisor` | Campus event approvals, master calendar, resource limits, audit logs, analytics |
-| **Organiser (Club Host)** | `organiser@galgotias.edu` | `Organiser@123` | `/organiser` | Event planning, catalog cart, OR-Tools timetable, attendee roster, outbox broadcasts, assistant AI |
-| **Data Manager** | `datamanager@galgotias.edu` | `Data@123` | `/data-manager` | CSV uploads & template downloads (venues, equipment, speakers, participants, past events) |
-| **Participant (Student)** | `student@galgotias.edu` | `Student@123` | `/participant` | Event registration, personalized clash-free agenda, QR check-in, feedback submission |
+| **Supervisor (University Admin)** | `admin@galgotias.edu` | `/supervisor` | Campus event approvals, master calendar, resource limits, audit logs, analytics |
+| **Organiser (Club Host)** | `organiser@galgotias.edu` | `/organiser` | Event planning, catalog cart, OR-Tools timetable, attendee roster, outbox broadcasts, assistant AI |
+| **Data Manager** | `datamanager@galgotias.edu` | `/data-manager` | CSV uploads & template downloads (venues, equipment, speakers, participants, past events) |
+| **Participant (Student)** | `student@galgotias.edu` | `/participant` | Event registration, personalized clash-free agenda, QR check-in, feedback submission |
 
-> **Security Note:** Credentials are documented solely in this README and are NOT displayed on the public login UI.
+Set `SUPERVISOR_PASSWORD`, `ORGANISER_PASSWORD`, `DATA_MANAGER_PASSWORD`, and `PARTICIPANT_PASSWORD` before running the seed script. If a password is not configured, the script generates a random password and prints it once when creating that account.
 
 ---
 

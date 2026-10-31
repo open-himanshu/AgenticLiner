@@ -9,6 +9,9 @@ Implements:
 import uuid
 from typing import Dict, Any, List, Optional
 from backend.core.database.connection import get_connection
+from backend.core.safety.kavach import KavachEngine, InvariantViolation
+
+kavach = KavachEngine()
 
 class CommunicationAgent:
     def __init__(self):
@@ -130,19 +133,52 @@ class CommunicationAgent:
             """, (event_id,))
             recipients = [r["email"] for r in cur.fetchall()]
 
-            outbox_entries = []
-            for recipient in recipients:
-                outbox_id = f"notif_{uuid.uuid4().hex[:8]}"
-                cur.execute("""
-                    INSERT INTO outbox (id, event_id, recipient, subject, message, type, status)
-                    VALUES (?, ?, ?, ?, ?, 'schedule_change', 'held')
-                """, (outbox_id, event_id, recipient, subject, body))
-                outbox_entries.append(outbox_id)
+            operation_id = f"op_{uuid.uuid4().hex}"
+
+            def stage_schedule_notices(transaction):
+                kavach.verify_recipient_limit(transaction, recipients)
+                outbox_entries = []
+                for recipient in recipients:
+                    outbox_id = f"notif_{uuid.uuid4().hex[:8]}"
+                    transaction.execute(
+                        """INSERT INTO outbox
+                           (id, event_id, recipient, subject, message, type, status, operation_id)
+                           VALUES (?, ?, ?, ?, ?, 'schedule_change', 'held', ?)""",
+                        (
+                            outbox_id,
+                            event_id,
+                            recipient,
+                            subject,
+                            body,
+                            operation_id,
+                        ),
+                    )
+                    outbox_entries.append(outbox_id)
+                return {"staged_count": len(outbox_entries), "subject": subject}
+
+            result = kavach.execute_with_kavach(
+                conn,
+                event_id,
+                "communication_agent",
+                "schedule_change_notices",
+                stage_schedule_notices,
+                operation_id=operation_id,
+                release_staged_notices=False,
+            )
+            if result["status"] != "committed":
+                violation = result.get("violation")
+                if violation:
+                    raise InvariantViolation(
+                        violation["rule"],
+                        violation["item"],
+                        violation["detail"],
+                        violation.get("suggestion"),
+                    )
+                raise RuntimeError(result.get("error", "Could not stage schedule notices."))
 
             return {
-                "staged_count": len(outbox_entries),
-                "subject": subject,
-                "status": "held_in_outbox"
+                **result["details"],
+                "status": "held_in_outbox",
             }
         finally:
             if close_conn:

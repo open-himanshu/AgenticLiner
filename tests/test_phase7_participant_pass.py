@@ -6,6 +6,7 @@ gate check-in verification via QR scanning, and personalized session recommendat
 
 import pytest
 import httpx
+from conftest import TEST_PASSWORDS
 from backend.api.main import app
 from backend.services.admin_service import reset_all_operational_data
 from backend.services.inventory_service import create_venue
@@ -32,17 +33,17 @@ async def test_qr_code_generation():
 @pytest.mark.anyio
 async def test_student_profile_creation_and_retrieval():
     stud = get_or_create_student_profile(
-        email="rohit@galgotias.edu",
-        name="Rohit Sharma",
+        email="riley@example.invalid",
+        name="Riley Example",
         department="B.Tech AI",
         year=3
     )
-    assert stud["email"] == "rohit@galgotias.edu"
-    assert stud["name"] == "Rohit Sharma"
+    assert stud["email"] == "riley@example.invalid"
+    assert stud["name"] == "Riley Example"
     assert len(stud["interests_list"]) > 0
 
     # Retrieve again should return the existing record
-    stud2 = get_or_create_student_profile("rohit@galgotias.edu")
+    stud2 = get_or_create_student_profile("riley@example.invalid")
     assert stud2["id"] == stud["id"]
 
 @pytest.mark.anyio
@@ -65,8 +66,8 @@ async def test_student_passes_and_gate_qr_flow():
     attendee_mgr = AttendeeManager()
     reg = attendee_mgr.register_student(
         event_id=event_id,
-        name="Pooja Sharma",
-        email="pooja@galgotias.edu",
+        name="Taylor Example",
+        email="taylor@example.invalid",
         department="Computer Science",
         year=2,
         interests=["Robotics", "Python"]
@@ -76,7 +77,7 @@ async def test_student_passes_and_gate_qr_flow():
     reg_id = reg["registration_id"]
 
     # 3. Retrieve student passes
-    passes = get_student_passes("pooja@galgotias.edu")
+    passes = get_student_passes("taylor@example.invalid")
     assert len(passes) == 1
     p = passes[0]
     assert p["event_name"] == "Campus Robotics Hackathon"
@@ -88,11 +89,18 @@ async def test_student_passes_and_gate_qr_flow():
     # 4. Gate Security Scanner scans the QR Pass via HTTP GET
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        await client.post(
+            "/login",
+            data={
+                "email": "organiser@galgotias.edu",
+                "password": TEST_PASSWORDS["ORGANISER_PASSWORD"],
+            },
+        )
         # Browser / mobile camera scan returns HTML confirmation card
         scan_resp = await client.get(f"/api/pass/scan?reg_id={reg_id}", headers={"Accept": "text/html"})
         assert scan_resp.status_code == 200
         assert "ENTRY VERIFIED" in scan_resp.text
-        assert "Pooja Sharma" in scan_resp.text
+        assert "Taylor Example" in scan_resp.text
         assert "Campus Robotics Hackathon" in scan_resp.text
 
         # Verify attendance recorded in DB
@@ -103,6 +111,13 @@ async def test_student_passes_and_gate_qr_flow():
 async def test_invalid_gate_pass_scan():
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        await client.post(
+            "/login",
+            data={
+                "email": "organiser@galgotias.edu",
+                "password": TEST_PASSWORDS["ORGANISER_PASSWORD"],
+            },
+        )
         scan_resp = await client.get("/api/pass/scan?reg_id=fake_pass_id", headers={"Accept": "text/html"})
         assert scan_resp.status_code == 404
         assert "Invalid Ticket" in scan_resp.text
@@ -124,14 +139,17 @@ async def test_personalized_recommendations():
 async def test_http_participant_dashboard_and_registration_portal():
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        # 1. Test public /register page loads with events
+        # 1. Registration requires a participant session.
+        reg_page = await client.get("/register")
+        assert reg_page.status_code in (401, 302)
+
+        # 2. Login as student
+        login_res = await client.post("/login", data={"email": "student@galgotias.edu", "password": TEST_PASSWORDS["PARTICIPANT_PASSWORD"]})
+        assert login_res.status_code in (200, 302)
+
         reg_page = await client.get("/register")
         assert reg_page.status_code == 200
         assert "Campus Event Registration Portal" in reg_page.text
-
-        # 2. Login as student
-        login_res = await client.post("/login", data={"email": "student@galgotias.edu", "password": "Student@123"})
-        assert login_res.status_code in (200, 302)
 
         # 3. Access /participant dashboard
         part_resp = await client.get("/participant")

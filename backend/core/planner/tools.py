@@ -16,8 +16,16 @@ resource_opt = ResourceOptimizer()
 
 def tool_find_free_venues(min_capacity: int, date: str, start_time: str, end_time: str) -> Dict[str, Any]:
     """Finds all campus rooms that are not booked and have at least min_capacity seats."""
-    start_dt = f"{date} {start_time}" if " " not in start_time else start_time
-    end_dt = f"{date} {end_time}" if " " not in end_time else end_time
+    start_dt = (
+        start_time
+        if " " in start_time or "T" in start_time
+        else f"{date} {start_time}"
+    )
+    end_dt = (
+        end_time
+        if " " in end_time or "T" in end_time
+        else f"{date} {end_time}"
+    )
 
     with get_connection() as conn:
         cur = conn.cursor()
@@ -75,6 +83,7 @@ def tool_requisition_campus_resources(
     date: str,
     start_time: str,
     end_time: str,
+    budget: float,
     event_details: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
@@ -86,8 +95,18 @@ def tool_requisition_campus_resources(
 
     try:
         items = json.loads(items_json) if isinstance(items_json, str) else items_json
-    except Exception:
-        items = []
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise InvariantViolation(
+            "invalid_requisition",
+            event_id,
+            "Requisition items must be valid JSON.",
+        ) from exc
+    if not isinstance(items, list):
+        raise InvariantViolation(
+            "invalid_requisition",
+            event_id,
+            "Requisition items must be a list.",
+        )
 
     operation_id = f"op_{uuid.uuid4().hex}"
 
@@ -97,8 +116,8 @@ def tool_requisition_campus_resources(
                 """
                 INSERT INTO events (
                     id, name, brief, event_type, expected_participants,
-                    organizer_department, status
-                ) VALUES (?, ?, ?, ?, ?, ?, 'planned')
+                    organizer_department, budget, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'planned')
                 """,
                 (
                     event_id,
@@ -106,13 +125,35 @@ def tool_requisition_campus_resources(
                     event_details["brief"],
                     event_details["event_type"],
                     event_details["expected_participants"],
-                    event_details["organizer_department"],
+                    event_details.get(
+                        "organizer_department", "School of AI"
+                    ),
+                    budget,
                 ),
+            )
+        else:
+            conn.execute(
+                "UPDATE events SET budget = ? WHERE id = ?",
+                (budget, event_id),
             )
 
         # 1. Invariant verification
+        kavach.verify_time_window(start_dt, end_dt)
         kavach.verify_room_capacity(conn, room_id, attendance)
         kavach.verify_room_overlap(conn, room_id, start_dt, end_dt)
+        try:
+            item_costs = [
+                float(item.get("cost", item.get("estimated_cost", 0)))
+                for item in items
+            ]
+        except (TypeError, ValueError, AttributeError) as exc:
+            raise InvariantViolation(
+                "invalid_booking_cost",
+                event_id,
+                "Each requisition cost must be a valid number.",
+            ) from exc
+        proposed_cost = sum(item_costs)
+        kavach.verify_event_budget(conn, event_id, budget, proposed_cost)
 
         cur = conn.cursor()
         cur.execute("SELECT name, requires_special_approval FROM rooms WHERE id = ?", (room_id,))
@@ -123,16 +164,22 @@ def tool_requisition_campus_resources(
         # 2. Allocate Venue
         room_booking_id = f"bk_{uuid.uuid4().hex[:8]}"
         conn.execute("""
-            INSERT INTO bookings (id, event_id, room_id, item_name, category, start_time, end_time, quantity, approval_status, status)
-            VALUES (?, ?, ?, ?, 'venue', ?, ?, 1, ?, 'confirmed')
+            INSERT INTO bookings (id, event_id, room_id, item_name, category, start_time, end_time, quantity, estimated_cost, approval_status, status)
+            VALUES (?, ?, ?, ?, 'venue', ?, ?, 1, 0, ?, 'confirmed')
         """, (room_booking_id, event_id, room_id, room_name, start_dt, end_dt, room_approval))
 
         allocated_details = [{"type": "venue", "name": room_name, "id": room_id, "approval": room_approval}]
 
         # 3. Allocate Resources & Equipment
-        for it in items:
+        for it, item_cost in zip(items, item_costs):
             res_id = it.get("resource_id")
             qty = it.get("quantity", 1)
+            if item_cost < 0:
+                raise InvariantViolation(
+                    "invalid_booking_cost",
+                    str(res_id or "resource"),
+                    "Booking cost cannot be negative.",
+                )
             kavach.verify_resource_stock(conn, res_id, qty, start_dt, end_dt)
             
             cur.execute("SELECT name, category, requires_approval FROM resources WHERE id = ?", (res_id,))
@@ -141,9 +188,9 @@ def tool_requisition_campus_resources(
                 item_approval = "pending_dean_approval" if r_data["requires_approval"] else "auto_approved"
                 b_id = f"bk_{uuid.uuid4().hex[:8]}"
                 conn.execute("""
-                    INSERT INTO bookings (id, event_id, resource_id, item_name, category, start_time, end_time, quantity, approval_status, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed')
-                """, (b_id, event_id, res_id, r_data["name"], r_data["category"], start_dt, end_dt, qty, item_approval))
+                    INSERT INTO bookings (id, event_id, resource_id, item_name, category, start_time, end_time, quantity, estimated_cost, approval_status, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed')
+                """, (b_id, event_id, res_id, r_data["name"], r_data["category"], start_dt, end_dt, qty, item_cost, item_approval))
                 
                 # Update allocated stock
                 conn.execute("UPDATE resources SET allocated_stock = allocated_stock + ? WHERE id = ?", (qty, res_id))

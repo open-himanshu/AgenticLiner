@@ -5,6 +5,7 @@ Phase 8: Tests for Google OR-Tools CP-SAT Scheduler, Dynamic Speaker Reallocatio
 
 import pytest
 from fastapi.testclient import TestClient
+from conftest import TEST_PASSWORDS
 from backend.api.main import app
 from backend.services.schedule_service import (
     solve_timetable,
@@ -13,7 +14,8 @@ from backend.services.schedule_service import (
     get_scheduling_rooms
 )
 from backend.core.database.demo_people import HERO_SPEAKER
-from backend.core.database.connection import fetch_one
+from backend.core.database.connection import fetch_one, fetch_all
+from backend.core.safety.kavach import KavachEngine, InvariantViolation
 
 @pytest.fixture
 def client():
@@ -66,6 +68,27 @@ def test_handle_hero_speaker_cancellation():
     assert row["status"] == "held"
     assert HERO_SPEAKER["name"] in row["message"] or "Substitute" in row["subject"]
 
+
+def test_hero_schedule_change_notice_rolls_back_when_blast_radius_is_exceeded(monkeypatch):
+    from backend.services import schedule_service
+
+    before = len(fetch_all(
+        "SELECT id FROM outbox WHERE event_id = 'ev_001' AND type = 'schedule_change'"
+    ))
+    monkeypatch.setattr(
+        schedule_service, "kavach", KavachEngine(max_blast_radius=1)
+    )
+
+    with pytest.raises(InvariantViolation) as exc_info:
+        handle_hero_speaker_cancellation(event_id="ev_001")
+
+    assert exc_info.value.rule == "blast_radius_exceeded"
+    after = len(fetch_all(
+        "SELECT id FROM outbox WHERE event_id = 'ev_001' AND type = 'schedule_change'"
+    ))
+    assert after == before
+
+
 def test_export_schedule_csv():
     res = solve_timetable()
     csv_str = export_schedule_csv(res["schedule"])
@@ -74,6 +97,14 @@ def test_export_schedule_csv():
     assert "Generative AI Systems Masterclass" in csv_str
 
 def test_api_schedule_endpoints(client):
+    login = client.post(
+        "/login",
+        json={
+            "email": "organiser@galgotias.edu",
+            "password": TEST_PASSWORDS["ORGANISER_PASSWORD"],
+        },
+    )
+    assert login.status_code == 200
     # 1. POST /api/schedule/solve
     res1 = client.post("/api/schedule/solve", json={})
     assert res1.status_code == 200
@@ -104,7 +135,7 @@ def test_schedule_page_render(client):
     # 2. Login as organiser
     login_res = client.post("/login", json={
         "email": "organiser@galgotias.edu",
-        "password": "Organiser@123"
+        "password": TEST_PASSWORDS["ORGANISER_PASSWORD"]
     })
     assert login_res.status_code in [200, 302]
 
@@ -115,3 +146,5 @@ def test_schedule_page_render(client):
     assert "Google OR-Tools CP-SAT" in res.text
     assert "2D Venue &times; Slot Matrix" in res.text
     assert "Hero Demo: Speaker Cancels" in res.text
+    assert f"Speaker Cancelled: {HERO_SPEAKER['name']}" in res.text
+    assert f"Speaker: {HERO_SPEAKER['name']} (Associate Prof)" in res.text

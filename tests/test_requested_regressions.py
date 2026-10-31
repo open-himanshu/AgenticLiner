@@ -3,13 +3,87 @@ import sys
 from types import SimpleNamespace
 
 import pytest
+from fastapi.testclient import TestClient
 
 from backend.core.database.connection import get_connection, get_db_path
+from conftest import TEST_PASSWORDS
+from backend.api.main import app
 from backend.core.planner import agent as planner_agent
 from backend.core.safety.kavach import InvariantViolation, KavachEngine
 from backend.modules.module5_comm_agent.agent import CommunicationAgent
 from backend.services import agentic_genesis_service
 from backend.core.planner import tools as planner_tools
+
+
+def test_hero_speaker_cancellation_uses_canonical_identity():
+    from backend.core.database.demo_people import HERO_SPEAKER
+    from backend.services.schedule_service import DEFAULT_SESSIONS
+
+    client = TestClient(app)
+    client.post(
+        "/login",
+        data={
+            "email": "organiser@galgotias.edu",
+            "password": TEST_PASSWORDS["ORGANISER_PASSWORD"],
+        },
+    )
+    response = client.post("/api/schedule/hero-speaker-cancel")
+
+    assert response.status_code == 200
+    assert HERO_SPEAKER["name"] == "Dr. Neha Verma"
+    assert response.json()["original_speaker"] == HERO_SPEAKER["name"]
+    hero_session = next(
+        session for session in DEFAULT_SESSIONS if session["id"] == "sess_02"
+    )
+    assert hero_session["speaker_id"] == HERO_SPEAKER["id"]
+    with get_connection() as conn:
+        seeded_name = conn.execute(
+            "SELECT name FROM speakers WHERE id = ?", (HERO_SPEAKER["id"],)
+        ).fetchone()["name"]
+    assert seeded_name == HERO_SPEAKER["name"]
+
+
+def test_outbox_page_route_renders_under_canonical_path():
+    client = TestClient(app)
+    login_response = client.post(
+        "/login",
+        data={
+            "email": "organiser@galgotias.edu",
+            "password": TEST_PASSWORDS["ORGANISER_PASSWORD"],
+        },
+    )
+    assert login_response.status_code in (200, 302)
+
+    response = client.get("/outbox")
+    compatibility_response = client.get("/notices")
+
+    assert response.status_code == 200
+    assert "Outbox" in response.text
+    assert compatibility_response.status_code == 200
+
+
+def test_demo_google_account_uses_fictional_identity():
+    client = TestClient(app)
+    login_response = client.get("/login")
+    signup_response = client.get("/signup")
+    anonymous_registration_response = client.get("/register")
+    participant_client = TestClient(app)
+    participant_client.post(
+        "/login",
+        data={
+            "email": "student@galgotias.edu",
+            "password": TEST_PASSWORDS["PARTICIPANT_PASSWORD"],
+        },
+    )
+    registration_response = participant_client.get("/register")
+
+    assert login_response.status_code == 200
+    assert signup_response.status_code == 200
+    assert anonymous_registration_response.status_code in (401, 302)
+    assert registration_response.status_code == 200
+    assert "Casey Example" in login_response.text
+    assert "Casey Example" in signup_response.text
+    assert "Riley Example" in registration_response.text
 
 
 def test_database_path_uses_isolated_environment_variable(monkeypatch, tmp_path):
@@ -127,6 +201,7 @@ def test_failed_resource_requisition_rolls_back_created_event():
         date="2026-12-01",
         start_time="09:00:00",
         end_time="10:00:00",
+        budget=25000,
         event_details={
             "name": "Failed requisition",
             "brief": "Must roll back",

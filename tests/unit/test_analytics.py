@@ -17,7 +17,7 @@ def test_certificate_generation():
         )
 
     res = engine.generate_certificate(
-        student_name="Himanshu",
+        student_name="Morgan Example",
         event_name="SparkX 3.0 Hackathon",
         student_id="stud_001",
         event_id="ev_001"

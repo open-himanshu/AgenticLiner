@@ -55,6 +55,8 @@ async def add_venue_endpoint(
         if "text/html" in accept or "multipart/form-data" in request.headers.get("content-type", ""):
             return RedirectResponse(url="/data-manager?tab=venues&added=1", status_code=status.HTTP_302_FOUND)
         return JSONResponse(content={"success": True, "venue": venue})
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error adding venue: {e}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -103,6 +105,8 @@ async def add_equipment_endpoint(
         if "text/html" in accept or "multipart/form-data" in request.headers.get("content-type", ""):
             return RedirectResponse(url="/data-manager?tab=equipment&added=1", status_code=status.HTTP_302_FOUND)
         return JSONResponse(content={"success": True, "equipment": item})
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error adding equipment: {e}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -151,6 +155,8 @@ async def add_speaker_endpoint(
         if "text/html" in accept or "multipart/form-data" in request.headers.get("content-type", ""):
             return RedirectResponse(url="/data-manager?tab=speakers&added=1", status_code=status.HTTP_302_FOUND)
         return JSONResponse(content={"success": True, "speaker": speaker})
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error adding speaker: {e}")
         raise HTTPException(status_code=400, detail=str(e))

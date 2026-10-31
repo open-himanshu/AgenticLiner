@@ -28,6 +28,20 @@ def init_database(db_conn: sqlite3.Connection = None):
         }
         if "operation_id" not in outbox_columns:
             conn.execute("ALTER TABLE outbox ADD COLUMN operation_id TEXT")
+        event_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(events)")
+        }
+        if "budget" not in event_columns:
+            conn.execute(
+                "ALTER TABLE events ADD COLUMN budget REAL NOT NULL DEFAULT 0"
+            )
+        booking_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(bookings)")
+        }
+        if "estimated_cost" not in booking_columns:
+            conn.execute(
+                "ALTER TABLE bookings ADD COLUMN estimated_cost REAL NOT NULL DEFAULT 0"
+            )
         print("Database schema initialized successfully.")
     finally:
         if not db_conn:
@@ -74,7 +88,7 @@ def seed_campus_data(db_conn: sqlite3.Connection = None, force_reseed: bool = Fa
 
         # 2. Speakers & Faculty Mentors
         speakers = [
-            ("spk_01", HERO_SPEAKER["name"], "School of AI", "Generative AI, AI Safety, Optimization", "hero@example.invalid", "+910000000001", json.dumps(["09:00-13:00", "14:00-17:00"])),
+            (HERO_SPEAKER["id"], HERO_SPEAKER["name"], "School of AI", "Generative AI, AI Safety, Optimization", "hero@example.invalid", "+910000000001", json.dumps(["09:00-13:00", "14:00-17:00"])),
             ("spk_02", DEMO_FACULTY["ml_mentor"], "Machine Learning Group", "Machine Learning, Deep Learning, MLOps", "ml-mentor@example.invalid", "+910000000002", json.dumps(["10:00-16:00"])),
             ("spk_03", DEMO_FACULTY["python_mentor"], "Python for AI", "Algorithms, Python Architecture, Data Pipelines", "python-mentor@example.invalid", "+910000000003", json.dumps(["11:00-15:00", "16:00-18:00"])),
             ("spk_04", DEMO_FACULTY["dean"], "Dean SoAI", "Keynotes, Industry AI, Future Tech", "dean@example.invalid", "+910000000004", json.dumps(["09:30-11:30"])),

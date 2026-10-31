@@ -15,6 +15,7 @@ from backend.services.pass_service import (
 )
 from backend.modules.module2_scheduling.attendee_manager import AttendeeManager
 from backend.core.database.connection import fetch_one
+from backend.api.dependencies import require_role
 
 logger = logging.getLogger(__name__)
 attendee_mgr = AttendeeManager()
@@ -24,7 +25,8 @@ router = APIRouter(prefix="/api/pass", tags=["Gate Pass & Verification"])
 @router.get("/scan")
 async def scan_gate_pass(
     request: Request,
-    reg_id: str = Query(...)
+    reg_id: str = Query(...),
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
 ):
     """
     Gate Scanner Endpoint: Scanned via mobile camera or barcode scanner at event entry gate.
