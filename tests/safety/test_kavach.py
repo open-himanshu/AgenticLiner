@@ -27,6 +27,8 @@ def test_kavach_successful_commit(test_db):
         (event_id, "Test Hackathon", "A 2-day hackathon", 50)
     )
 
+    operation_id = "op_success_test"
+
     def valid_booking_action(conn):
         kavach.verify_room_capacity(conn, "room_sem_101", 50)
         kavach.verify_room_overlap(conn, "room_sem_101", "2026-11-20 10:00:00", "2026-11-20 12:00:00")
@@ -38,12 +40,12 @@ def test_kavach_successful_commit(test_db):
         )
         m_id = f"msg_{uuid.uuid4().hex[:6]}"
         conn.execute(
-            "INSERT INTO outbox (id, event_id, recipient, subject, message, status) VALUES (?, ?, ?, ?, ?, 'held')",
-            (m_id, event_id, "student@galgotias.edu", "Booking Confirmed", "Your hall is booked.")
+            "INSERT INTO outbox (id, event_id, recipient, subject, message, status, operation_id) VALUES (?, ?, ?, ?, ?, 'held', ?)",
+            (m_id, event_id, "student@galgotias.edu", "Booking Confirmed", "Your hall is booked.", operation_id)
         )
         return {"booking_id": b_id}
 
-    result = kavach.execute_with_kavach(test_db, event_id, "test_user", "book_venue", valid_booking_action)
+    result = kavach.execute_with_kavach(test_db, event_id, "test_user", "book_venue", valid_booking_action, operation_id)
     
     assert result["status"] == "committed"
     cur = test_db.cursor()
@@ -62,6 +64,8 @@ def test_kavach_capacity_overrun_rollback(test_db):
         (event_id, "Mega Workshop", "Massive AI workshop", 150)
     )
 
+    operation_id = "op_failure_test"
+
     def invalid_capacity_action(conn):
         kavach.verify_room_capacity(conn, "room_comp_lab", 150)
         
@@ -70,12 +74,12 @@ def test_kavach_capacity_overrun_rollback(test_db):
             ("bk_bad", event_id, "room_comp_lab", "Computing Lab 4", "venue", "2026-11-20 10:00:00", "2026-11-20 12:00:00", "confirmed")
         )
         conn.execute(
-            "INSERT INTO outbox (id, event_id, recipient, subject, message, status) VALUES (?, ?, ?, ?, ?, 'held')",
-            ("msg_bad", event_id, "student@galgotias.edu", "Bad Notice", "Wrong room booked")
+            "INSERT INTO outbox (id, event_id, recipient, subject, message, status, operation_id) VALUES (?, ?, ?, ?, ?, 'held', ?)",
+            ("msg_bad", event_id, "student@galgotias.edu", "Bad Notice", "Wrong room booked", operation_id)
         )
         return {"status": "ok"}
 
-    result = kavach.execute_with_kavach(test_db, event_id, "test_user", "book_oversized", invalid_capacity_action)
+    result = kavach.execute_with_kavach(test_db, event_id, "test_user", "book_oversized", invalid_capacity_action, operation_id)
 
     assert result["status"] == "rolled_back"
     assert result["violation"]["rule"] == "capacity_overrun"

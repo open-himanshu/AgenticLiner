@@ -182,6 +182,7 @@ CREATE TABLE IF NOT EXISTS outbox (
     message TEXT NOT NULL,
     type TEXT DEFAULT 'general', -- confirmation, reminder, schedule_change, certificate
     status TEXT DEFAULT 'held', -- held, sent, failed
+    operation_id TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sent_at TIMESTAMP,
     error_message TEXT,

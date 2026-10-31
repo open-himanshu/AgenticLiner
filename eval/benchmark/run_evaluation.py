@@ -12,6 +12,7 @@ import os
 import sys
 import json
 import time
+import tempfile
 
 # Ensure project root is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
@@ -168,40 +169,46 @@ def evaluate_setup_c(prompts: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 def main():
-    print("=== AgenticLiner Benchmark Evaluation Starting ===")
-    prompts = load_prompts()
-    print(f"Loaded {len(prompts)} prompts across clean, ambiguous, high_conflict, and destructive categories.")
+    with tempfile.TemporaryDirectory(prefix="agenticliner-benchmark-") as temp_dir:
+        os.environ["DATABASE_PATH"] = os.path.join(temp_dir, "benchmark.sqlite3")
+        from backend.core.database.init_db import init_database, seed_campus_data
 
-    t0 = time.time()
-    results = {
-        "benchmark_timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "total_prompts": len(prompts),
-        "categories": {
-            "clean": 15,
-            "ambiguous": 15,
-            "high_conflict": 15,
-            "destructive": 5
-        },
-        "comparison": [
-            evaluate_setup_a(prompts),
-            evaluate_setup_b(prompts),
-            evaluate_setup_c(prompts)
-        ]
-    }
-    elapsed = round(time.time() - t0, 3)
-    results["elapsed_seconds"] = elapsed
+        init_database()
+        seed_campus_data()
+        print("=== AgenticLiner Benchmark Evaluation Starting ===")
+        prompts = load_prompts()
+        print(f"Loaded {len(prompts)} prompts across clean, ambiguous, high_conflict, and destructive categories.")
 
-    with open(RESULTS_PATH, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2)
+        t0 = time.time()
+        results = {
+            "benchmark_timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "total_prompts": len(prompts),
+            "categories": {
+                "clean": 15,
+                "ambiguous": 15,
+                "high_conflict": 15,
+                "destructive": 5
+            },
+            "comparison": [
+                evaluate_setup_a(prompts),
+                evaluate_setup_b(prompts),
+                evaluate_setup_c(prompts)
+            ]
+        }
+        elapsed = round(time.time() - t0, 3)
+        results["elapsed_seconds"] = elapsed
 
-    print(f"Benchmark completed in {elapsed}s.")
-    print(f"Results written to: {RESULTS_PATH}")
-    for s in results["comparison"]:
-        print(f"\n{s['setup_name']}:")
-        print(f"  Conflict Detection: {s['conflict_detection_rate']}%")
-        print(f"  Destructive Prevention: {s['destructive_prevention_rate']}%")
-        print(f"  Adaptive Clarification: {s['adaptive_clarification_rate']}%")
-        print(f"  DB Integrity: {s['db_integrity_status']}")
+        with open(RESULTS_PATH, "w", encoding="utf-8") as f:
+            json.dump(results, f, indent=2)
+
+        print(f"Benchmark completed in {elapsed}s.")
+        print(f"Results written to: {RESULTS_PATH}")
+        for s in results["comparison"]:
+            print(f"\n{s['setup_name']}:")
+            print(f"  Conflict Detection: {s['conflict_detection_rate']}%")
+            print(f"  Destructive Prevention: {s['destructive_prevention_rate']}%")
+            print(f"  Adaptive Clarification: {s['adaptive_clarification_rate']}%")
+            print(f"  DB Integrity: {s['db_integrity_status']}")
 
 if __name__ == "__main__":
     main()

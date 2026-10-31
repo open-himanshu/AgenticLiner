@@ -126,11 +126,22 @@ class KavachEngine:
 
     def verify_resource_stock(self, conn: sqlite3.Connection, resource_id: str, requested_qty: int, start_time: str, end_time: str) -> None:
         """Verify that requested campus equipment or volunteer quota does not exceed stock."""
+        if requested_qty <= 0:
+            raise InvariantViolation(
+                rule="invalid_resource_quantity",
+                item=resource_id,
+                detail="Requested resource quantity must be greater than zero.",
+            )
+
         cur = conn.cursor()
         cur.execute("SELECT name, stock FROM resources WHERE id = ?", (resource_id,))
         res = cur.fetchone()
         if not res:
-            return
+            raise InvariantViolation(
+                rule="resource_not_found",
+                item=resource_id,
+                detail=f"Resource ID '{resource_id}' does not exist in campus inventory.",
+            )
         total_stock = res["stock"]
         
         cur.execute("""
@@ -154,13 +165,22 @@ class KavachEngine:
                 suggestion=f"Cap quantity to {available} units or submit inter-department requisition."
             )
 
-    def execute_with_kavach(self, conn: sqlite3.Connection, event_id: str, actor: str, operation_name: str, actions_callback) -> Dict[str, Any]:
+    def execute_with_kavach(
+        self,
+        conn: sqlite3.Connection,
+        event_id: str,
+        actor: str,
+        operation_name: str,
+        actions_callback,
+        operation_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
         Executes multi-action event mutations inside an isolated SQLite savepoint.
         If any campus invariant fails, performs an instant atomic ROLLBACK to the savepoint,
         drops any staged outbox notices, and logs the detailed failure in the audit log.
         """
         savepoint_name = f"sp_{uuid.uuid4().hex[:8]}"
+        operation_id = operation_id or f"op_{uuid.uuid4().hex}"
         conn.execute(f"SAVEPOINT {savepoint_name};")
         self.log_audit(conn, actor, f"SAVEPOINT_CREATE:{savepoint_name}", "SUCCESS", event_id=event_id)
 
@@ -172,7 +192,11 @@ class KavachEngine:
             self.log_audit(conn, actor, f"SAVEPOINT_COMMIT:{operation_name}", "SUCCESS", event_id=event_id, details=result_payload)
             
             # Release staged outbox messages for this event
-            conn.execute("UPDATE outbox SET status = 'sent', sent_at = CURRENT_TIMESTAMP WHERE event_id = ? AND status = 'held'", (event_id,))
+            conn.execute(
+                "UPDATE outbox SET status = 'sent', sent_at = CURRENT_TIMESTAMP "
+                "WHERE operation_id = ? AND status = 'held'",
+                (operation_id,),
+            )
 
             return {
                 "status": "committed",
@@ -186,7 +210,10 @@ class KavachEngine:
             conn.execute(f"ROLLBACK TO SAVEPOINT {savepoint_name};")
             conn.execute(f"RELEASE SAVEPOINT {savepoint_name};")
             # Drop staged outbox messages
-            conn.execute("DELETE FROM outbox WHERE event_id = ? AND status = 'held'", (event_id,))
+            conn.execute(
+                "DELETE FROM outbox WHERE operation_id = ? AND status = 'held'",
+                (operation_id,),
+            )
             
             error_details = {
                 "rule": iv.rule,
@@ -205,7 +232,10 @@ class KavachEngine:
         except Exception as ex:
             conn.execute(f"ROLLBACK TO SAVEPOINT {savepoint_name};")
             conn.execute(f"RELEASE SAVEPOINT {savepoint_name};")
-            conn.execute("DELETE FROM outbox WHERE event_id = ? AND status = 'held'", (event_id,))
+            conn.execute(
+                "DELETE FROM outbox WHERE operation_id = ? AND status = 'held'",
+                (operation_id,),
+            )
             
             self.log_audit(conn, actor, f"SYSTEM_ERROR:{operation_name}", "FAILED", event_id=event_id, details={"error": str(ex)})
             return {

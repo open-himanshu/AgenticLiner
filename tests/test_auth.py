@@ -192,7 +192,7 @@ async def test_signup_otp_and_verification_flow():
         res = await client.post(
             "/signup",
             data={
-                "full_name": "Dr. Sunita Rao",
+                "full_name": "Dr. Nova Example",
                 "email": new_email,
                 "role": "organiser",
                 "department": "School of AI",
@@ -231,7 +231,7 @@ async def test_signup_otp_and_verification_flow():
         # 4. Confirm newly registered user can access /organiser
         res_dashboard = await client.get("/organiser")
         assert res_dashboard.status_code == 200
-        assert "Dr. Sunita Rao" in res_dashboard.text
+        assert "Dr. Nova Example" in res_dashboard.text
 
 @pytest.mark.anyio
 async def test_signup_weak_password_rejected():
@@ -307,8 +307,8 @@ async def test_google_auth_fast_login_and_role_access():
             "/auth/google",
             json={
                 "demo_google": True,
-                "email": "prof.sharma.google@galgotias.edu",
-                "name": "Prof. Sharma",
+                "email": "prof.pixel.hart@example.invalid",
+                "name": "Prof. Pixel Hart",
                 "role": "organiser",
                 "department": "Computer Science (CSE)"
             }
@@ -317,13 +317,13 @@ async def test_google_auth_fast_login_and_role_access():
         data = res.json()
         assert data["success"] is True
         assert data["redirect_url"] == "/organiser"
-        assert data["user"]["email"] == "prof.sharma.google@galgotias.edu"
+        assert data["user"]["email"] == "prof.pixel.hart@example.invalid"
         assert data["user"]["role"] == "organiser"
 
         # Verify session cookie was issued and can access /organiser
         res_dash = await client.get("/organiser")
         assert res_dash.status_code == 200
-        assert "Prof. Sharma" in res_dash.text
+        assert "Prof. Pixel Hart" in res_dash.text
 
 @pytest.mark.anyio
 async def test_email_service_safety():
@@ -334,4 +334,3 @@ async def test_email_service_safety():
     if not is_smtp_configured():
         assert ok is False
         assert "SMTP is not configured" in err
-

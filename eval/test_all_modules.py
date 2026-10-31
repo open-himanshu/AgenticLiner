@@ -1,5 +1,6 @@
 import sys
 import os
+import tempfile
 
 # Ensure root path
 sys.path.insert(0, os.path.abspath("."))
@@ -90,14 +91,20 @@ def test_safety_and_audit():
     print("[PASS] Kavach Safety & Raw SQLite Audit: 100% PURE (Zero Overlaps, Zero Leaks)")
 
 if __name__ == "__main__":
-    print("=== Testing All 7 SparkX 3.0 Modules End-to-End ===")
-    test_module_1()
-    test_module_2()
-    test_module_3()
-    test_module_4()
-    test_module_5()
-    test_module_6()
-    test_module_7()
-    test_safety_and_audit()
-    print("==================================================")
-    print("ALL 7 MODULES FULLY OPERATIONAL & VERIFIED!")
+    with tempfile.TemporaryDirectory(prefix="agenticliner-eval-") as temp_dir:
+        os.environ["DATABASE_PATH"] = os.path.join(temp_dir, "eval.sqlite3")
+        from backend.core.database.init_db import init_database, seed_campus_data
+
+        init_database()
+        seed_campus_data()
+        print("=== Testing All 7 SparkX 3.0 Modules End-to-End ===")
+        test_module_1()
+        test_module_2()
+        test_module_3()
+        test_module_4()
+        test_module_5()
+        test_module_6()
+        test_module_7()
+        test_safety_and_audit()
+        print("==================================================")
+        print("ALL 7 MODULES FULLY OPERATIONAL & VERIFIED!")

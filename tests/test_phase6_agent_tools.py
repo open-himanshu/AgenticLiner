@@ -117,6 +117,19 @@ async def test_http_agent_run_endpoint():
     # Create venue for autonomous planner to find
     await create_venue(name="Main Campus Convention Hall", capacity=300, location="Admin Block")
     await create_equipment(name="Extension Boards (Spike Strips)", category="equipment", stock=50)
+    from backend.core.database.connection import execute_query
+    execute_query(
+        "INSERT INTO resources (id, category, name, stock) VALUES (?, ?, ?, ?)",
+        ("res_ext_boards", "equipment", "Extension Boards", 50),
+    )
+    execute_query(
+        "INSERT INTO resources (id, category, name, stock) VALUES (?, ?, ?, ?)",
+        ("res_first_aid", "misc", "First Aid Kits", 10),
+    )
+    execute_query(
+        "INSERT INTO resources (id, category, name, stock) VALUES (?, ?, ?, ?)",
+        ("res_food_lunch", "food", "Lunch Boxes", 1000),
+    )
 
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
@@ -133,6 +146,6 @@ async def test_http_agent_run_endpoint():
 
         assert resp.status_code == 200
         data = resp.json()
-        assert data["success"] is True
+        assert data["success"] is True, data
         assert len(data["timeline"]) >= 4
         assert "Main Campus Convention Hall" in data["venue"]

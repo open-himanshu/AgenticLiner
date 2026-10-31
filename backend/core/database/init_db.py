@@ -13,6 +13,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 
 from backend.core.database.connection import get_connection, get_db_path
+from backend.core.database.demo_people import DEMO_FACULTY, HERO_SPEAKER
 
 SCHEMA_FILE = Path(__file__).parent / "schema.sql"
 
@@ -22,6 +23,11 @@ def init_database(db_conn: sqlite3.Connection = None):
         with open(SCHEMA_FILE, "r", encoding="utf-8") as f:
             schema_sql = f.read()
         conn.executescript(schema_sql)
+        outbox_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(outbox)")
+        }
+        if "operation_id" not in outbox_columns:
+            conn.execute("ALTER TABLE outbox ADD COLUMN operation_id TEXT")
         print("Database schema initialized successfully.")
     finally:
         if not db_conn:
@@ -68,11 +74,11 @@ def seed_campus_data(db_conn: sqlite3.Connection = None, force_reseed: bool = Fa
 
         # 2. Speakers & Faculty Mentors
         speakers = [
-            ("spk_01", "Dr. Vartika Puri", "School of AI", "Generative AI, AI Safety, Optimization", "vartika.puri@galgotiasuniversity.edu.in", "+919560430101", json.dumps(["09:00-13:00", "14:00-17:00"])),
-            ("spk_02", "Prof. Akhilesh Sir", "Machine Learning Group", "Machine Learning, Deep Learning, MLOps", "akhilesh.ml@galgotiasuniversity.edu.in", "+919876543210", json.dumps(["10:00-16:00"])),
-            ("spk_03", "Prof. Niraj Sir", "Python for AI", "Algorithms, Python Architecture, Data Pipelines", "niraj.ai@galgotiasuniversity.edu.in", "+919811223344", json.dumps(["11:00-15:00", "16:00-18:00"])),
-            ("spk_04", "Dr. Manish Raj", "Dean SoAI", "Keynotes, Industry AI, Future Tech", "dean.soai@galgotiasuniversity.edu.in", "+919877112233", json.dumps(["09:30-11:30"])),
-            ("spk_05", "Dr. Neha Verma (Substitute)", "School of AI", "Machine Learning, Generative AI, Data Science", "neha.ai@galgotiasuniversity.edu.in", "+919876112233", json.dumps(["09:00-17:00"])),
+            ("spk_01", HERO_SPEAKER["name"], "School of AI", "Generative AI, AI Safety, Optimization", "hero@example.invalid", "+910000000001", json.dumps(["09:00-13:00", "14:00-17:00"])),
+            ("spk_02", DEMO_FACULTY["ml_mentor"], "Machine Learning Group", "Machine Learning, Deep Learning, MLOps", "ml-mentor@example.invalid", "+910000000002", json.dumps(["10:00-16:00"])),
+            ("spk_03", DEMO_FACULTY["python_mentor"], "Python for AI", "Algorithms, Python Architecture, Data Pipelines", "python-mentor@example.invalid", "+910000000003", json.dumps(["11:00-15:00", "16:00-18:00"])),
+            ("spk_04", DEMO_FACULTY["dean"], "Dean SoAI", "Keynotes, Industry AI, Future Tech", "dean@example.invalid", "+910000000004", json.dumps(["09:30-11:30"])),
+            (HERO_SPEAKER["substitute_id"], HERO_SPEAKER["substitute_name"], HERO_SPEAKER["substitute_department"], "Machine Learning, Generative AI, Data Science", "substitute@example.invalid", "+910000000005", json.dumps(["09:00-17:00"])),
         ]
         cursor.executemany(
             "INSERT INTO speakers (id, name, department, topics, email, phone, availability_json) VALUES (?, ?, ?, ?, ?, ?, ?)",

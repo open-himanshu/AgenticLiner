@@ -69,6 +69,7 @@ pip install -r requirements.txt
 
 # 2. Configure environment
 copy .env.example .env
+# Optionally set GEMINI_MODEL to select the Gemini model (default: gemini-2.5-flash)
 
 # 3. Initialize database & seed role accounts
 python backend/services/seed_users.py
@@ -80,6 +81,9 @@ pytest tests/test_auth.py
 python -m uvicorn backend.api.main:app --host 127.0.0.1 --port 8000
 ```
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser. Unauthenticated requests automatically redirect to `/login`.
+
+Pytest assigns each test a separate temporary SQLite database through `DATABASE_PATH`;
+the benchmark runners also use temporary databases and do not modify the application database.
 
 ---
 1. **Environment Setup:**

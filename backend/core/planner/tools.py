@@ -67,7 +67,16 @@ def tool_recommend_from_history(event_type: str, headcount: int) -> Dict[str, An
         "recommendations": recs
     }
 
-def tool_requisition_campus_resources(event_id: str, room_id: str, attendance: int, items_json: str, date: str, start_time: str, end_time: str) -> Dict[str, Any]:
+def tool_requisition_campus_resources(
+    event_id: str,
+    room_id: str,
+    attendance: int,
+    items_json: str,
+    date: str,
+    start_time: str,
+    end_time: str,
+    event_details: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """
     Executes campus venue and inventory allocations inside a Kavach transaction savepoint.
     Enforces room capacity, room overlap, and inventory stock invariants.
@@ -80,7 +89,27 @@ def tool_requisition_campus_resources(event_id: str, room_id: str, attendance: i
     except Exception:
         items = []
 
+    operation_id = f"op_{uuid.uuid4().hex}"
+
     def perform_allocation_transaction(conn: Any):
+        if event_details is not None:
+            conn.execute(
+                """
+                INSERT INTO events (
+                    id, name, brief, event_type, expected_participants,
+                    organizer_department, status
+                ) VALUES (?, ?, ?, ?, ?, ?, 'planned')
+                """,
+                (
+                    event_id,
+                    event_details["name"],
+                    event_details["brief"],
+                    event_details["event_type"],
+                    event_details["expected_participants"],
+                    event_details["organizer_department"],
+                ),
+            )
+
         # 1. Invariant verification
         kavach.verify_room_capacity(conn, room_id, attendance)
         kavach.verify_room_overlap(conn, room_id, start_dt, end_dt)
@@ -126,9 +155,16 @@ def tool_requisition_campus_resources(event_id: str, room_id: str, attendance: i
         # Stage confirmation outbox notice
         outbox_id = f"notif_{uuid.uuid4().hex[:8]}"
         conn.execute("""
-            INSERT INTO outbox (id, event_id, recipient, subject, message, type, status)
-            VALUES (?, ?, 'event.coordinator@galgotiasuniversity.edu.in', 'Campus Logistics Allocated', ?, 'confirmation', 'held')
-        """, (outbox_id, event_id, f"Successfully allocated {room_name} and {len(items)} campus resource items."))
+            INSERT INTO outbox (
+                id, event_id, recipient, subject, message, type, status, operation_id
+            ) VALUES (?, ?, 'event.coordinator@galgotiasuniversity.edu.in',
+                'Campus Logistics Allocated', ?, 'confirmation', 'held', ?)
+        """, (
+            outbox_id,
+            event_id,
+            f"Successfully allocated {room_name} and {len(items)} campus resource items.",
+            operation_id,
+        ))
 
         return {
             "room_booking_id": room_booking_id,
@@ -139,6 +175,11 @@ def tool_requisition_campus_resources(event_id: str, room_id: str, attendance: i
 
     with get_connection() as conn:
         result = kavach.execute_with_kavach(
-            conn, event_id, "autopilot_agent", "requisition_campus_resources", perform_allocation_transaction
+            conn,
+            event_id,
+            "autopilot_agent",
+            "requisition_campus_resources",
+            perform_allocation_transaction,
+            operation_id=operation_id,
         )
         return result

@@ -8,10 +8,13 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator, Any, List, Optional, Dict
 
-DB_PATH = os.environ.get("DATABASE_URL", "sqlite:///./agenticliner.db").replace("sqlite:///", "")
-
 def get_db_path() -> str:
-    path = Path(DB_PATH)
+    configured_path = os.environ.get("DATABASE_PATH")
+    if configured_path is None:
+        configured_path = os.environ.get(
+            "DATABASE_URL", "sqlite:///./agenticliner.db"
+        ).replace("sqlite:///", "")
+    path = Path(configured_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     return str(path)
 

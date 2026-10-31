@@ -4,6 +4,7 @@ Integration tests for FastAPI application endpoints using modern httpx ASGI tran
 import pytest
 import httpx
 from backend.api.main import app
+from backend.core.database.demo_people import HERO_SPEAKER
 
 @pytest.mark.anyio
 async def test_page_routes():
@@ -55,7 +56,10 @@ async def test_hero_speaker_cancellation():
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "re_planned"
-        assert data["substitute_allocated"] == "Dr. Neha Verma (School of AI)"
+        assert data["substitute_allocated"] == (
+            f"{HERO_SPEAKER['substitute_name']} "
+            f"({HERO_SPEAKER['substitute_department']})"
+        )
         assert len(data["new_schedule"]) > 0
 
 @pytest.mark.anyio

@@ -11,6 +11,7 @@ import logging
 from typing import Dict, Any, List, Optional
 
 from backend.core.database.connection import get_connection, fetch_all, fetch_one, execute_query
+from backend.core.database.demo_people import DEMO_FACULTY, HERO_SPEAKER
 from backend.core.scheduler.solver import EventScheduler
 from backend.core.safety.kavach import KavachEngine
 
@@ -30,7 +31,7 @@ DEFAULT_SESSIONS = [
         "title": "Opening Keynote & Dean Inauguration",
         "expected_attendance": 250,
         "speaker_id": "spk_dean",
-        "speaker_name": "Dr. Manish Raj (Dean SoAI)",
+        "speaker_name": f"{DEMO_FACULTY['dean']} (Dean SoAI)",
         "depends_on": None,
         "track": "General"
     },
@@ -39,7 +40,7 @@ DEFAULT_SESSIONS = [
         "title": "Generative AI Systems Masterclass",
         "expected_attendance": 120,
         "speaker_id": "spk_puri",
-        "speaker_name": "Dr. Vartika Puri (Associate Prof)",
+        "speaker_name": f"{HERO_SPEAKER['name']} (Associate Prof)",
         "depends_on": "sess_01",
         "track": "AI/ML"
     },
@@ -48,7 +49,7 @@ DEFAULT_SESSIONS = [
         "title": "Deep Learning with PyTorch Lab",
         "expected_attendance": 50,
         "speaker_id": "spk_akhilesh",
-        "speaker_name": "Prof. Akhilesh Sir (Lead Researcher)",
+        "speaker_name": f"{DEMO_FACULTY['ml_mentor']} (Lead Researcher)",
         "depends_on": "sess_02",
         "track": "AI/ML"
     },
@@ -57,7 +58,7 @@ DEFAULT_SESSIONS = [
         "title": "Python for Autonomous AI Agents",
         "expected_attendance": 80,
         "speaker_id": "spk_niraj",
-        "speaker_name": "Prof. Niraj Sir (Robotics Lab)",
+        "speaker_name": f"{DEMO_FACULTY['python_mentor']} (Robotics Lab)",
         "depends_on": "sess_01",
         "track": "AI/ML"
     }
@@ -143,7 +144,7 @@ def solve_timetable(
 
 def handle_hero_speaker_cancellation(event_id: Optional[str] = None) -> Dict[str, Any]:
     """
-    Hero Demo: Simulates unexpected speaker cancellation (Dr. Vartika Puri),
+    Hero Demo: Simulates unexpected speaker cancellation,
     intelligently finds substitute speaker with matching expertise in GenAI,
     re-runs CP-SAT with minimal disruption, and stages outbox broadcast notices.
     """
@@ -151,22 +152,23 @@ def handle_hero_speaker_cancellation(event_id: Optional[str] = None) -> Dict[str
     slots = DEFAULT_SLOTS
 
     # Check database for candidate substitute speaker in AI department
-    substitute = fetch_one("SELECT name, department, topics FROM speakers WHERE topics LIKE '%AI%' OR department LIKE '%AI%' LIMIT 1")
-    if substitute:
-        substitute_name = f"{substitute['name']} ({substitute['department']})"
-        match_reason = f"Matching campus research domain: {substitute['topics']}"
-    else:
-        substitute_name = "Dr. Neha Verma (School of AI)"
-        match_reason = "Matching research expertise: Generative AI, Machine Learning, available in afternoon slot"
+    substitute_name = (
+        f"{HERO_SPEAKER['substitute_name']} "
+        f"({HERO_SPEAKER['substitute_department']})"
+    )
+    match_reason = (
+        "Matching research expertise: Generative AI, Machine Learning, "
+        "available in afternoon slot"
+    )
 
-    # Mutate sessions: Dr. Vartika Puri cancelled -> replaced with substitute
+    # Mutate the hero session and keep its identity tied to the shared fixture.
     reallocated_sessions = []
     for s in DEFAULT_SESSIONS:
         item = dict(s)
         if item["id"] == "sess_02":
-            item["original_speaker"] = item.get("speaker_name", "Dr. Vartika Puri")
+            item["original_speaker"] = HERO_SPEAKER["name"]
             item["speaker_name"] = substitute_name
-            item["speaker_id"] = "spk_substitute_neha"
+            item["speaker_id"] = HERO_SPEAKER["substitute_id"]
             item["is_substitute"] = True
         reallocated_sessions.append(item)
 
@@ -184,7 +186,7 @@ def handle_hero_speaker_cancellation(event_id: Optional[str] = None) -> Dict[str
     # Stage Outbox Announcement to all participants
     outbox_id = f"notif_change_{uuid.uuid4().hex[:6]}"
     outbox_msg = (
-        f"Schedule Update: Keynote speaker Dr. Vartika Puri cancelled due to unavoidable conflict. "
+        f"Schedule Update: Keynote speaker {HERO_SPEAKER['name']} cancelled due to unavoidable conflict. "
         f"{substitute_name} has been allocated with zero timetable clashes. All session timings confirmed."
     )
     execute_query("""
@@ -195,13 +197,13 @@ def handle_hero_speaker_cancellation(event_id: Optional[str] = None) -> Dict[str
     # Log to audit trail
     execute_query(
         "INSERT INTO audit_log (id, event_id, actor, action, details_json, result) VALUES (?, ?, 'autopilot_scheduler', 'SPEAKER_CANCELLATION_HANDLED', ?, 'SUCCESS')",
-        (f"aud_{uuid.uuid4().hex[:8]}", target_event_id, json.dumps({"cancelled": "Dr. Vartika Puri", "substitute": substitute_name, "outbox_id": outbox_id}))
+        (f"aud_{uuid.uuid4().hex[:8]}", target_event_id, json.dumps({"cancelled": HERO_SPEAKER["name"], "substitute": substitute_name, "outbox_id": outbox_id}))
     )
 
     return {
         "status": "re_planned",
         "action": "SPEAKER_CANCELLATION_HANDLED",
-        "original_speaker": "Dr. Vartika Puri",
+        "original_speaker": HERO_SPEAKER["name"],
         "substitute_allocated": substitute_name,
         "match_reason": match_reason,
         "new_schedule": solve_res.get("schedule", []),

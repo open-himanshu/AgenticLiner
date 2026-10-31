@@ -94,11 +94,11 @@ def test_universal_command_turnout_query():
     assert "data" in res
 
 def test_universal_command_certificate():
-    cmd = "Generate certificate for Aryan Saxena"
+    cmd = "Generate certificate for Riley Example"
     res = execute_universal_command(cmd)
     assert res["success"] is True
     assert res["action"] == "CERTIFICATE_GENERATED"
-    assert "Aryan Saxena" in res["message"]
+    assert "Riley Example" in res["message"]
     assert "certificate_id" in res["data"]
 
 def test_http_agent_genesis_and_command_endpoints(client):
@@ -109,6 +109,7 @@ def test_http_agent_genesis_and_command_endpoints(client):
     assert res1.status_code == 200
     data1 = res1.json()
     assert data1["success"] is True
+    assert data1["parser"] in {"gemini", "regex_fallback"}
     assert "event_id" in data1
     assert len(data1["execution_timeline"]) == 5
 

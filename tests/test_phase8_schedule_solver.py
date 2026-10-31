@@ -12,6 +12,7 @@ from backend.services.schedule_service import (
     export_schedule_csv,
     get_scheduling_rooms
 )
+from backend.core.database.demo_people import HERO_SPEAKER
 from backend.core.database.connection import fetch_one
 
 @pytest.fixture
@@ -49,8 +50,12 @@ def test_handle_hero_speaker_cancellation():
     result = handle_hero_speaker_cancellation()
     assert result["status"] == "re_planned"
     assert result["action"] == "SPEAKER_CANCELLATION_HANDLED"
-    assert result["original_speaker"] == "Dr. Vartika Puri"
+    assert result["original_speaker"] == HERO_SPEAKER["name"]
     assert "substitute_allocated" in result
+    assert result["substitute_allocated"] == (
+        f"{HERO_SPEAKER['substitute_name']} "
+        f"({HERO_SPEAKER['substitute_department']})"
+    )
     assert len(result["new_schedule"]) == 4
     assert "grid_matrix" in result
     
@@ -59,7 +64,7 @@ def test_handle_hero_speaker_cancellation():
     row = fetch_one("SELECT * FROM outbox WHERE id = ?", (outbox_id,))
     assert row is not None
     assert row["status"] == "held"
-    assert "Dr. Vartika Puri" in row["message"] or "Substitute" in row["subject"]
+    assert HERO_SPEAKER["name"] in row["message"] or "Substitute" in row["subject"]
 
 def test_export_schedule_csv():
     res = solve_timetable()
@@ -82,7 +87,7 @@ def test_api_schedule_endpoints(client):
     assert res2.status_code == 200
     data2 = res2.json()
     assert data2["status"] == "re_planned"
-    assert data2["original_speaker"] == "Dr. Vartika Puri"
+    assert data2["original_speaker"] == HERO_SPEAKER["name"]
 
     # 3. GET /api/schedule/export.csv
     res3 = client.get("/api/schedule/export.csv")

@@ -6,6 +6,7 @@ Implements:
 3. Auto-generated event FAQs.
 """
 
+import uuid
 from typing import Dict, Any, List, Optional
 from backend.core.database.connection import get_connection
 

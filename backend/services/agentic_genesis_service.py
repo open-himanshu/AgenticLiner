@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 
 from backend.core.database.connection import get_connection, fetch_one, fetch_all, execute_query
+from backend.core.database.demo_people import DEMO_FACULTY, HERO_SPEAKER
 from backend.services.event_workflow_service import create_event_request
 from backend.services.schedule_service import solve_timetable, get_scheduling_rooms
 from backend.services.analytics_service import issue_verifiable_certificate, get_analytics_dashboard_data
@@ -46,13 +47,14 @@ def parse_with_gemini_api(prompt: str) -> Optional[Dict[str, Any]]:
         )
 
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
             contents=prompt,
             config={"system_instruction": system_instruction, "response_mime_type": "application/json"}
         )
 
         data = json.loads(response.text)
         data["raw_prompt"] = prompt
+        data["parser"] = "gemini"
         return data
     except Exception as e:
         logger.warning(f"Gemini API parse fallback to bilingual engine: {e}")
@@ -66,6 +68,7 @@ def parse_natural_language_event_prompt(prompt: str) -> Dict[str, Any]:
     # 1. Try Gemini API first if configured
     gemini_result = parse_with_gemini_api(prompt)
     if gemini_result and isinstance(gemini_result, dict) and "headcount" in gemini_result:
+        gemini_result["parser"] = "gemini"
         return gemini_result
 
     # 2. Comprehensive Bilingual (English + Hinglish + Hindi) Deterministic Engine
@@ -148,7 +151,8 @@ def parse_natural_language_event_prompt(prompt: str) -> Dict[str, Any]:
         "needs_sound": needs_sound,
         "needs_projector": needs_projector,
         "needs_power": needs_power,
-        "raw_prompt": prompt
+        "raw_prompt": prompt,
+        "parser": "regex_fallback"
     }
 
 def execute_autonomous_event_genesis(
@@ -273,7 +277,7 @@ def execute_autonomous_event_genesis(
             "title": f"Inaugural Keynote: Future of {params['domain']}",
             "expected_attendance": params["headcount"],
             "speaker_id": "spk_dean",
-            "speaker_name": "Dr. Manish Raj (Dean)",
+            "speaker_name": f"{DEMO_FACULTY['dean']} (Dean)",
             "depends_on": None,
             "track": "General"
         },
@@ -282,7 +286,7 @@ def execute_autonomous_event_genesis(
             "title": f"Hands-on Technical Deep Dive: {params['domain']}",
             "expected_attendance": int(params["headcount"] * 0.8),
             "speaker_id": "spk_lead",
-            "speaker_name": "Dr. Vartika Puri (Associate Prof)",
+            "speaker_name": f"{HERO_SPEAKER['name']} (Associate Prof)",
             "depends_on": f"sess_{event_id}_01",
             "track": "Technical"
         },
@@ -291,7 +295,7 @@ def execute_autonomous_event_genesis(
             "title": "Interactive Team Coding & Prototyping Challenge",
             "expected_attendance": int(params["headcount"] * 0.6),
             "speaker_id": "spk_lab",
-            "speaker_name": "Prof. Akhilesh Sir",
+            "speaker_name": DEMO_FACULTY["ml_mentor"],
             "depends_on": f"sess_{event_id}_02",
             "track": "Lab"
         },
@@ -300,7 +304,7 @@ def execute_autonomous_event_genesis(
             "title": "Grand Project Exhibition & Valedictory Awards",
             "expected_attendance": params["headcount"],
             "speaker_id": "spk_eval",
-            "speaker_name": "Prof. Niraj Sir",
+            "speaker_name": DEMO_FACULTY["python_mentor"],
             "depends_on": f"sess_{event_id}_03",
             "track": "Valedictory"
         }
@@ -353,6 +357,7 @@ def execute_autonomous_event_genesis(
         "event_id": event_id,
         "event_name": params["event_name"],
         "event_type": params["event_type"],
+        "parser": params["parser"],
         "domain": params["domain"],
         "venue": chosen_room,
         "headcount": params["headcount"],
@@ -444,7 +449,7 @@ def execute_universal_command(command: str, user_role: str = "organiser") -> Dic
     # 4. Certificate generation (English: generate certificate; Hinglish: certificate banao; Hindi: प्रमाण पत्र बनाओ)
     if any(w in c_lower for w in ["certificate", "cert", "praman patra", "प्रमाण पत्र"]):
         name_match = re.search(r'(?:for|to|student|ka|ke|liye|का|के लिए)\s+([A-Za-z\s]+)', command, re.IGNORECASE)
-        student_name = name_match.group(1).strip() if name_match else "Himanshu Sharma"
+        student_name = name_match.group(1).strip() if name_match else "Riley Example"
         ev = fetch_one("SELECT id FROM events LIMIT 1")
         ev_id = ev["id"] if ev else "ev_001"
         cert = issue_verifiable_certificate(student_name=student_name, event_id=ev_id)
