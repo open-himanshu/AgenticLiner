@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - AgenticLiner Event Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Official Firebase Web SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="/static/js/firebase-auth.js"></script>
+    <!-- Google Identity Services Web SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        :root {
+            --brand-primary: #1E3A8A;
+            --brand-accent: #3b82f6;
+        }
+        body {
+            background-color: #f1f5f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            background: #ffffff;
+            width: 100%;
+            max-width: 460px;
+            overflow: hidden;
+        }
+        .login-header {
+            background: linear-gradient(135deg, #1E3A8A 0%, #1e40af 100%);
+            color: #ffffff;
+            padding: 30px 24px;
+            text-align: center;
+        }
+        .btn-google {
+            border: 1px solid #dadce0;
+            background-color: #ffffff;
+            color: #3c4043;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .btn-google:hover {
+            background-color: #f8fafd;
+            border-color: #c2c7d0;
+            box-shadow: 0 1px 3px rgba(60,64,67,0.15);
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.75rem;
+            letter-spacing: 0.05rem;
+            margin: 20px 0;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .divider:not(:empty)::before { margin-right: .75em; }
+        .divider:not(:empty)::after { margin-left: .75em; }
+        .google-account-item {
+            cursor: pointer;
+            transition: background 0.15s ease;
+            border-radius: 8px;
+            padding: 10px 14px;
+        }
+        .google-account-item:hover {
+            background-color: #f1f5f9;
+        }
+        .google-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 d-flex justify-content-center">
+            <div class="login-card">
+                <div class="login-header">
+                    <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
+                        <span class="fs-2">🚀</span>
+                        <h3 class="fw-bold mb-0">AgenticLiner</h3>
+                    </div>
+                    <p class="small text-white-50 mb-0">College Event Planning & Operations Platform</p>
+                    <span class="badge bg-light text-dark mt-2" style="font-size: 0.7rem;">Galgotias University SparkX 3.0</span>
+                </div>
+
+                <div class="p-4 p-sm-5">
+                    {% if error %}
+                    <div class="alert alert-danger d-flex align-items-center small py-2 mb-3" role="alert">
+                        <i class="bi bi-exclamation-circle-fill me-2 fs-5"></i>
+                        <div>{{ error }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if request.query_params.get('logged_out') %}
+                    <div class="alert alert-success d-flex align-items-center small py-2 mb-3" role="alert">
+                        <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                        <div>You have been safely logged out.</div>
+                    </div>
+                    {% endif %}
+
+                    {% if request.query_params.get('reset_success') %}
+                    <div class="alert alert-success d-flex align-items-center small py-2 mb-3" role="alert">
+                        <i class="bi bi-shield-check me-2 fs-5"></i>
+                        <div>Password updated successfully! Please sign in with your new credentials.</div>
+                    </div>
+                    {% endif %}
+
+                    <!-- REAL FIREBASE / GOOGLE SIGN-IN BUTTON -->
+                    <button type="button" class="btn btn-google w-100 py-2 d-flex align-items-center justify-content-center gap-2 shadow-sm mb-2" onclick="handleGoogleSignInClick()">
+                        <svg width="18" height="18" viewBox="0 0 18 18">
+                            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z"/>
+                            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+                            <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.347 2.825.957 4.039l3.007-2.332z"/>
+                            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
+                        </svg>
+                        <span class="fw-semibold">Sign in with Google</span>
+                    </button>
+
+                    <div class="divider">OR SIGN IN WITH CAMPUS EMAIL</div>
+
+                    <!-- FORM LOGIN -->
+                    <form action="/login" method="POST">
+                        <input type="hidden" name="next" value="{{ next or '' }}">
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label small fw-semibold text-secondary">Campus Email Address</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted"><i class="bi bi-envelope"></i></span>
+                                <input type="email" class="form-control" id="email" name="email" placeholder="name@galgotias.edu" required autofocus>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label for="password" class="form-label small fw-semibold text-secondary mb-0">Password</label>
+                                <a href="/forgot-password" class="small text-decoration-none text-primary" style="font-size: 0.8rem;">Forgot password?</a>
+                            </div>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted"><i class="bi bi-key"></i></span>
+                                <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('password', this)" title="Show/Hide Password">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm mb-3">
+                            <i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Portal
+                        </button>
+
+                        <div class="text-center small mb-3">
+                            <span class="text-muted">Don't have an account?</span>
+                            <a href="/signup" class="fw-bold text-decoration-none ms-1">Sign Up / Create Account</a>
+                        </div>
+                    </form>
+
+                    <!-- Quick Demo Fill Section -->
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="text-muted small fw-semibold mb-2 text-center">Fast Login (Pre-Configured Role Accounts):</div>
+                        <div class="row g-1">
+                            <div class="col-6">
+                                <button type="button" class="btn btn-sm btn-outline-secondary w-100 text-start py-1" onclick="fillCreds('admin@galgotias.edu', 'Admin@123')">
+                                    <span class="badge bg-danger me-1">Admin</span> Supervisor
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button type="button" class="btn btn-sm btn-outline-secondary w-100 text-start py-1" onclick="fillCreds('organiser@galgotias.edu', 'Organiser@123')">
+                                    <span class="badge bg-primary me-1">Host</span> Organiser
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button type="button" class="btn btn-sm btn-outline-secondary w-100 text-start py-1" onclick="fillCreds('datamanager@galgotias.edu', 'Data@123')">
+                                    <span class="badge bg-warning text-dark me-1">CSV</span> Data Mgr
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button type="button" class="btn btn-sm btn-outline-secondary w-100 text-start py-1" onclick="fillCreds('student@galgotias.edu', 'Student@123')">
+                                    <span class="badge bg-info text-dark me-1">User</span> Student
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- GOOGLE ACCOUNT CHOOSER / SETUP MODAL -->
+<div class="modal fade" id="googleAccountModal" tabindex="-1" aria-labelledby="googleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-body p-4">
+                <div class="text-center mb-3">
+                    <svg width="34" height="34" viewBox="0 0 18 18">
+                        <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z"/>
+                        <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+                        <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.347 2.825.957 4.039l3.007-2.332z"/>
+                        <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
+                    </svg>
+                    <h5 class="fw-bold mt-2 mb-1" id="googleModalLabel">Sign in with Google</h5>
+                    <p class="small text-muted mb-0">to continue to <strong>AgenticLiner</strong></p>
+                </div>
+
+                <div id="googleLoadingNotice" class="alert alert-info py-2 d-none text-center small mb-3">
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    Authenticating with Google...
+                </div>
+
+                <!-- Account List -->
+                <div class="list-group list-group-flush mb-3">
+                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="loginWithGoogleAccount('himanshugupta00727@gmail.com', 'Himanshu Gupta', 'organiser')">
+                        <div class="google-avatar bg-primary">H</div>
+                        <div class="flex-grow-1 overflow-hidden">
+                            <div class="fw-semibold text-truncate">Himanshu Gupta</div>
+                            <div class="small text-muted text-truncate">himanshugupta00727@gmail.com</div>
+                        </div>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">Organiser</span>
+                    </div>
+
+                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="loginWithGoogleAccount('student@galgotias.edu', 'Galgotias Student', 'participant')">
+                        <div class="google-avatar bg-success">G</div>
+                        <div class="flex-grow-1 overflow-hidden">
+                            <div class="fw-semibold text-truncate">Galgotias Student</div>
+                            <div class="small text-muted text-truncate">student@galgotias.edu</div>
+                        </div>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle small">Student</span>
+                    </div>
+
+                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="loginWithGoogleAccount('dean.office@galgotias.edu', 'Prof. Dean (Admin)', 'supervisor')">
+                        <div class="google-avatar bg-danger">D</div>
+                        <div class="flex-grow-1 overflow-hidden">
+                            <div class="fw-semibold text-truncate">Dean Office</div>
+                            <div class="small text-muted text-truncate">dean.office@galgotias.edu</div>
+                        </div>
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle small">Supervisor</span>
+                    </div>
+                </div>
+
+                <!-- Custom Email Entry Accordion -->
+                <div class="accordion accordion-flush mb-2" id="customAccAccordion">
+                    <div class="accordion-item border-0">
+                        <button class="btn btn-sm btn-link text-decoration-none p-0 text-muted d-flex align-items-center gap-1" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCustom">
+                            <i class="bi bi-person-plus me-1"></i> Use another Google account
+                        </button>
+                        <div id="collapseCustom" class="collapse mt-2">
+                            <div class="input-group input-group-sm mb-2">
+                                <input type="email" id="customGoogleEmail" class="form-control" placeholder="your.name@gmail.com">
+                                <button class="btn btn-primary" type="button" onclick="submitCustomGoogleAccount()">Continue</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center pt-2 border-top">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap 5 Bundle JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+const firebaseConfig = {{ (firebase_config or {}) | tojson }};
+if (firebaseConfig && firebaseConfig.apiKey) {
+    initFirebase(firebaseConfig);
+}
+
+function handleGoogleSignInClick() {
+    if (firebaseConfig && firebaseConfig.apiKey) {
+        // Open Real Firebase Google Popup Window
+        signInWithGoogleReal('organiser', 'School of AI');
+    } else {
+        // Open Google Account Chooser Modal
+        openGoogleModal();
+    }
+}
+
+function fillCreds(email, pass) {
+    document.getElementById('email').value = email;
+    document.getElementById('password').value = pass;
+}
+
+function togglePassword(inputId, btn) {
+    const field = document.getElementById(inputId);
+    const icon = btn.querySelector('i');
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+    } else {
+        field.type = 'password';
+        icon.className = 'bi bi-eye';
+    }
+}
+
+function openGoogleModal() {
+    const modalEl = document.getElementById('googleAccountModal');
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+}
+
+async function loginWithGoogleAccount(email, name, role) {
+    const notice = document.getElementById('googleLoadingNotice');
+    if (notice) notice.classList.remove('d-none');
+
+    try {
+        const res = await fetch('/api/auth/firebase-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                demo_google: true,
+                email: email,
+                name: name,
+                role: role || 'organiser',
+                department: 'School of AI'
+            })
+        });
+        const data = await res.json();
+        if (data.success && data.redirect_url) {
+            window.location.href = data.redirect_url;
+        } else {
+            alert('Google authentication failed: ' + (data.detail || 'Unknown error'));
+            if (notice) notice.classList.add('d-none');
+        }
+    } catch (err) {
+        alert('Error connecting to Google Auth: ' + err);
+        if (notice) notice.classList.add('d-none');
+    }
+}
+
+function submitCustomGoogleAccount() {
+    const email = document.getElementById('customGoogleEmail').value.trim();
+    if (!email || !email.includes('@')) {
+        alert('Please enter a valid Google email address.');
+        return;
+    }
+    const name = email.split('@')[0];
+    loginWithGoogleAccount(email, name, 'participant');
+}
+</script>
+
+</body>
+</html>
