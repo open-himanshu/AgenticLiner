@@ -11,6 +11,11 @@ from typing import Dict, Any, List, Optional
 from backend.core.database.connection import get_connection
 from backend.core.safety.kavach import KavachEngine, InvariantViolation
 
+import logging
+from backend.core.planner.call_llm import call_llm, get_provider_config, ProviderError
+
+logger = logging.getLogger(__name__)
+
 kavach = KavachEngine()
 
 class CommunicationAgent:
@@ -39,6 +44,54 @@ class CommunicationAgent:
                 WHERE s.event_id = ?
             """, (event_id,))
             sessions = [dict(r) for r in cur.fetchall()]
+
+            # Grounded real-time LLM inference when provider is configured
+            try:
+                provider_cfg = get_provider_config()
+                provider = (provider_cfg.get("provider") or "").lower()
+                has_key = bool(provider_cfg.get("api_key")) or provider == "ollama"
+                if provider in {"gemini", "groq", "ollama"} and has_key:
+                    schedule_lines = []
+                    for s in sessions:
+                        schedule_lines.append(
+                            f"- Session: '{s['title']}', Time: {s['start_time']} - {s['end_time']}, "
+                            f"Room: {s.get('room_name')} ({s.get('location')}), Speaker: {s.get('speaker_name') or 'TBD'}"
+                        )
+                    schedule_text = "\n".join(schedule_lines) if schedule_lines else "No formal sessions published yet."
+
+                    system_prompt = (
+                        "You are the Grounded Campus Event Assistant for Galgotias University SparkX 3.0. "
+                        "Answer questions from students/participants clearly, politely, and factually. "
+                        "Ground your answers strictly on the verified schedule and rules below:\n\n"
+                        f"SCHEDULE & VENUE FACTS:\n{schedule_text}\n"
+                        "LUNCH: Cafeteria & Courtyard from 13:00 to 14:00.\n"
+                        "ROLE & PERMISSIONS POLICY: Participants can view sessions, personalized agendas, and scan QR gate passes. "
+                        "Booking halls, managing inventory, and creating events are strictly restricted to Organisers and Supervisors.\n\n"
+                        "RULES:\n"
+                        "- If asked about booking halls or administrative tools, politely explain that participants can view events but booking is reserved for Organisers.\n"
+                        "- Never hallucinate fake event dates, timings, or non-existent rooms.\n"
+                        "- Keep responses concise (under 3 sentences)."
+                    )
+
+                    llm_resp = call_llm(
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": query},
+                        ],
+                        tools=[],
+                        config=provider_cfg,
+                    )
+                    ans_text = (llm_resp.get("text") or "").strip()
+                    if ans_text:
+                        return {
+                            "found": True,
+                            "answer": ans_text,
+                            "mode": "llm",
+                            "provider": llm_resp.get("provider"),
+                            "model": llm_resp.get("model"),
+                        }
+            except Exception as exc:
+                logger.warning("Grounded LLM query failed, falling back to deterministic rules: %s", exc)
 
             # Match query against sessions
             matched_session = None

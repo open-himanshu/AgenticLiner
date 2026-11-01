@@ -142,17 +142,19 @@ def _call_gemini(
             description=t["function"]["description"],
             parameters_json_schema=t["function"]["parameters"],
         )
-        for t in tools
+        for t in (tools or [])
     ]
     system_instruction = next(
         (m["content"] for m in messages if m["role"] == "system"), ""
     )
-    config = types.GenerateContentConfig(
-        system_instruction=system_instruction,
-        tools=[types.Tool(function_declarations=declarations)],
-        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
-        temperature=0,
-    )
+    config_kwargs: Dict[str, Any] = {
+        "system_instruction": system_instruction,
+        "temperature": 0,
+    }
+    if declarations:
+        config_kwargs["tools"] = [types.Tool(function_declarations=declarations)]
+        config_kwargs["automatic_function_calling"] = types.AutomaticFunctionCallingConfig(disable=True)
+    config = types.GenerateContentConfig(**config_kwargs)
     contents = _gemini_contents(messages, types)
 
     for attempt in range(MAX_RATE_LIMIT_RETRIES + 1):
@@ -266,10 +268,11 @@ def _call_groq(
     request_payload: Dict[str, Any] = {
         "model": model,
         "messages": groq_messages,
-        "tools": tools,
-        "tool_choice": "auto",
         "temperature": 0,
     }
+    if tools:
+        request_payload["tools"] = tools
+        request_payload["tool_choice"] = "auto"
     if "gpt-oss" in model.lower():
         effort = _clean_env("GROQ_REASONING_EFFORT", "low")
         request_payload["reasoning_effort"] = effort if effort in {"low", "medium", "high"} else "low"
@@ -380,13 +383,15 @@ def _call_ollama(
     hostname = hostname or "localhost"
 
     ollama_msgs = _ollama_messages(messages)
-    request_data = json.dumps({
+    body_payload: Dict[str, Any] = {
         "model": model,
         "messages": ollama_msgs,
-        "tools": tools,
         "stream": False,
         "options": {"temperature": 0},
-    }).encode("utf-8")
+    }
+    if tools:
+        body_payload["tools"] = tools
+    request_data = json.dumps(body_payload).encode("utf-8")
     req = urllib.request.Request(
         f"http://{hostname}:{port}/api/chat",
         data=request_data,
@@ -474,7 +479,7 @@ def _ollama_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def call_llm(
     messages: List[Dict[str, Any]],
-    tools: List[Dict[str, Any]],
+    tools: Optional[List[Dict[str, Any]]] = None,
     config: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """
@@ -482,6 +487,7 @@ def call_llm(
       text, tool_calls, usage  (and provider, model for metadata).
     Raises ProviderError on any non-retryable failure.
     """
+    tools = tools or []
     if config is None:
         config = get_provider_config()
     provider = config["provider"]

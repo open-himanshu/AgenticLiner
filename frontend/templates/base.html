@@ -407,6 +407,16 @@
                 const data = await res.json();
                 spinner.style.display = 'none';
 
+                if (!res.ok) {
+                    simpleBox.style.display = 'block';
+                    simpleBox.className = 'alert alert-warning p-3 rounded-3';
+                    document.getElementById('agentSimpleTitle').innerText = res.status === 403 ? 'Access Restricted (Role Policy)' : 'Execution Notice';
+                    document.getElementById('agentSimpleText').innerText = (data && (data.detail || data.message))
+                        ? (data.detail || data.message)
+                        : 'Operation not permitted or could not be completed for your role.';
+                    return;
+                }
+
                 if (data.execution_timeline) {
                     // Full Event Auto-Genesis Result
                     timelineBox.style.display = 'block';
