@@ -1,101 +1,219 @@
-"""
-Independent Database Checker Script for AgenticLiner (Section 11 of Master Plan).
-Audits the raw SQLite database directly WITHOUT relying on Kavach's own assertions.
-Verifies:
-1. Double-booking / time overlapping violations.
-2. Capacity violations (attendance > room capacity).
-3. Speaker collision violations.
-4. Outbox leakage (unreleased notifications on failed transactions).
-"""
+"""Audit benchmark database snapshots without using application safety checks."""
 
 import sqlite3
-from typing import Dict, Any, List
+from contextlib import closing
+from pathlib import Path
+from typing import Any
+
 from backend.core.database.connection import get_connection
 
+
 class IndependentDBChecker:
-    def __init__(self):
-        pass
+    def run_full_audit(
+        self, database_path: str | Path | None = None
+    ) -> dict[str, Any]:
+        if database_path is None:
+            connection = get_connection()
+        else:
+            connection = sqlite3.connect(database_path)
+            connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA foreign_keys = ON")
+        with closing(connection):
+            return self._audit_connection(connection)
 
-    def run_full_audit(self) -> Dict[str, Any]:
-        with get_connection() as conn:
-            cur = conn.cursor()
+    def _audit_connection(
+        self, connection: sqlite3.Connection
+    ) -> dict[str, Any]:
+        tables = {
+            row["name"]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        required_tables = {
+            "bookings",
+            "events",
+            "outbox",
+            "rooms",
+            "sessions",
+            "speakers",
+        }
+        missing_tables = sorted(required_tables - tables)
 
-            # 1. Check for Room Overlaps / Double Bookings
-            cur.execute("""
-                SELECT b1.id as booking_1, b2.id as booking_2, b1.room_id, r.name as room_name,
-                       b1.start_time, b1.end_time
-                FROM bookings b1
-                JOIN bookings b2 ON b1.room_id = b2.room_id 
-                                AND b1.id < b2.id
-                                AND b1.status = 'confirmed' 
-                                AND b2.status = 'confirmed'
-                JOIN rooms r ON b1.room_id = r.id
-                WHERE (
-                    (b1.start_time < b2.end_time AND b1.end_time > b2.start_time)
+        overlaps = []
+        booking_capacity = []
+        session_capacity = []
+        speaker_clashes = []
+        orphan_events = []
+        outbox_leaks = []
+        foreign_key_violations = []
+
+        if {"bookings", "rooms"} <= tables:
+            overlaps = [
+                dict(row)
+                for row in connection.execute(
+                    """
+                    SELECT first.id AS booking_1, second.id AS booking_2,
+                           first.room_id, room.name AS room_name,
+                           first.start_time, first.end_time
+                    FROM bookings AS first
+                    JOIN bookings AS second
+                      ON first.room_id = second.room_id
+                     AND first.id < second.id
+                     AND first.status = 'confirmed'
+                     AND second.status = 'confirmed'
+                    JOIN rooms AS room ON first.room_id = room.id
+                    WHERE first.room_id IS NOT NULL
+                      AND first.start_time < second.end_time
+                      AND first.end_time > second.start_time
+                    """
                 )
-            """)
-            overlaps = cur.fetchall()
-
-            # 2. Check for Room Capacity Violations
-            cur.execute("""
-                SELECT s.id as session_id, s.title, s.expected_attendance, r.name as room_name, r.capacity
-                FROM sessions s
-                JOIN rooms r ON s.room_id = r.id
-                WHERE s.expected_attendance > r.capacity
-            """)
-            capacity_violations = cur.fetchall()
-
-            # 3. Check for Speaker Double-booking Violations
-            cur.execute("""
-                SELECT s1.id as session_1, s2.id as session_2, spk.name as speaker_name,
-                       s1.start_time, s1.end_time
-                FROM sessions s1
-                JOIN sessions s2 ON s1.speaker_id = s2.speaker_id 
-                                AND s1.id < s2.id
-                JOIN speakers spk ON s1.speaker_id = spk.id
-                WHERE (
-                    (s1.start_time < s2.end_time AND s1.end_time > s2.start_time)
+            ]
+        if {"bookings", "events", "rooms"} <= tables:
+            booking_capacity = [
+                dict(row)
+                for row in connection.execute(
+                    """
+                    SELECT booking.id AS booking_id, event.id AS event_id,
+                           event.expected_participants, room.name AS room_name,
+                           room.capacity
+                    FROM bookings AS booking
+                    JOIN events AS event ON event.id = booking.event_id
+                    JOIN rooms AS room ON room.id = booking.room_id
+                    WHERE booking.status = 'confirmed'
+                      AND booking.room_id IS NOT NULL
+                      AND event.expected_participants > room.capacity
+                      AND NOT EXISTS (
+                          SELECT 1 FROM sessions AS session
+                          WHERE session.event_id = event.id
+                      )
+                    """
                 )
-            """)
-            speaker_clashes = cur.fetchall()
+            ]
+        if {"sessions", "rooms"} <= tables:
+            session_capacity = [
+                dict(row)
+                for row in connection.execute(
+                    """
+                    SELECT session.id AS session_id, session.title,
+                           session.expected_attendance, room.name AS room_name,
+                           room.capacity
+                    FROM sessions AS session
+                    JOIN rooms AS room ON room.id = session.room_id
+                    WHERE session.expected_attendance > room.capacity
+                    """
+                )
+            ]
+        if {"sessions", "speakers"} <= tables:
+            speaker_clashes = [
+                dict(row)
+                for row in connection.execute(
+                    """
+                    SELECT first.id AS session_1, second.id AS session_2,
+                           speaker.name AS speaker_name, first.start_time,
+                           first.end_time
+                    FROM sessions AS first
+                    JOIN sessions AS second
+                      ON first.speaker_id = second.speaker_id
+                     AND first.id < second.id
+                    JOIN speakers AS speaker
+                      ON first.speaker_id = speaker.id
+                    WHERE first.speaker_id IS NOT NULL
+                      AND first.start_time < second.end_time
+                      AND first.end_time > second.start_time
+                    """
+                )
+            ]
+        if {"events", "bookings"} <= tables:
+            orphan_events = [
+                dict(row)
+                for row in connection.execute(
+                    """
+                    SELECT event.id, event.name, event.status
+                    FROM events AS event
+                    LEFT JOIN bookings AS booking ON booking.event_id = event.id
+                    GROUP BY event.id
+                    HAVING count(booking.id) = 0
+                    """
+                )
+            ]
+        if "outbox" in tables:
+            if "events" in tables:
+                outbox_leaks = [
+                    dict(row)
+                    for row in connection.execute(
+                        """
+                        SELECT message.id, message.event_id, message.status,
+                               event.status AS event_status
+                        FROM outbox AS message
+                        LEFT JOIN events AS event ON event.id = message.event_id
+                        WHERE message.status = 'held'
+                           OR event.id IS NULL
+                           OR (message.status = 'sent'
+                               AND event.status IN ('cancelled', 'draft', 'rolled_back'))
+                        """
+                    )
+                ]
+            else:
+                outbox_leaks = [
+                    dict(row)
+                    for row in connection.execute(
+                        "SELECT id, event_id, status FROM outbox"
+                    )
+                ]
+        foreign_key_violations = [
+            dict(row)
+            for row in connection.execute("PRAGMA foreign_key_check")
+        ]
 
-            # 4. Check for Outbox Leakage
-            cur.execute("""
-                SELECT o.id, o.recipient, o.subject, o.status, e.status as event_status
-                FROM outbox o
-                JOIN events e ON o.event_id = e.id
-                WHERE o.status = 'sent' AND e.status IN ('cancelled', 'draft', 'rolled_back')
-            """)
-            outbox_leaks = cur.fetchall()
+        bookings_count = (
+            connection.execute(
+                "SELECT count(*) FROM bookings WHERE status = 'confirmed'"
+            ).fetchone()[0]
+            if "bookings" in tables
+            else 0
+        )
+        events_count = (
+            connection.execute("SELECT count(*) FROM events").fetchone()[0]
+            if "events" in tables
+            else 0
+        )
+        audits_count = (
+            connection.execute("SELECT count(*) FROM audit_log").fetchone()[0]
+            if "audit_log" in tables
+            else 0
+        )
+        violations = {
+            "room_overlaps_count": len(overlaps),
+            "capacity_overruns_count": len(booking_capacity)
+            + len(session_capacity),
+            "speaker_clashes_count": len(speaker_clashes),
+            "orphan_events_count": len(orphan_events),
+            "outbox_leaks_count": len(outbox_leaks),
+            "foreign_key_violations_count": len(foreign_key_violations),
+            "missing_tables_count": len(missing_tables),
+        }
+        audit_passed = not any(violations.values())
+        return {
+            "audit_passed": audit_passed,
+            "total_events_in_db": events_count,
+            "confirmed_bookings_in_db": bookings_count,
+            "audit_log_entries": audits_count,
+            "violations": violations,
+            "details": {
+                "overlaps": overlaps,
+                "capacity_violations": booking_capacity + session_capacity,
+                "speaker_clashes": speaker_clashes,
+                "orphan_events": orphan_events,
+                "outbox_leaks": outbox_leaks,
+                "foreign_key_violations": foreign_key_violations,
+                "missing_tables": missing_tables,
+            },
+        }
 
-            total_bookings = cur.execute("SELECT count(*) FROM bookings WHERE status = 'confirmed'").fetchone()[0]
-            total_events = cur.execute("SELECT count(*) FROM events").fetchone()[0]
-            total_audits = cur.execute("SELECT count(*) FROM audit_log").fetchone()[0]
-
-            is_pure = (len(overlaps) == 0 and len(capacity_violations) == 0 and len(speaker_clashes) == 0 and len(outbox_leaks) == 0)
-
-            return {
-                "audit_passed": is_pure,
-                "total_events_in_db": total_events,
-                "confirmed_bookings_in_db": total_bookings,
-                "audit_log_entries": total_audits,
-                "violations": {
-                    "room_overlaps_count": len(overlaps),
-                    "capacity_overruns_count": len(capacity_violations),
-                    "speaker_clashes_count": len(speaker_clashes),
-                    "outbox_leaks_count": len(outbox_leaks)
-                },
-                "details": {
-                    "overlaps": [dict(r) for r in overlaps],
-                    "capacity_violations": [dict(r) for r in capacity_violations],
-                    "speaker_clashes": [dict(r) for r in speaker_clashes]
-                }
-            }
 
 if __name__ == "__main__":
-    checker = IndependentDBChecker()
-    res = checker.run_full_audit()
-    print("Independent DB Audit Results:")
-    print(f"Overall State Pure: {res['audit_passed']}")
-    print(f"Confirmed Bookings: {res['confirmed_bookings_in_db']}")
-    print(f"Violations Detected: {res['violations']}")
+    audit = IndependentDBChecker().run_full_audit()
+    print("Independent database audit:")
+    print(f"Overall state clean: {audit['audit_passed']}")
+    print(f"Violations: {audit['violations']}")
