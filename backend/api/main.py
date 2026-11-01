@@ -20,6 +20,7 @@ import secrets
 from backend.core.database.connection import get_connection, fetch_all, fetch_one, execute_query
 from backend.core.database.demo_people import HERO_SPEAKER
 from backend.core.planner.agent import AutopilotAgent
+from backend.core.planner.agent_mode import run_autopilot_with_fallback
 from backend.core.scheduler.solver import EventScheduler
 from backend.modules.module1_coplan.task_board import get_event_task_board
 from backend.modules.module1_coplan.brief_parser import parse_event_brief, adaptive_intake
