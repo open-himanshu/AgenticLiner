@@ -306,8 +306,10 @@ async def test_forgot_and_reset_password_flow(monkeypatch):
         assert res_login.headers["location"] == "/participant"
 
 @pytest.mark.anyio
-async def test_google_auth_fast_login_and_role_access():
-    transport = httpx.ASGITransport(app=app)
+async def test_google_auth_fast_login_and_role_access(monkeypatch):
+    monkeypatch.setenv("ALLOW_DEMO_LOGIN", "1")
+    monkeypatch.delenv("ALLOW_PUBLIC_TUNNEL", raising=False)
+    transport = httpx.ASGITransport(app=app, client=("127.0.0.1", 12345))
     async with httpx.AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
         # Sign in with Google as an Organiser
         res = await client.post(
@@ -331,6 +333,183 @@ async def test_google_auth_fast_login_and_role_access():
         res_dash = await client.get("/organiser")
         assert res_dash.status_code == 200
         assert "Student Club Organiser" in res_dash.text
+
+
+@pytest.mark.anyio
+async def test_firebase_login_rejects_tampered_token_without_network(monkeypatch):
+    from backend.api import auth_routes
+
+    verification_calls = []
+
+    def reject_token(token):
+        verification_calls.append(token)
+        raise ValueError("Invalid Firebase ID token")
+
+    def reject_network(*args, **kwargs):
+        raise AssertionError("Tests must not make network requests.")
+
+    monkeypatch.setattr(auth_routes, "verify_firebase_id_token", reject_token, raising=False)
+    monkeypatch.setattr(auth_routes.urllib.request, "urlopen", reject_network)
+    monkeypatch.setenv("FIREBASE_PROJECT_ID", "test-firebase-project")
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/auth/firebase-login",
+            json={"id_token": "tampered-token"},
+        )
+
+    assert response.status_code == 401
+    assert verification_calls == ["tampered-token"]
+
+
+def test_firebase_verifier_uses_configured_project_id(monkeypatch):
+    from backend.api import auth_routes
+
+    initialized_apps = []
+    app = object()
+
+    def no_initialized_app(name):
+        raise ValueError(name)
+
+    def initialize_app(options, name):
+        initialized_apps.append((options, name))
+        return app
+
+    monkeypatch.setenv("FIREBASE_PROJECT_ID", "configured-firebase-project")
+    monkeypatch.setattr(auth_routes.firebase_admin, "get_app", no_initialized_app)
+    monkeypatch.setattr(auth_routes.firebase_admin, "initialize_app", initialize_app)
+    monkeypatch.setattr(
+        auth_routes.firebase_auth,
+        "verify_id_token",
+        lambda token, app: {"email": "verified@example.com"},
+    )
+
+    claims = auth_routes.verify_firebase_id_token("firebase-token")
+
+    assert claims["email"] == "verified@example.com"
+    assert initialized_apps == [
+        (
+            {"projectId": "configured-firebase-project"},
+            "agenticliner-configured-firebase-project",
+        )
+    ]
+
+
+@pytest.mark.anyio
+async def test_firebase_login_unknown_email_gets_participant_role(monkeypatch):
+    from backend.api import auth_routes
+
+    def verify_token(token):
+        assert token == "valid-token"
+        return {
+            "email": "new-participant@example.com",
+            "email_verified": True,
+            "name": "Verified Participant",
+        }
+
+    def reject_network(*args, **kwargs):
+        raise AssertionError("Tests must not make network requests.")
+
+    monkeypatch.setattr(auth_routes, "verify_firebase_id_token", verify_token, raising=False)
+    monkeypatch.setattr(auth_routes.urllib.request, "urlopen", reject_network)
+    monkeypatch.setenv("FIREBASE_PROJECT_ID", "test-firebase-project")
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/auth/firebase-login",
+            json={
+                "id_token": "valid-token",
+                "email": "admin@galgotias.edu",
+                "role": "supervisor",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["user"]["email"] == "new-participant@example.com"
+    assert response.json()["user"]["role"] == "participant"
+
+
+@pytest.mark.anyio
+async def test_firebase_login_uses_database_role_for_existing_user(monkeypatch):
+    from backend.api import auth_routes
+
+    def reject_network(*args, **kwargs):
+        raise AssertionError("Tests must not make network requests.")
+
+    monkeypatch.setattr(
+        auth_routes,
+        "verify_firebase_id_token",
+        lambda token: {
+            "email": "admin@galgotias.edu",
+            "email_verified": True,
+            "name": "Verified Admin",
+        },
+        raising=False,
+    )
+    monkeypatch.setattr(auth_routes.urllib.request, "urlopen", reject_network)
+    monkeypatch.setenv("FIREBASE_PROJECT_ID", "test-firebase-project")
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/auth/firebase-login",
+            json={
+                "id_token": "valid-token",
+                "email": "organiser@galgotias.edu",
+                "role": "participant",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["user"]["email"] == "admin@galgotias.edu"
+    assert response.json()["user"]["role"] == "supervisor"
+
+
+@pytest.mark.anyio
+async def test_demo_login_is_disabled_by_default(monkeypatch):
+    monkeypatch.delenv("ALLOW_DEMO_LOGIN", raising=False)
+    monkeypatch.delenv("ALLOW_PUBLIC_TUNNEL", raising=False)
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/auth/google",
+            json={"demo_google": True, "email": "organiser@galgotias.edu"},
+        )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_demo_login_is_refused_when_public_tunnel_is_enabled(monkeypatch):
+    monkeypatch.setenv("ALLOW_DEMO_LOGIN", "1")
+    monkeypatch.setenv("ALLOW_PUBLIC_TUNNEL", "1")
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/auth/google",
+            json={"demo_google": True, "email": "organiser@galgotias.edu"},
+        )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_demo_login_is_refused_for_non_loopback_client(monkeypatch):
+    monkeypatch.setenv("ALLOW_DEMO_LOGIN", "1")
+    monkeypatch.delenv("ALLOW_PUBLIC_TUNNEL", raising=False)
+
+    transport = httpx.ASGITransport(app=app, client=("203.0.113.10", 12345))
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/auth/google",
+            json={"demo_google": True, "email": "organiser@galgotias.edu"},
+        )
+
+    assert response.status_code == 403
 
 @pytest.mark.anyio
 async def test_email_service_safety():

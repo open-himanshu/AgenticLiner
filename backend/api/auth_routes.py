@@ -10,9 +10,12 @@ from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from typing import Optional
 import os
-import urllib.request
-import json
 import logging
+import json
+import ipaddress
+import firebase_admin
+from firebase_admin import auth as firebase_auth
+from firebase_admin.exceptions import FirebaseError
 
 from backend.services.auth_service import (
     authenticate_user,
@@ -36,6 +39,12 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Authentication"])
 
+class FirebaseAuthConfigurationError(RuntimeError):
+    pass
+
+class InvalidFirebaseIDToken(ValueError):
+    pass
+
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
@@ -57,6 +66,45 @@ def get_firebase_config():
         "appId": os.getenv("FIREBASE_APP_ID", "").strip()
     }
 
+def is_demo_login_enabled(request: Request) -> bool:
+    """Returns whether server-side demo login is enabled for this deployment."""
+    if (
+        os.getenv("ALLOW_DEMO_LOGIN", "").strip() != "1"
+        or os.getenv("ALLOW_PUBLIC_TUNNEL", "").strip() == "1"
+        or request.client is None
+    ):
+        return False
+
+    try:
+        return ipaddress.ip_address(request.client.host).is_loopback
+    except ValueError:
+        return False
+
+def verify_firebase_id_token(id_token: str):
+    """Verifies a Firebase ID token against the configured Firebase project."""
+    project_id = os.getenv("FIREBASE_PROJECT_ID", "").strip()
+    if not project_id:
+        raise FirebaseAuthConfigurationError("FIREBASE_PROJECT_ID is not configured.")
+
+    app_name = f"agenticliner-{project_id}"
+    try:
+        try:
+            firebase_app = firebase_admin.get_app(app_name)
+        except ValueError:
+            firebase_app = firebase_admin.initialize_app(
+                options={"projectId": project_id},
+                name=app_name
+            )
+    except Exception as exc:
+        raise FirebaseAuthConfigurationError(
+            "Firebase Admin SDK could not initialize for the configured project."
+        ) from exc
+
+    try:
+        return firebase_auth.verify_id_token(id_token, app=firebase_app)
+    except (ValueError, firebase_auth.InvalidIdTokenError) as exc:
+        raise InvalidFirebaseIDToken("Firebase ID token is invalid.") from exc
+
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, next: Optional[str] = None):
     """Renders the unified login page with Google Sign-In and role-based redirect."""
@@ -76,7 +124,7 @@ async def login_page(request: Request, next: Optional[str] = None):
             "google_client_id": google_client_id,
             "firebase_config": get_firebase_config(),
             "smtp_configured": is_smtp_configured(),
-            "demo_login_enabled": os.getenv("ALLOW_PUBLIC_TUNNEL") != "1"
+            "demo_login_enabled": is_demo_login_enabled(request)
         }
     )
 
@@ -109,7 +157,7 @@ async def login_submit(
                     "google_client_id": google_client_id,
                     "firebase_config": get_firebase_config(),
                     "smtp_configured": is_smtp_configured(),
-                    "demo_login_enabled": os.getenv("ALLOW_PUBLIC_TUNNEL") != "1"
+                    "demo_login_enabled": is_demo_login_enabled(request)
                 }
             )
         raise HTTPException(status_code=400, detail="Email and password are required.")
@@ -127,7 +175,7 @@ async def login_submit(
                     "google_client_id": google_client_id,
                     "firebase_config": get_firebase_config(),
                     "smtp_configured": is_smtp_configured(),
-                    "demo_login_enabled": os.getenv("ALLOW_PUBLIC_TUNNEL") != "1"
+                    "demo_login_enabled": is_demo_login_enabled(request)
                 }
             )
         raise HTTPException(status_code=401, detail=error_msg or "Invalid credentials.")
@@ -166,7 +214,7 @@ async def signup_page(request: Request):
             "google_client_id": google_client_id,
             "firebase_config": get_firebase_config(),
             "smtp_configured": is_smtp_configured(),
-            "demo_login_enabled": os.getenv("ALLOW_PUBLIC_TUNNEL") != "1"
+            "demo_login_enabled": is_demo_login_enabled(request)
         }
     )
 
@@ -215,7 +263,7 @@ async def signup_submit(
                 "form_data": form_data,
                 "google_client_id": google_client_id,
                 "smtp_configured": is_smtp_configured(),
-                "demo_login_enabled": os.getenv("ALLOW_PUBLIC_TUNNEL") != "1"
+                "demo_login_enabled": is_demo_login_enabled(request)
             }
         )
 
@@ -228,7 +276,7 @@ async def signup_submit(
                 "form_data": form_data,
                 "google_client_id": google_client_id,
                 "smtp_configured": is_smtp_configured(),
-                "demo_login_enabled": os.getenv("ALLOW_PUBLIC_TUNNEL") != "1"
+                "demo_login_enabled": is_demo_login_enabled(request)
             }
         )
 
@@ -243,7 +291,7 @@ async def signup_submit(
                 "form_data": form_data,
                 "google_client_id": google_client_id,
                 "smtp_configured": is_smtp_configured(),
-                "demo_login_enabled": os.getenv("ALLOW_PUBLIC_TUNNEL") != "1"
+                "demo_login_enabled": is_demo_login_enabled(request)
             }
         )
 
@@ -258,7 +306,7 @@ async def signup_submit(
                 "form_data": form_data,
                 "google_client_id": google_client_id,
                 "smtp_configured": is_smtp_configured(),
-                "demo_login_enabled": os.getenv("ALLOW_PUBLIC_TUNNEL") != "1"
+                "demo_login_enabled": is_demo_login_enabled(request)
             }
         )
 
@@ -440,50 +488,49 @@ async def google_auth_callback(request: Request):
         raise HTTPException(status_code=400, detail="Invalid request payload.")
 
     credential = data.get("credential") or data.get("id_token")
-    role = data.get("role", "participant")
-    department = data.get("department", "School of AI")
-    is_demo = data.get("demo_google", False)
-
-    google_email = data.get("email")
-    google_name = data.get("name")
+    is_demo = data.get("demo_google") is True
 
     if is_demo:
-        if os.getenv("ALLOW_PUBLIC_TUNNEL") == "1":
+        if not is_demo_login_enabled(request):
             raise HTTPException(
                 status_code=403,
-                detail="Demo sign-in is disabled while public access is enabled."
+                detail="Demo sign-in is disabled for this deployment."
             )
+        google_email = data.get("email")
+        google_name = data.get("name")
+        department = data.get("department", "School of AI")
     else:
-        if not credential:
-            raise HTTPException(status_code=401, detail="A verified Google credential is required.")
+        if not isinstance(credential, str) or not credential.strip():
+            raise HTTPException(status_code=401, detail="A Firebase ID token is required.")
         try:
-            tokeninfo_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={credential}"
-            req = urllib.request.Request(tokeninfo_url, headers={"User-Agent": "AgenticLiner-Auth"})
-            with urllib.request.urlopen(req, timeout=5) as response:
-                if response.status != 200:
-                    raise HTTPException(status_code=401, detail="Google credential verification failed.")
-                token_data = json.loads(response.read().decode("utf-8"))
-            expected_audience = os.getenv("GOOGLE_CLIENT_ID", "").strip()
-            if expected_audience and token_data.get("aud") != expected_audience:
-                raise HTTPException(status_code=401, detail="Google credential audience is invalid.")
-            if token_data.get("email_verified") not in (True, "true"):
-                raise HTTPException(status_code=401, detail="Google email is not verified.")
-            google_email = token_data.get("email")
-            google_name = token_data.get("name") or google_name
-        except HTTPException:
-            raise
-        except Exception as ex:
-            logger.warning(f"Google credential verification failed: {ex}")
-            raise HTTPException(status_code=401, detail="Google credential verification failed.")
+            token_data = verify_firebase_id_token(credential)
+        except InvalidFirebaseIDToken:
+            logger.warning("Firebase ID token verification failed.")
+            raise HTTPException(status_code=401, detail="Firebase ID token verification failed.")
+        except FirebaseAuthConfigurationError:
+            logger.exception("Firebase authentication is not configured correctly.")
+            raise HTTPException(status_code=503, detail="Firebase authentication is unavailable.")
+        except FirebaseError:
+            logger.exception("Firebase ID token verification is unavailable.")
+            raise HTTPException(status_code=503, detail="Firebase authentication is unavailable.")
+        except ValueError:
+            logger.warning("Firebase ID token verification failed.")
+            raise HTTPException(status_code=401, detail="Firebase ID token verification failed.")
 
-    if not google_email:
-        raise HTTPException(status_code=400, detail="Missing verified email address.")
+        google_email = token_data.get("email")
+        google_name = token_data.get("name")
+        department = token_data.get("department", "School of AI")
+        if token_data.get("email_verified") is not True:
+            raise HTTPException(status_code=401, detail="A verified Firebase email is required.")
+
+    if not isinstance(google_email, str) or not google_email.strip():
+        raise HTTPException(status_code=401, detail="A verified email address is required.")
 
     # Create or retrieve user from database
     user = create_user_from_google(
         email=google_email,
         full_name=google_name or google_email.split("@")[0],
-        role=role if is_demo else "participant",
+        role="participant",
         department=department
     )
 

@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 import os
@@ -139,7 +139,7 @@ class AutopilotRequest(BaseModel):
     date: str = "2026-11-25"
     start_time: str = "09:00:00"
     end_time: str = "17:00:00"
-    budget: float = 25000
+    budget: float = Field(gt=0)
 
 class StudentRegistrationRequest(BaseModel):
     event_id: str = "ev_001"
@@ -687,8 +687,8 @@ async def run_autopilot_api(
     req: AutopilotRequest,
     user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
 ):
-    """Runs autonomous event planning with Kavach safety checks and live timeline logging."""
-    res = autopilot_agent.run_autopilot(
+    """Runs autonomous event planning with provider fallback and live timeline logging."""
+    res = run_autopilot_with_fallback(
         prompt=req.prompt,
         date=req.date,
         start_time=req.start_time,

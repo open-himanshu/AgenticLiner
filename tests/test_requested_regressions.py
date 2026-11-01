@@ -62,12 +62,14 @@ def test_outbox_page_route_renders_under_canonical_path():
     assert compatibility_response.status_code == 200
 
 
-def test_demo_google_account_uses_fictional_identity():
-    client = TestClient(app)
+def test_demo_google_account_uses_fictional_identity(monkeypatch):
+    monkeypatch.setenv("ALLOW_DEMO_LOGIN", "1")
+    monkeypatch.delenv("ALLOW_PUBLIC_TUNNEL", raising=False)
+    client = TestClient(app, client=("127.0.0.1", 12345))
     login_response = client.get("/login")
     signup_response = client.get("/signup")
     anonymous_registration_response = client.get("/register")
-    participant_client = TestClient(app)
+    participant_client = TestClient(app, client=("127.0.0.1", 12345))
     participant_client.post(
         "/login",
         data={

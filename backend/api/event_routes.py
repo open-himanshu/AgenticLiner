@@ -125,6 +125,8 @@ async def approve_event_endpoint(
             supervisor_email=user.get("email", "admin@galgotias.edu"),
             remarks=remarks or ""
         )
+        if not res.get("success", False):
+            return JSONResponse(status_code=409, content=res)
         accept = request.headers.get("accept", "")
         if "text/html" in accept or request.headers.get("content-type") == "application/x-www-form-urlencoded":
             return RedirectResponse(url="/supervisor?approved=1", status_code=status.HTTP_302_FOUND)

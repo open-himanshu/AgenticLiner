@@ -291,6 +291,48 @@ def approve_event_by_supervisor(event_id: str, supervisor_email: str = "admin@ga
                 "event_not_found", event_id, f"Event {event_id} not found."
             )
 
+        pending_bookings = conn.execute(
+            """SELECT id, room_id, resource_id, quantity, start_time, end_time
+               FROM bookings
+               WHERE event_id = ? AND status = 'pending'""",
+            (event_id,),
+        ).fetchall()
+        for booking in pending_bookings:
+            kavach.verify_time_window(booking["start_time"], booking["end_time"])
+            if booking["room_id"]:
+                kavach.verify_room_capacity(
+                    conn, booking["room_id"], event["expected_participants"]
+                )
+                kavach.verify_room_overlap(
+                    conn,
+                    booking["room_id"],
+                    booking["start_time"],
+                    booking["end_time"],
+                )
+            if booking["resource_id"]:
+                overlapping_allocations = conn.execute(
+                    """SELECT COALESCE(SUM(quantity), 0) AS quantity
+                       FROM bookings
+                       WHERE event_id = ?
+                         AND resource_id = ?
+                         AND status = 'pending'
+                         AND start_time < ?
+                         AND end_time > ?""",
+                    (
+                        event_id,
+                        booking["resource_id"],
+                        booking["end_time"],
+                        booking["start_time"],
+                    ),
+                ).fetchone()["quantity"]
+                kavach.verify_resource_stock(
+                    conn,
+                    booking["resource_id"],
+                    overlapping_allocations,
+                    booking["start_time"],
+                    booking["end_time"],
+                )
+
         conn.execute(
             """UPDATE events
                SET approval_status = 'approved', status = 'allocated', updated_at = CURRENT_TIMESTAMP
@@ -354,9 +396,31 @@ def approve_event_by_supervisor(event_id: str, supervisor_email: str = "admin@ga
             "message": f"Event '{event['name']}' successfully approved and bookings confirmed.",
         }
 
-    return _run_supervisor_transition(
-        event_id, supervisor_email, "approve_event_by_supervisor", approve_event
-    )
+    try:
+        return _run_supervisor_transition(
+            event_id, supervisor_email, "approve_event_by_supervisor", approve_event
+        )
+    except InvariantViolation as violation:
+        if violation.rule not in {
+            "invalid_time_window",
+            "room_not_found",
+            "capacity_overrun",
+            "room_overlap",
+            "invalid_resource_quantity",
+            "resource_not_found",
+            "resource_exhaustion",
+        }:
+            raise
+        return {
+            "success": False,
+            "event_id": event_id,
+            "violation": {
+                "rule": violation.rule,
+                "item": violation.item,
+                "detail": violation.detail,
+                "suggestion": violation.suggestion,
+            },
+        }
 
 
 def reject_event_by_supervisor(event_id: str, supervisor_email: str = "admin@galgotias.edu", reason: str = "") -> Dict[str, Any]:

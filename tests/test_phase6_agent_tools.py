@@ -185,7 +185,8 @@ async def test_http_agent_run_endpoint():
                 "prompt": "Organize a campus coding hackathon for 180 students",
                 "date": "2026-12-20",
                 "start_time": "09:00:00",
-                "end_time": "17:00:00"
+                "end_time": "17:00:00",
+                "budget": 25000
             }
         )
 

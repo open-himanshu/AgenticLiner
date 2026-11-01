@@ -431,8 +431,26 @@ def run_autopilot_with_fallback(
 ) -> Dict[str, Any]:
     """
     Try agent mode first.  On ProviderError, fall back to the fixed pipeline.
-    The response always includes 'mode': 'agent' | 'fixed_fallback'.
+    The response mode identifies agent, provider-fallback, or provider-free execution.
     """
+    if call_llm_fn is None and not os.getenv("PROVIDER", "").strip():
+        from backend.core.planner.agent import AutopilotAgent
+
+        result = AutopilotAgent().run_autopilot(
+            prompt=prompt,
+            date=date,
+            start_time=start_time,
+            end_time=end_time,
+            budget=budget,
+        )
+        result.update({
+            "mode": "fixed",
+            "provider": "",
+            "model": "",
+            "tokens_used": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+        })
+        return result
+
     try:
         return run_agent_mode(
             prompt=prompt,
@@ -442,9 +460,17 @@ def run_autopilot_with_fallback(
             budget=budget,
             call_llm_fn=call_llm_fn,
         )
-    except ProviderError:
+    except ProviderError as exc:
         # Fall back to the existing fixed pipeline.
         from backend.core.planner.agent import AutopilotAgent
+        try:
+            provider_config = get_provider_config()
+            provider = provider_config["provider"]
+            model = provider_config["model"]
+        except ProviderError:
+            provider = os.getenv("PROVIDER", "").strip()
+            model = os.getenv(f"{provider.upper()}_MODEL", "").strip() if provider else ""
+
         agent = AutopilotAgent()
         result = agent.run_autopilot(
             prompt=prompt,
@@ -453,9 +479,11 @@ def run_autopilot_with_fallback(
             end_time=end_time,
             budget=budget,
         )
-        result["mode"] = "fixed_fallback"
-        result["provider"] = ""
-        result["model"] = ""
-        result["tokens_used"] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        result.update({
+            "mode": "fixed_fallback",
+            "provider": provider,
+            "model": model,
+            "tokens_used": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+            "fallback_reason": str(exc),
+        })
         return result
-

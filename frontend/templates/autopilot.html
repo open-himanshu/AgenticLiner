@@ -38,6 +38,12 @@
                 </div>
 
                 <div class="mb-3">
+                    <label class="form-label small fw-semibold" for="agentBudget">Budget limit</label>
+                    <input type="number" class="form-control form-control-sm" id="agentBudget" min="0.01" step="0.01" required>
+                    <div class="form-text" style="font-size: 0.75rem;">The planner will not requisition above this amount.</div>
+                </div>
+
+                <div class="mb-3">
                     <label class="form-label small fw-semibold text-muted">Test Scenarios (Quick Fill):</label>
                     <div class="d-flex flex-column gap-1">
                         <button class="btn btn-sm btn-outline-secondary text-start" onclick="setScenario('Organize a 2-day campus AI hackathon for 150 students with coding workshops, buffet lunch, extension spike boards and stage mics.', '2026-11-28')">
@@ -82,6 +88,17 @@
                     </div>
                     <div id="statusBadgeContainer">
                         <span class="badge bg-secondary">Idle</span>
+                    </div>
+                </div>
+
+                <div id="executionMetadata" class="alert alert-light border small mb-3" hidden>
+                    <div class="fw-semibold mb-2">Execution Details</div>
+                    <div>Mode: <span id="executionMode">-</span></div>
+                    <div>Provider: <span id="executionProvider">-</span></div>
+                    <div>Model: <span id="executionModel">-</span></div>
+                    <div>Tokens used: <span id="executionTokens">0</span></div>
+                    <div id="fallbackReasonRow" class="text-danger mt-1" hidden>
+                        Fallback reason: <span id="fallbackReason"></span>
                     </div>
                 </div>
 
@@ -142,10 +159,17 @@
     document.getElementById('btnRunAgent').addEventListener('click', async () => {
         const prompt = document.getElementById('agentPrompt').value;
         const targetDate = document.getElementById('agentDate').value || '2026-11-28';
+        const budgetInput = document.getElementById('agentBudget');
+        const budget = Number(budgetInput.value);
         const btn = document.getElementById('btnRunAgent');
         const container = document.getElementById('timelineContainer');
         const statusContainer = document.getElementById('statusBadgeContainer');
         const summaryCard = document.getElementById('summaryCard');
+
+        if (!budgetInput.value || !Number.isFinite(budget) || budget <= 0) {
+            budgetInput.reportValidity();
+            return;
+        }
 
         btn.disabled = true;
         btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Agent Running...`;
@@ -157,12 +181,23 @@
             const response = await fetch('/api/autopilot/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: prompt, date: targetDate })
+                body: JSON.stringify({ prompt: prompt, date: targetDate, budget: budget })
             });
 
             const result = await response.json();
             btn.disabled = false;
             btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
+
+            const tokenUsage = result.tokens_used || {};
+            document.getElementById('executionMetadata').hidden = false;
+            document.getElementById('executionMode').textContent = result.mode || '-';
+            document.getElementById('executionProvider').textContent = result.provider || '-';
+            document.getElementById('executionModel').textContent = result.model || '-';
+            document.getElementById('executionTokens').textContent =
+                `${tokenUsage.total_tokens || 0} (prompt ${tokenUsage.prompt_tokens || 0}, completion ${tokenUsage.completion_tokens || 0})`;
+            const fallbackReasonRow = document.getElementById('fallbackReasonRow');
+            fallbackReasonRow.hidden = !result.fallback_reason;
+            document.getElementById('fallbackReason').textContent = result.fallback_reason || '';
 
             if (result.timeline && result.timeline.length > 0) {
                 result.timeline.forEach((step, idx) => {

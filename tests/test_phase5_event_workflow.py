@@ -18,7 +18,7 @@ from backend.services.event_workflow_service import (
 )
 from backend.services import event_workflow_service
 from backend.core.safety.kavach import KavachEngine, InvariantViolation
-from backend.core.database.connection import fetch_one, fetch_all
+from backend.core.database.connection import fetch_one, fetch_all, execute_query
 from backend.modules.module2_scheduling.attendee_manager import AttendeeManager
 
 @pytest.fixture(autouse=True)
@@ -214,6 +214,125 @@ async def test_event_lifecycle_approval_and_outbox_release():
 
     sent_notices = fetch_all("SELECT * FROM outbox WHERE event_id = ? AND status = 'sent'", (event_id,))
     assert len(sent_notices) >= 2  # Dean request released + approval congratulation
+
+
+@pytest.mark.anyio
+async def test_supervisor_approval_rechecks_resource_stock_and_rolls_back():
+    resource = await create_equipment(
+        name="Approval-time limited microphones",
+        category="equipment",
+        stock=5,
+        unit="set",
+    )
+    pending_event = create_event_request(
+        name="Pending microphone event",
+        brief="Requires supervisor approval",
+        event_type="conference",
+        expected_participants=200,
+        organizer_department="Computing Club",
+        organizer_email="organiser@galgotias.edu",
+        start_time="2026-12-11 09:00:00",
+        end_time="2026-12-11 12:00:00",
+        requisitions=[{"resource_id": resource["id"], "quantity": 4}],
+    )
+    create_event_request(
+        name="Confirmed microphone event",
+        brief="Consumes available stock before supervisor approval",
+        event_type="workshop",
+        expected_participants=50,
+        organizer_department="Robotics Club",
+        organizer_email="organiser@galgotias.edu",
+        start_time="2026-12-11 09:00:00",
+        end_time="2026-12-11 12:00:00",
+        requisitions=[{"resource_id": resource["id"], "quantity": 2}],
+    )
+
+    result = approve_event_by_supervisor(pending_event["event_id"])
+
+    assert result["success"] is False
+    assert result["violation"]["rule"] == "resource_exhaustion"
+    assert result["violation"]["item"] == resource["name"]
+    event_state = fetch_one(
+        "SELECT approval_status, status FROM events WHERE id = ?",
+        (pending_event["event_id"],),
+    )
+    assert event_state == {
+        "approval_status": "pending_dean_approval",
+        "status": "planned",
+    }
+    own_bookings = fetch_all(
+        "SELECT status, approval_status FROM bookings WHERE event_id = ?",
+        (pending_event["event_id"],),
+    )
+    assert own_bookings == [{"status": "pending", "approval_status": "pending_dean_approval"}]
+    assert fetch_one(
+        "SELECT allocated_stock FROM resources WHERE id = ?", (resource["id"],)
+    )["allocated_stock"] == 2
+    assert fetch_one(
+        "SELECT count(*) AS count FROM outbox WHERE event_id = ? AND status = 'held'",
+        (pending_event["event_id"],),
+    )["count"] == 1
+
+
+@pytest.mark.anyio
+async def test_supervisor_approval_rechecks_room_overlap_and_rolls_back():
+    venue = await create_venue(
+        name="Approval-time conflict hall",
+        capacity=300,
+        location="Block F",
+        requires_special_approval=True,
+    )
+    pending_event = create_event_request(
+        name="Pending room event",
+        brief="Requires supervisor approval",
+        event_type="conference",
+        expected_participants=200,
+        organizer_department="Computing Club",
+        organizer_email="organiser@galgotias.edu",
+        room_id=venue["id"],
+        start_time="2026-12-12 09:00:00",
+        end_time="2026-12-12 12:00:00",
+    )
+    conflicting_event = create_event_request(
+        name="Confirmed room event",
+        brief="Books the room before approval",
+        event_type="workshop",
+        expected_participants=50,
+        organizer_department="Robotics Club",
+        organizer_email="organiser@galgotias.edu",
+        room_id=venue["id"],
+        start_time="2026-12-12 10:00:00",
+        end_time="2026-12-12 13:00:00",
+    )
+    execute_query(
+        """UPDATE bookings
+           SET status = 'confirmed', approval_status = 'approved'
+           WHERE event_id = ?""",
+        (conflicting_event["event_id"],),
+    )
+
+    result = approve_event_by_supervisor(pending_event["event_id"])
+
+    assert result["success"] is False
+    assert result["violation"]["rule"] == "room_overlap"
+    event_state = fetch_one(
+        "SELECT approval_status, status FROM events WHERE id = ?",
+        (pending_event["event_id"],),
+    )
+    assert event_state == {
+        "approval_status": "pending_dean_approval",
+        "status": "planned",
+    }
+    own_bookings = fetch_all(
+        "SELECT status, approval_status FROM bookings WHERE event_id = ?",
+        (pending_event["event_id"],),
+    )
+    assert own_bookings == [{"status": "pending", "approval_status": "pending_dean_approval"}]
+    assert fetch_one(
+        "SELECT count(*) AS count FROM outbox WHERE event_id = ? AND status = 'held'",
+        (pending_event["event_id"],),
+    )["count"] == 1
+
 
 @pytest.mark.anyio
 async def test_event_lifecycle_rejection():
