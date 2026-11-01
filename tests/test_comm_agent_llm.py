@@ -47,11 +47,19 @@ def test_comm_agent_falls_back_to_rules_when_llm_fails(monkeypatch):
         raise ProviderError("LLM API is unreachable")
 
     monkeypatch.setattr("backend.modules.module5_comm_agent.agent.call_llm", failing_call_llm)
+    monkeypatch.setattr(
+        "backend.modules.module5_comm_agent.agent.get_provider_config",
+        lambda: {"provider": "gemini", "model": "test-model", "api_key": "test-key"},
+    )
 
     # 1. Known venue query should still resolve via database facts
     res_venue = agent.answer_query("ev_001", "Where is the main auditorium located?")
     assert res_venue["found"] is True
     assert "taking place in" in res_venue["answer"]
+    assert res_venue["mode"] == "rules_fallback"
+    assert res_venue["provider"] == "gemini"
+    assert res_venue["model"] == "test-model"
+    assert res_venue["fallback_reason"] == "LLM request failed; using grounded rules."
 
     # 2. Unknown query should return the safe student coordinator flag message
     res_unknown = agent.answer_query("ev_001", "book a random space")
@@ -72,6 +80,8 @@ def test_comm_agent_falls_back_when_no_llm_provider(monkeypatch):
     res = agent.answer_query("ev_001", "When is lunch scheduled?")
     assert res["found"] is True
     assert "Lunch and refreshments" in res["answer"]
+    assert res["mode"] == "rules_fallback"
+    assert res["fallback_reason"] == "LLM provider is not configured; using grounded rules."
 
 
 @pytest.mark.anyio

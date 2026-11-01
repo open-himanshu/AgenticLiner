@@ -34,6 +34,20 @@ class CommunicationAgent:
         try:
             cur = conn.cursor()
             query_lower = query.lower()
+            provider_name = ""
+            model_name = ""
+            fallback_reason = "LLM provider is not configured; using grounded rules."
+
+            def rules_response(found: bool, answer: str, **details) -> Dict[str, Any]:
+                return {
+                    "found": found,
+                    "answer": answer,
+                    **details,
+                    "mode": "rules_fallback",
+                    "provider": provider_name,
+                    "model": model_name,
+                    "fallback_reason": fallback_reason,
+                }
 
             # 1. Fetch event sessions, rooms, speakers
             cur.execute("""
@@ -46,11 +60,15 @@ class CommunicationAgent:
             sessions = [dict(r) for r in cur.fetchall()]
 
             # Grounded real-time LLM inference when provider is configured
+            provider_call_started = False
             try:
                 provider_cfg = get_provider_config()
                 provider = (provider_cfg.get("provider") or "").lower()
+                provider_name = provider
+                model_name = provider_cfg.get("model") or ""
                 has_key = bool(provider_cfg.get("api_key")) or provider == "ollama"
                 if provider in {"gemini", "groq", "ollama"} and has_key:
+                    provider_call_started = True
                     schedule_lines = []
                     for s in sessions:
                         schedule_lines.append(
@@ -90,8 +108,17 @@ class CommunicationAgent:
                             "provider": llm_resp.get("provider"),
                             "model": llm_resp.get("model"),
                         }
-            except Exception as exc:
-                logger.warning("Grounded LLM query failed, falling back to deterministic rules: %s", exc)
+                    fallback_reason = "LLM returned an empty answer; using grounded rules."
+            except ProviderError:
+                fallback_reason = (
+                    "LLM request failed; using grounded rules."
+                    if provider_call_started
+                    else "LLM provider is not configured; using grounded rules."
+                )
+                logger.warning(fallback_reason)
+            except Exception:
+                fallback_reason = "LLM request failed; using grounded rules."
+                logger.warning(fallback_reason)
 
             # Match query against sessions
             matched_session = None
@@ -107,11 +134,7 @@ class CommunicationAgent:
                     f"in {matched_session['room_name']} ({matched_session['location']}). "
                     f"Speaker: {matched_session['speaker_name'] or 'TBD'}."
                 )
-                return {
-                    "found": True,
-                    "answer": ans,
-                    "session_matched": matched_session
-                }
+                return rules_response(True, ans, session_matched=matched_session)
 
             # 2. General Venue queries
             if "where" in query_lower or "venue" in query_lower or "hall" in query_lower or "audi" in query_lower:
@@ -137,23 +160,23 @@ class CommunicationAgent:
                     venue_list = ", ".join([f"{v['name']} ({v['location']})" for v in venues])
                 else:
                     venue_list = "Main Auditorium A (C-Block Floor 1), Auditorium B (Mini Hall)"
-                return {
-                    "found": True,
-                    "answer": f"The event sessions and activities are taking place in: {venue_list}."
-                }
+                return rules_response(
+                    True,
+                    f"The event sessions and activities are taking place in: {venue_list}.",
+                )
 
             # 3. Lunch / Refreshment queries
             if "lunch" in query_lower or "food" in query_lower or "snack" in query_lower:
-                return {
-                    "found": True,
-                    "answer": "Lunch and refreshments will be served at the cafeteria and courtyard during the afternoon break (13:00 - 14:00)."
-                }
+                return rules_response(
+                    True,
+                    "Lunch and refreshments will be served at the cafeteria and courtyard during the afternoon break (13:00 - 14:00).",
+                )
 
             # If not found in grounded records
-            return {
-                "found": False,
-                "answer": "I don't have this specific information in the official event schedule yet. I've flagged this question for the student coordinators to answer."
-            }
+            return rules_response(
+                False,
+                "I don't have this specific information in the official event schedule yet. I've flagged this question for the student coordinators to answer.",
+            )
         finally:
             if close_conn:
                 conn.close()
