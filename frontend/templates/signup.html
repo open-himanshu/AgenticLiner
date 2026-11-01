@@ -144,10 +144,7 @@
                             <div class="col-sm-6">
                                 <label for="role" class="form-label small fw-semibold text-secondary">Account Role</label>
                                 <select class="form-select" id="role" name="role" required>
-                                    <option value="organiser" {% if form_data.get('role') == 'organiser' or not form_data.get('role') %}selected{% endif %}>Organiser (Faculty/Club)</option>
-                                    <option value="supervisor" {% if form_data.get('role') == 'supervisor' %}selected{% endif %}>Supervisor (Dean/Admin)</option>
-                                    <option value="participant" {% if form_data.get('role') == 'participant' %}selected{% endif %}>Participant (Student)</option>
-                                    <option value="data_manager" {% if form_data.get('role') == 'data_manager' %}selected{% endif %}>Data Manager (CSV Ops)</option>
+                                    <option value="participant" selected>Participant (Student)</option>
                                 </select>
                             </div>
                             <div class="col-sm-6">
@@ -240,13 +237,14 @@
                     Creating account with Google...
                 </div>
 
+                {% if demo_login_enabled %}
                 <!-- Account List -->
                 <div class="list-group list-group-flush mb-3">
-                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="signupWithGoogleAccount('himanshugupta00727@gmail.com', 'Himanshu Gupta')">
-                        <div class="google-avatar bg-primary">H</div>
+                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="signupWithGoogleAccount('casey@example.invalid', 'Casey Example')">
+                        <div class="google-avatar bg-primary">C</div>
                         <div class="flex-grow-1 overflow-hidden">
-                            <div class="fw-semibold text-truncate">Himanshu Gupta</div>
-                            <div class="small text-muted text-truncate">himanshugupta00727@gmail.com</div>
+                            <div class="fw-semibold text-truncate">Casey Example</div>
+                            <div class="small text-muted text-truncate">casey@example.invalid</div>
                         </div>
                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">Google</span>
                     </div>
@@ -268,6 +266,9 @@
                         <input type="email" id="customSignupGoogleEmail" class="form-control" placeholder="your.name@gmail.com">
                         <button class="btn btn-primary" type="button" onclick="submitCustomSignupGoogleAccount()">Sign Up</button>
                     </div>
+                    {% else %}
+                    <p class="small text-muted">Public sign-up requires a verified Google account. Demo account sign-up is disabled.</p>
+                    {% endif %}
                 </div>
 
                 <div class="text-center pt-2 border-top">

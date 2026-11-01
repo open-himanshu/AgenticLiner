@@ -99,10 +99,8 @@ def create_user_from_google(
     role: str = "participant",
     department: str = "School of AI"
 ) -> Dict[str, Any]:
-    """Creates or updates a user authenticated via Google One-Tap / OAuth."""
-    valid_roles = {"supervisor", "organiser", "data_manager", "participant"}
-    if role not in valid_roles:
-        role = "participant"
+    """Creates participant accounts via Google sign-in and preserves existing account roles."""
+    role = "participant"
 
     existing = get_user_by_email(email)
     if existing:

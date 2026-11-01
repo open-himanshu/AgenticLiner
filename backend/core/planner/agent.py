@@ -9,7 +9,6 @@ import json
 import uuid
 import re
 from typing import Dict, Any, List, Optional
-from backend.core.database.connection import get_connection
 from backend.core.planner.tools import (
     tool_find_free_venues,
     tool_check_equipment,
@@ -34,7 +33,7 @@ class AutopilotAgent:
         self.timeline.append(step_entry)
         return step_entry
 
-    def run_autopilot(self, prompt: str, date: str = "2026-11-25", start_time: str = "09:00:00", end_time: str = "17:00:00") -> Dict[str, Any]:
+    def run_autopilot(self, prompt: str, date: str = "2026-11-25", start_time: str = "09:00:00", end_time: str = "17:00:00", budget: float = 25000) -> Dict[str, Any]:
         """
         Executes autonomous campus event planning:
         1. Adaptive Intake & Entity Extraction (Event Type, headcount, timing)
@@ -71,12 +70,6 @@ class AutopilotAgent:
         else:
             event_type = "seminar"
             event_name = "Academic Seminar"
-
-        with get_connection() as conn:
-            conn.execute("""
-                INSERT INTO events (id, name, brief, event_type, expected_participants, status)
-                VALUES (?, ?, ?, ?, ?, 'planned')
-            """, (event_id, event_name, prompt, event_type, headcount))
 
         self._log_step(
             step_no=step_no,
@@ -130,12 +123,18 @@ class AutopilotAgent:
                 "quantity": r["suggested_qty"]
             })
 
+        recommendation_summary = (
+            f"Synthesized {len(recs)} campus logistics recommendations: "
+            f"'{recs[0]['item_name']}' ({recs[0]['reason']})."
+            if recs
+            else "No campus logistics recommendations are available."
+        )
         self._log_step(
             step_no=step_no,
             tool_name="recommend_from_history",
             arguments={"event_type": event_type, "headcount": headcount},
             status="completed",
-            summary=f"Synthesized {len(recs)} campus logistics recommendations: '{recs[0]['item_name']}' ({recs[0]['reason']}).",
+            summary=recommendation_summary,
             details=recs
         )
 
@@ -148,7 +147,15 @@ class AutopilotAgent:
             items_json=json.dumps(items_to_requisition),
             date=date,
             start_time=start_time,
-            end_time=end_time
+            end_time=end_time,
+            budget=budget,
+            event_details={
+                "name": event_name,
+                "brief": prompt,
+                "event_type": event_type,
+                "expected_participants": headcount,
+                "organizer_department": "School of Computing Science",
+            }
         )
 
         if booking_res.get("status") == "committed":

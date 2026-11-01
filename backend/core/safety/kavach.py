@@ -14,8 +14,10 @@ University Invariants Enforced:
 import sqlite3
 import uuid
 import json
-from typing import Dict, Any, List, Optional
-from datetime import datetime
+import math
+import os
+from typing import Dict, Any, List, Optional, Callable
+from datetime import date, datetime
 from backend.core.database.connection import get_connection
 
 class InvariantViolation(Exception):
@@ -28,8 +30,19 @@ class InvariantViolation(Exception):
         super().__init__(f"[{rule}] {item}: {detail}")
 
 class KavachEngine:
-    def __init__(self, max_blast_radius: int = 20):
+    def __init__(
+        self,
+        max_blast_radius: int = 20,
+        max_recipients: Optional[int] = None,
+    ):
         self.max_blast_radius = max_blast_radius
+        self.max_recipients = (
+            max_recipients
+            if max_recipients is not None
+            else int(os.getenv("KAVACH_MAX_RECIPIENTS", "500"))
+        )
+        if self.max_recipients < 1:
+            raise ValueError("KAVACH_MAX_RECIPIENTS must be a positive integer.")
 
     def log_audit(self, conn: sqlite3.Connection, actor: str, action: str, result: str, event_id: Optional[str] = None, details: Optional[Dict[str, Any]] = None):
         """Record an operation in the persistent audit log."""
@@ -126,11 +139,22 @@ class KavachEngine:
 
     def verify_resource_stock(self, conn: sqlite3.Connection, resource_id: str, requested_qty: int, start_time: str, end_time: str) -> None:
         """Verify that requested campus equipment or volunteer quota does not exceed stock."""
+        if requested_qty <= 0:
+            raise InvariantViolation(
+                rule="invalid_resource_quantity",
+                item=resource_id,
+                detail="Requested resource quantity must be greater than zero.",
+            )
+
         cur = conn.cursor()
         cur.execute("SELECT name, stock FROM resources WHERE id = ?", (resource_id,))
         res = cur.fetchone()
         if not res:
-            return
+            raise InvariantViolation(
+                rule="resource_not_found",
+                item=resource_id,
+                detail=f"Resource ID '{resource_id}' does not exist in campus inventory.",
+            )
         total_stock = res["stock"]
         
         cur.execute("""
@@ -154,26 +178,140 @@ class KavachEngine:
                 suggestion=f"Cap quantity to {available} units or submit inter-department requisition."
             )
 
-    def execute_with_kavach(self, conn: sqlite3.Connection, event_id: str, actor: str, operation_name: str, actions_callback) -> Dict[str, Any]:
+    def verify_time_window(self, start_time: str, end_time: str) -> None:
+        """Reject malformed, non-positive, or same-day/past event windows."""
+        try:
+            start = datetime.fromisoformat(start_time)
+            end = datetime.fromisoformat(end_time)
+        except (TypeError, ValueError) as exc:
+            raise InvariantViolation(
+                "invalid_time_window",
+                "event",
+                "Start and end must be valid ISO date-time values.",
+            ) from exc
+
+        try:
+            invalid_order = start >= end
+        except TypeError as exc:
+            raise InvariantViolation(
+                "invalid_time_window",
+                "event",
+                "Start and end times must use compatible time-zone formats.",
+            ) from exc
+        if invalid_order:
+            raise InvariantViolation(
+                "invalid_time_window",
+                "event",
+                "The event start time must be earlier than its end time.",
+            )
+        if start.date() <= date.today():
+            raise InvariantViolation(
+                "invalid_time_window",
+                "event",
+                "Events must be scheduled for a future date.",
+            )
+
+    def verify_event_budget(
+        self,
+        conn: sqlite3.Connection,
+        event_id: str,
+        budget: float,
+        proposed_cost: float = 0,
+    ) -> None:
+        """Reject a requisition when committed and proposed costs exceed budget."""
+        try:
+            budget = float(budget)
+            proposed_cost = float(proposed_cost)
+        except (TypeError, ValueError) as exc:
+            raise InvariantViolation(
+                "invalid_budget",
+                event_id,
+                "Budget and booking costs must be valid numbers.",
+            ) from exc
+        if (
+            not math.isfinite(budget)
+            or not math.isfinite(proposed_cost)
+            or budget < 0
+            or proposed_cost < 0
+        ):
+            raise InvariantViolation(
+                "invalid_budget",
+                event_id,
+                "Budget and booking costs cannot be negative.",
+            )
+        row = conn.execute(
+            "SELECT COALESCE(SUM(estimated_cost), 0) AS total FROM bookings WHERE event_id = ?",
+            (event_id,),
+        ).fetchone()
+        committed_cost = row["total"] if row else 0
+        total_cost = committed_cost + proposed_cost
+        if total_cost > budget:
+            raise InvariantViolation(
+                "budget_exceeded",
+                event_id,
+                f"Booking cost {total_cost:.2f} exceeds event budget {budget:.2f}.",
+                suggestion="Reduce requisition costs or increase the approved event budget.",
+            )
+
+    def verify_recipient_limit(self, conn: sqlite3.Connection, recipients: Any) -> None:
+        """Enforce the per-operation outbox recipient cap."""
+        count = recipients if isinstance(recipients, int) else len(recipients)
+        if count > self.max_recipients:
+            raise InvariantViolation(
+                "recipient_limit_exceeded",
+                "outbox",
+                f"Notice targets {count} recipients; the configured limit is {self.max_recipients}.",
+                suggestion="Split the broadcast into smaller approved batches.",
+            )
+
+    def execute_with_kavach(
+        self,
+        conn: sqlite3.Connection,
+        event_id: str,
+        actor: str,
+        operation_name: str,
+        actions_callback,
+        operation_id: Optional[str] = None,
+        release_staged_notices: bool = True,
+    ) -> Dict[str, Any]:
         """
         Executes multi-action event mutations inside an isolated SQLite savepoint.
         If any campus invariant fails, performs an instant atomic ROLLBACK to the savepoint,
         drops any staged outbox notices, and logs the detailed failure in the audit log.
         """
         savepoint_name = f"sp_{uuid.uuid4().hex[:8]}"
+        operation_id = operation_id or f"op_{uuid.uuid4().hex}"
         conn.execute(f"SAVEPOINT {savepoint_name};")
         self.log_audit(conn, actor, f"SAVEPOINT_CREATE:{savepoint_name}", "SUCCESS", event_id=event_id)
+        changes_before = conn.total_changes
 
         try:
             result_payload = actions_callback(conn)
 
-            # Release savepoint and commit changes
+            if release_staged_notices:
+                conn.execute(
+                    "UPDATE outbox SET status = 'sent', sent_at = CURRENT_TIMESTAMP "
+                    "WHERE operation_id = ? AND status = 'held'",
+                    (operation_id,),
+                )
+            if operation_id:
+                recipient_row = conn.execute(
+                    "SELECT count(*) AS count FROM outbox WHERE operation_id = ?",
+                    (operation_id,),
+                ).fetchone()
+                self.verify_recipient_limit(conn, recipient_row["count"])
+
+            changed_rows = conn.total_changes - changes_before
+            if changed_rows > self.max_blast_radius:
+                raise InvariantViolation(
+                    "blast_radius_exceeded",
+                    operation_name,
+                    f"Operation changed {changed_rows} rows; the configured limit is {self.max_blast_radius}.",
+                    suggestion="Split the operation into smaller independently reviewed transactions.",
+                )
+
             conn.execute(f"RELEASE SAVEPOINT {savepoint_name};")
             self.log_audit(conn, actor, f"SAVEPOINT_COMMIT:{operation_name}", "SUCCESS", event_id=event_id, details=result_payload)
-            
-            # Release staged outbox messages for this event
-            conn.execute("UPDATE outbox SET status = 'sent', sent_at = CURRENT_TIMESTAMP WHERE event_id = ? AND status = 'held'", (event_id,))
-
             return {
                 "status": "committed",
                 "operation": operation_name,
@@ -185,9 +323,6 @@ class KavachEngine:
             # Atomic ROLLBACK to savepoint
             conn.execute(f"ROLLBACK TO SAVEPOINT {savepoint_name};")
             conn.execute(f"RELEASE SAVEPOINT {savepoint_name};")
-            # Drop staged outbox messages
-            conn.execute("DELETE FROM outbox WHERE event_id = ? AND status = 'held'", (event_id,))
-            
             error_details = {
                 "rule": iv.rule,
                 "item": iv.item,
@@ -205,11 +340,68 @@ class KavachEngine:
         except Exception as ex:
             conn.execute(f"ROLLBACK TO SAVEPOINT {savepoint_name};")
             conn.execute(f"RELEASE SAVEPOINT {savepoint_name};")
-            conn.execute("DELETE FROM outbox WHERE event_id = ? AND status = 'held'", (event_id,))
-            
             self.log_audit(conn, actor, f"SYSTEM_ERROR:{operation_name}", "FAILED", event_id=event_id, details={"error": str(ex)})
             return {
                 "status": "rolled_back",
                 "operation": operation_name,
                 "error": f"Unexpected execution error: {str(ex)}"
             }
+
+    def execute_with_retry(
+        self,
+        conn: sqlite3.Connection,
+        event_id: str,
+        actor: str,
+        operation_name: str,
+        planner_callback: Callable[[Optional[str], int], Callable[[sqlite3.Connection], Any]],
+        request_payload: Dict[str, Any],
+        max_retries: int = 3,
+    ) -> Dict[str, Any]:
+        """Ask a planner to revise a violating request up to three times, then queue it."""
+        retries_limit = min(max(0, max_retries), 3)
+        attempts_limit = retries_limit + 1
+        short_error = None
+
+        for attempt in range(1, attempts_limit + 1):
+            action = planner_callback(short_error, attempt)
+            result = self.execute_with_kavach(
+                conn,
+                event_id,
+                actor,
+                operation_name,
+                action,
+                operation_id=f"op_{uuid.uuid4().hex}",
+            )
+            if result["status"] == "committed":
+                result["attempts"] = attempt
+                return result
+            if "violation" not in result:
+                result["attempts"] = attempt
+                return result
+
+            violation = result["violation"]
+            short_error = (
+                f"[{violation['rule']}] {violation['item']}: {violation['detail']}"
+            )[:160]
+
+        review_id = f"review_{uuid.uuid4().hex[:12]}"
+        conn.execute(
+            """INSERT INTO human_review_queue
+               (id, event_id, actor, operation_name, request_json, attempts, last_error)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (
+                review_id,
+                event_id,
+                actor,
+                operation_name,
+                json.dumps(request_payload),
+                attempts_limit,
+                short_error or "Automatic planning failed.",
+            ),
+        )
+        return {
+            "status": "human_review",
+            "review_id": review_id,
+            "attempts": attempts_limit,
+            "error": short_error,
+        }

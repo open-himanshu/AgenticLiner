@@ -8,15 +8,19 @@ from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 import os
 import json
 import uuid
+import logging
+import secrets
 
 from backend.core.database.connection import get_connection, fetch_all, fetch_one, execute_query
+from backend.core.database.demo_people import HERO_SPEAKER
 from backend.core.planner.agent import AutopilotAgent
+from backend.core.planner.agent_mode import run_autopilot_with_fallback
 from backend.core.scheduler.solver import EventScheduler
 from backend.modules.module1_coplan.task_board import get_event_task_board
 from backend.modules.module1_coplan.brief_parser import parse_event_brief, adaptive_intake
@@ -52,8 +56,22 @@ from backend.services.agentic_genesis_service import (
     execute_universal_command
 )
 from backend.api.dependencies import require_auth, require_role, get_session_user
+from backend.core.safety.kavach import KavachEngine
 
 app = FastAPI(title="AgenticLiner - Academic Event Platform", version="2.2.0")
+logger = logging.getLogger(__name__)
+kavach = KavachEngine()
+
+
+def load_session_secret_key() -> str:
+    secret_key = os.getenv("SECRET_KEY")
+    if secret_key:
+        return secret_key
+    logger.warning(
+        "SECRET_KEY is not configured; generated a random session secret. "
+        "Sessions will not persist across server restarts."
+    )
+    return secrets.token_urlsafe(32)
 
 # Setup Directories
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -64,14 +82,15 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # Session Middleware Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "agenticliner_super_secret_session_key_2026_galgotias_sparkx")
+SECRET_KEY = load_session_secret_key()
 SESSION_COOKIE = os.getenv("SESSION_COOKIE_NAME", "agenticliner_session")
 app.add_middleware(
     SessionMiddleware,
     secret_key=SECRET_KEY,
     session_cookie=SESSION_COOKIE,
     max_age=86400,
-    same_site="lax"
+    same_site="lax",
+    https_only=os.getenv("ALLOW_PUBLIC_TUNNEL") == "1"
 )
 
 # Include Authentication Router
@@ -120,6 +139,7 @@ class AutopilotRequest(BaseModel):
     date: str = "2026-11-25"
     start_time: str = "09:00:00"
     end_time: str = "17:00:00"
+    budget: float = Field(gt=0)
 
 class StudentRegistrationRequest(BaseModel):
     event_id: str = "ev_001"
@@ -143,7 +163,7 @@ class AskAssistantRequest(BaseModel):
 
 class FeedbackSubmission(BaseModel):
     event_id: str
-    student_id: Optional[str] = "stud_001"
+    student_id: Optional[str] = None
     rating: int
     comment: str
 
@@ -364,7 +384,9 @@ async def schedule_page(
             "user": user,
             "rooms": rooms,
             "speakers": speakers,
-            "initial_solution": initial_solution
+            "initial_solution": initial_solution,
+            "hero_speaker": HERO_SPEAKER["name"],
+            "substitute_speaker": HERO_SPEAKER["substitute_name"]
         }
     )
 
@@ -387,7 +409,10 @@ async def attendees_page(
     )
 
 @app.get("/register", response_class=HTMLResponse)
-async def register_page(request: Request):
+async def register_page(
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["participant"]))
+):
     """Screen #8: Public Student Registration Portal"""
     user = get_session_user(request)
     events = fetch_all("SELECT id, name, event_type, expected_participants FROM events WHERE approval_status IN ('approved', 'auto_approved') ORDER BY created_at DESC")
@@ -399,8 +424,9 @@ async def register_page(request: Request):
         context={"user": user, "events": events}
     )
 
+@app.get("/outbox", response_class=HTMLResponse)
 @app.get("/notices", response_class=HTMLResponse)
-async def notices_page(
+async def outbox_page(
     request: Request,
     user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
 ):
@@ -458,7 +484,11 @@ async def analytics_page(
     )
 
 @app.get("/flyer/{event_id}", response_class=HTMLResponse)
-async def view_flyer(event_id: str, request: Request):
+async def view_flyer(
+    event_id: str,
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "participant", "supervisor"]))
+):
     """Module 2: Auto-Generated Printable Campus Flyer with QR Code"""
     event = fetch_one("SELECT * FROM events WHERE id = ?", (event_id,))
     if not event:
@@ -479,13 +509,18 @@ async def view_flyer(event_id: str, request: Request):
 # --- REST APIs ---
 
 @app.post("/api/register")
-async def register_student_api(req: StudentRegistrationRequest):
+async def register_student_api(
+    req: StudentRegistrationRequest,
+    user: Dict[str, Any] = Depends(require_role(["participant"]))
+):
     """Registers student with capacity guard & priority waitlist queuing."""
+    if req.email.strip().lower() != user["email"].strip().lower():
+        raise HTTPException(status_code=403, detail="Participants may only register themselves.")
     res = attendee_mgr.register_student(
         event_id=req.event_id,
-        name=req.name,
-        email=req.email,
-        department=req.department,
+        name=user.get("full_name") or req.name,
+        email=user["email"],
+        department=user.get("department") or req.department,
         year=req.year,
         interests=req.interests,
         preferred_sessions=req.preferred_sessions
@@ -493,19 +528,28 @@ async def register_student_api(req: StudentRegistrationRequest):
     return JSONResponse(content=res)
 
 @app.post("/api/attendees/{reg_id}/cancel")
-async def cancel_attendee_api(reg_id: str):
+async def cancel_attendee_api(
+    reg_id: str,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Cancels registration and triggers Automatic Waitlist Promotion."""
     res = attendee_mgr.cancel_registration(reg_id)
     return JSONResponse(content=res)
 
 @app.post("/api/attendees/{reg_id}/checkin")
-async def checkin_attendee_api(reg_id: str):
+async def checkin_attendee_api(
+    reg_id: str,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Marks attendee checked in at gate."""
     res = attendee_mgr.check_in_attendee(reg_id)
     return JSONResponse(content=res)
 
 @app.get("/api/export/attendees.csv")
-async def export_attendees_csv(event_id: str = "ev_001"):
+async def export_attendees_csv(
+    event_id: str = "ev_001",
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Downloads full roster as CSV."""
     csv_data = attendee_mgr.generate_attendees_csv(event_id)
     return Response(
@@ -515,23 +559,98 @@ async def export_attendees_csv(event_id: str = "ev_001"):
     )
 
 @app.post("/api/outbox/stage")
-async def stage_outbox_message(req: StageAnnouncementRequest):
+async def stage_outbox_message(
+    req: StageAnnouncementRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Stages notification in outbox."""
     msg_id = f"notif_{uuid.uuid4().hex[:8]}"
-    execute_query("""
-        INSERT INTO outbox (id, event_id, recipient, subject, message, type, status)
-        VALUES (?, ?, ?, ?, ?, ?, 'held')
-    """, (msg_id, req.event_id, req.recipient, req.subject, req.message, req.type))
-    return {"success": True, "notification_id": msg_id, "status": "held"}
+    operation_id = f"op_{uuid.uuid4().hex}"
+
+    def stage_notice(conn):
+        kavach.verify_recipient_limit(conn, [req.recipient])
+        conn.execute(
+            """INSERT INTO outbox
+               (id, event_id, recipient, subject, message, type, status, operation_id)
+               VALUES (?, ?, ?, ?, ?, ?, 'held', ?)""",
+            (
+                msg_id,
+                req.event_id,
+                req.recipient,
+                req.subject,
+                req.message,
+                req.type,
+                operation_id,
+            ),
+        )
+        return {"notification_id": msg_id}
+
+    with get_connection() as conn:
+        result = kavach.execute_with_kavach(
+            conn,
+            req.event_id,
+            user["email"],
+            "stage_outbox_message",
+            stage_notice,
+            operation_id=operation_id,
+            release_staged_notices=False,
+        )
+    if result["status"] != "committed":
+        raise HTTPException(
+            status_code=400,
+            detail=result.get("error", "Could not stage notification."),
+        )
+    return {
+        "success": True,
+        "notification_id": result["details"]["notification_id"],
+        "status": "held",
+    }
 
 @app.post("/api/outbox/release-all")
-async def release_all_outbox():
+async def release_all_outbox(
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Releases all held outbox notifications to sent."""
-    updated = execute_query("UPDATE outbox SET status = 'sent', sent_at = CURRENT_TIMESTAMP WHERE status = 'held'")
-    return {"success": True, "dispatched_count": updated}
+    with get_connection() as conn:
+        result = kavach.execute_with_kavach(
+            conn,
+            "SYSTEM",
+            user["email"],
+            "release_outbox",
+            lambda transaction: {
+                "dispatched_count": transaction.execute(
+                    """UPDATE outbox SET status = 'sent', sent_at = CURRENT_TIMESTAMP
+                       WHERE status = 'held'"""
+                ).rowcount
+            },
+        )
+    if result["status"] != "committed":
+        raise HTTPException(
+            status_code=400,
+            detail=result.get("error", "Could not release outbox notifications."),
+        )
+    return {"success": True, **result["details"]}
+
+
+@app.get("/api/human-review")
+async def list_human_review_requests(
+    user: Dict[str, Any] = Depends(require_role(["supervisor"]))
+):
+    """Lists pending planner requests that need supervisor review."""
+    requests = fetch_all(
+        """SELECT id, event_id, actor, operation_name, request_json, attempts,
+                  last_error, status, created_at
+           FROM human_review_queue
+           WHERE status = 'pending'
+           ORDER BY created_at ASC"""
+    )
+    return {"requests": requests}
 
 @app.get("/api/report/pdf/{event_id}")
-async def download_executive_report_pdf(event_id: str):
+async def download_executive_report_pdf(
+    event_id: str,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Downloads one-click Executive Event Summary PDF Report."""
     pdf_path = analytics_engine.generate_executive_report_pdf(event_id)
     return FileResponse(
@@ -541,7 +660,10 @@ async def download_executive_report_pdf(event_id: str):
     )
 
 @app.post("/api/agent/genesis")
-async def api_agent_genesis(req: AgentGenesisRequest):
+async def api_agent_genesis(
+    req: AgentGenesisRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """End-to-end autonomous event auto-genesis from one natural language prompt."""
     res = execute_autonomous_event_genesis(
         prompt=req.prompt,
@@ -551,25 +673,35 @@ async def api_agent_genesis(req: AgentGenesisRequest):
     return JSONResponse(content=res)
 
 @app.post("/api/agent/universal-command")
-async def api_universal_command(req: UniversalCommandRequest):
+async def api_universal_command(
+    req: UniversalCommandRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Executes on-the-fly natural language operational commands anywhere on campus platform."""
     res = execute_universal_command(command=req.command)
     return JSONResponse(content=res)
 
 @app.post("/api/autopilot/run")
-@app.post("/agent/run")
-async def run_autopilot_api(req: AutopilotRequest):
-    """Runs autonomous event planning with Kavach safety checks and live timeline logging."""
-    res = autopilot_agent.run_autopilot(
+@app.post("/agent/run", dependencies=[Depends(require_role(["organiser", "supervisor"]))])
+async def run_autopilot_api(
+    req: AutopilotRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
+    """Runs autonomous event planning with provider fallback and live timeline logging."""
+    res = run_autopilot_with_fallback(
         prompt=req.prompt,
         date=req.date,
         start_time=req.start_time,
-        end_time=req.end_time
+        end_time=req.end_time,
+        budget=req.budget,
     )
     return JSONResponse(content=res)
 
 @app.post("/api/copilot/parse")
-async def parse_copilot_brief(req: CopilotParseRequest):
+async def parse_copilot_brief(
+    req: CopilotParseRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Module 1: Parses natural language event brief and applies Adaptive Intake verification."""
     parsed = parse_event_brief(req.brief)
     intake = adaptive_intake(req.brief)
@@ -582,20 +714,29 @@ async def parse_copilot_brief(req: CopilotParseRequest):
     }
 
 @app.post("/api/certificates/generate")
-async def generate_certificate_api(req: CertificateGenerateRequest, request: Request):
+async def generate_certificate_api(
+    req: CertificateGenerateRequest,
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Module 7: Generates verified landscape PDF certificate with embedded QR verification."""
-    base_url = str(request.base_url).rstrip("/")
+    public_base_url = os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/")
+    if not public_base_url:
+        public_base_url = str(request.base_url).rstrip("/")
     cert_data = analytics_engine.generate_certificate(
         student_id=req.student_id,
         student_name=req.student_name,
         event_id=req.event_id,
         event_name=req.event_name,
-        verify_base_url=base_url
+        verify_base_url=f"{public_base_url}/verify"
     )
     return JSONResponse(content=cert_data)
 
 @app.get("/api/certificates/download/{cert_id}")
-async def download_certificate_pdf(cert_id: str):
+async def download_certificate_pdf(
+    cert_id: str,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Module 7: Downloads the generated certificate PDF."""
     cert = fetch_one("SELECT pdf_path FROM certificates WHERE id = ?", (cert_id,))
     if not cert or not cert.get("pdf_path") or not os.path.exists(cert["pdf_path"]):
@@ -607,13 +748,19 @@ async def download_certificate_pdf(cert_id: str):
     )
 
 @app.get("/api/catalog")
-async def get_catalog():
+async def get_catalog(
+    user: Dict[str, Any] = Depends(require_role(["data_manager", "organiser", "supervisor"]))
+):
     """Returns campus resources, categories, and inventory stock."""
     items = fetch_all("SELECT * FROM resources")
     return {"catalog": items}
 
 @app.get("/api/recommendations/resources")
-async def get_resource_recommendations(event_type: str = "hackathon", headcount: int = 150):
+async def get_resource_recommendations(
+    event_type: str = "hackathon",
+    headcount: int = 150,
+    user: Dict[str, Any] = Depends(require_role(["data_manager", "organiser", "supervisor"]))
+):
     """Module 3: Resource predictions & smart campus logistics bundles."""
     preds = resource_opt.estimate_resources(headcount=headcount, duration_hours=6.0, event_type=event_type)
     recs = resource_opt.get_smart_recommendations(event_type=event_type, headcount=headcount)
@@ -625,7 +772,10 @@ async def get_resource_recommendations(event_type: str = "hackathon", headcount:
     }
 
 @app.post("/api/schedule/solve")
-async def solve_schedule_api(payload: Optional[Dict[str, Any]] = None):
+async def solve_schedule_api(
+    payload: Optional[Dict[str, Any]] = None,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Module 2: Solves conflict-free timetable using Google OR-Tools CP-SAT."""
     payload = payload or {}
     sessions = payload.get("sessions")
@@ -635,13 +785,17 @@ async def solve_schedule_api(payload: Optional[Dict[str, Any]] = None):
     return JSONResponse(content=result)
 
 @app.post("/api/schedule/hero-speaker-cancel")
-async def hero_speaker_cancellation_demo():
+async def hero_speaker_cancellation_demo(
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Hero Demo: Speaker cancellation, replacement matching, re-scheduling, and Outbox alert."""
     result = handle_hero_speaker_cancellation()
     return JSONResponse(content=result)
 
 @app.get("/api/schedule/export.csv")
-async def export_schedule_csv_endpoint():
+async def export_schedule_csv_endpoint(
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Downloads timetable schedule as CSV."""
     solve_res = solve_timetable()
     csv_str = export_schedule_csv(solve_res.get("schedule", []))
@@ -652,9 +806,19 @@ async def export_schedule_csv_endpoint():
     )
 
 @app.get("/api/participant/{student_id}/recommendations")
-async def get_student_recommendations(student_id: str):
+async def get_student_recommendations(
+    student_id: str,
+    user: Dict[str, Any] = Depends(require_role(["participant"]))
+):
     """Module 4: Personalized sessions & networking matching using TF-IDF."""
-    student = fetch_one("SELECT interests FROM students WHERE id = ?", (student_id,))
+    student_profile = get_or_create_student_profile(
+        email=user["email"],
+        name=user.get("full_name", "Student Participant"),
+        department=user.get("department", "Computer Science")
+    )
+    if student_id != student_profile["id"]:
+        raise HTTPException(status_code=403, detail="Participants may only view their own recommendations.")
+    student = fetch_one("SELECT interests FROM students WHERE id = ?", (student_profile["id"],))
     interests = json.loads(student["interests"]) if (student and student["interests"]) else []
 
     sample_sessions = [
@@ -675,19 +839,32 @@ async def get_student_recommendations(student_id: str):
     }
 
 @app.post("/api/assistant/ask")
-async def ask_assistant(req: AskAssistantRequest):
+async def ask_assistant(
+    req: AskAssistantRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "participant", "supervisor"]))
+):
     """Module 5: Grounded Q&A Assistant without hallucinations."""
     ans = comm_agent.answer_query(req.event_id, req.query)
     return JSONResponse(content=ans)
 
 @app.post("/api/feedback/submit")
-async def submit_feedback(fb: FeedbackSubmission):
+async def submit_feedback(
+    fb: FeedbackSubmission,
+    user: Dict[str, Any] = Depends(require_role(["participant"]))
+):
     """Module 6: Feedback submission, sentiment scoring, and theme detection."""
+    student = get_or_create_student_profile(
+        email=user["email"],
+        name=user.get("full_name", "Student Participant"),
+        department=user.get("department", "Computer Science")
+    )
+    if fb.student_id and fb.student_id != student["id"]:
+        raise HTTPException(status_code=403, detail="Participants may only submit their own feedback.")
     result = record_feedback(
         event_id=fb.event_id,
         rating=fb.rating,
         comment=fb.comment,
-        student_id=fb.student_id
+        student_id=student["id"]
     )
     return JSONResponse(content={
         "status": "saved",
@@ -697,7 +874,10 @@ async def submit_feedback(fb: FeedbackSubmission):
     })
 
 @app.get("/api/analytics/{event_id}")
-async def get_event_analytics(event_id: str):
+async def get_event_analytics(
+    event_id: str,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Module 7: Full event metrics, attendance rate, and future recommendations."""
     metrics = analytics_engine.compute_event_metrics(event_id)
     raw_feedbacks = fetch_all("SELECT id, rating, comment FROM feedback WHERE event_id = ?", (event_id,))
@@ -708,7 +888,9 @@ async def get_event_analytics(event_id: str):
     }
 
 @app.get("/api/outbox")
-async def get_outbox():
+async def get_outbox(
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
     """Lists staged and sent campus notifications."""
     notices = fetch_all("SELECT * FROM outbox ORDER BY created_at DESC LIMIT 25")
     return {"outbox": notices}

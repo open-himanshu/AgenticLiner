@@ -65,6 +65,27 @@ class EventAnalyticsEngine:
             avg_rating = round(fb_row["avg_rating"] or 4.5, 2)
             total_feedbacks = fb_row["count"] or 0
 
+            cur.execute(
+                """SELECT lower(coalesce(sentiment, 'neutral')) as sentiment, count(*) as count
+                   FROM feedback WHERE event_id = ? GROUP BY lower(coalesce(sentiment, 'neutral'))""",
+                (event_id,)
+            )
+            sentiment_counts = {"positive": 0, "neutral": 0, "negative": 0}
+            for row in cur.fetchall():
+                sentiment = row["sentiment"]
+                sentiment_counts[sentiment if sentiment in sentiment_counts else "neutral"] += row["count"]
+            sentiment_percentages = {
+                sentiment: round(count / total_feedbacks * 100, 1) if total_feedbacks else 0.0
+                for sentiment, count in sentiment_counts.items()
+            }
+
+            cur.execute(
+                "SELECT count(*) as count FROM audit_log WHERE event_id = ? AND result = 'BLOCKED'",
+                (event_id,)
+            )
+            violation_row = cur.fetchone()
+            invariant_violations = violation_row["count"] if violation_row else 0
+
             # Resource utilization
             cur.execute("SELECT item_name, quantity, category FROM bookings WHERE event_id = ? AND status = 'confirmed'", (event_id,))
             booked_resources = [dict(r) for r in cur.fetchall()]
@@ -90,6 +111,8 @@ class EventAnalyticsEngine:
                 "attendance_rate_percent": attendance_rate,
                 "average_rating": avg_rating,
                 "total_feedbacks": total_feedbacks,
+                "sentiment_percentages": sentiment_percentages,
+                "invariant_violations": invariant_violations,
                 "booked_resources_count": len(booked_resources),
                 "booked_resources": booked_resources,
                 "future_recommendations": recommendations
@@ -266,6 +289,16 @@ class EventAnalyticsEngine:
         elements.append(Paragraph(f"Official Event Executive Performance Report: {metrics.get('event_name', 'Event')}", sub_style))
         elements.append(Spacer(1, 10))
 
+        sentiment = metrics.get(
+            "sentiment_percentages",
+            {"positive": 0.0, "neutral": 0.0, "negative": 0.0}
+        )
+        sentiment_summary = (
+            f"{sentiment['positive']}% Positive, "
+            f"{sentiment['neutral']}% Neutral, "
+            f"{sentiment['negative']}% Negative"
+        )
+
         # Metrics Table
         table_data = [
             ["Metric Category", "Metric Name", "Value / Count"],
@@ -274,9 +307,9 @@ class EventAnalyticsEngine:
             ["Attendance", "Verified QR Gate Turn-up", str(metrics.get("actual_attendees", 142))],
             ["Attendance", "Attendance Rate", f"{metrics.get('attendance_rate_percent', 94.6)}%"],
             ["Feedback", "Average Student Rating", f"{metrics.get('average_rating', 4.6)} / 5.0"],
-            ["Feedback", "Sentiment Polarity", "88% Positive"],
+            ["Feedback", "Sentiment Polarity", sentiment_summary],
             ["Logistics", "Hall Capacity Adherence", "100% (Zero Over-crowding)"],
-            ["Safety Layer", "Kavach Invariant Violations", "0 Double Bookings (Zero Drift)"]
+            ["Safety Layer", "Kavach Invariant Violations", f"{metrics.get('invariant_violations', 0)} BLOCKED"]
         ]
         t = Table(table_data, colWidths=[130, 240, 160])
         t.setStyle(TableStyle([

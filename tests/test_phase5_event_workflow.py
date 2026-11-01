@@ -6,6 +6,7 @@ Dean Approval/Rejection Lifecycle, Waitlist Auto-Promotion, and Held Outbox Patt
 
 import pytest
 import httpx
+from conftest import TEST_PASSWORDS
 from backend.api.main import app
 from backend.services.admin_service import reset_all_operational_data
 from backend.services.inventory_service import create_venue, create_equipment
@@ -15,8 +16,9 @@ from backend.services.event_workflow_service import (
     reject_event_by_supervisor,
     get_event_with_details
 )
-from backend.core.safety.kavach import InvariantViolation
-from backend.core.database.connection import fetch_one, fetch_all
+from backend.services import event_workflow_service
+from backend.core.safety.kavach import KavachEngine, InvariantViolation
+from backend.core.database.connection import fetch_one, fetch_all, execute_query
 from backend.modules.module2_scheduling.attendee_manager import AttendeeManager
 
 @pytest.fixture(autouse=True)
@@ -92,6 +94,31 @@ async def test_kavach_room_overlap_invariant_violation():
 
     assert "room_overlap" in str(exc_info.value)
     assert "Auditorium B" in str(exc_info.value)
+
+
+def test_event_creation_uses_kavach_savepoint_for_all_writes(monkeypatch):
+    from backend.services import event_workflow_service
+
+    monkeypatch.setattr(
+        event_workflow_service, "kavach", KavachEngine(max_blast_radius=1)
+    )
+    with pytest.raises(InvariantViolation) as exc_info:
+        create_event_request(
+            name="Blast Radius Event",
+            brief="Must roll back all writes",
+            event_type="workshop",
+            expected_participants=20,
+            organizer_department="Test Department",
+            organizer_email="organiser@example.invalid",
+            start_time="2030-12-01 09:00:00",
+            end_time="2030-12-01 10:00:00",
+        )
+
+    assert exc_info.value.rule == "blast_radius_exceeded"
+    assert fetch_one(
+        "SELECT id FROM events WHERE name = ?", ("Blast Radius Event",)
+    ) is None
+
 
 @pytest.mark.anyio
 async def test_kavach_resource_stock_invariant_violation():
@@ -188,6 +215,125 @@ async def test_event_lifecycle_approval_and_outbox_release():
     sent_notices = fetch_all("SELECT * FROM outbox WHERE event_id = ? AND status = 'sent'", (event_id,))
     assert len(sent_notices) >= 2  # Dean request released + approval congratulation
 
+
+@pytest.mark.anyio
+async def test_supervisor_approval_rechecks_resource_stock_and_rolls_back():
+    resource = await create_equipment(
+        name="Approval-time limited microphones",
+        category="equipment",
+        stock=5,
+        unit="set",
+    )
+    pending_event = create_event_request(
+        name="Pending microphone event",
+        brief="Requires supervisor approval",
+        event_type="conference",
+        expected_participants=200,
+        organizer_department="Computing Club",
+        organizer_email="organiser@galgotias.edu",
+        start_time="2026-12-11 09:00:00",
+        end_time="2026-12-11 12:00:00",
+        requisitions=[{"resource_id": resource["id"], "quantity": 4}],
+    )
+    create_event_request(
+        name="Confirmed microphone event",
+        brief="Consumes available stock before supervisor approval",
+        event_type="workshop",
+        expected_participants=50,
+        organizer_department="Robotics Club",
+        organizer_email="organiser@galgotias.edu",
+        start_time="2026-12-11 09:00:00",
+        end_time="2026-12-11 12:00:00",
+        requisitions=[{"resource_id": resource["id"], "quantity": 2}],
+    )
+
+    result = approve_event_by_supervisor(pending_event["event_id"])
+
+    assert result["success"] is False
+    assert result["violation"]["rule"] == "resource_exhaustion"
+    assert result["violation"]["item"] == resource["name"]
+    event_state = fetch_one(
+        "SELECT approval_status, status FROM events WHERE id = ?",
+        (pending_event["event_id"],),
+    )
+    assert event_state == {
+        "approval_status": "pending_dean_approval",
+        "status": "planned",
+    }
+    own_bookings = fetch_all(
+        "SELECT status, approval_status FROM bookings WHERE event_id = ?",
+        (pending_event["event_id"],),
+    )
+    assert own_bookings == [{"status": "pending", "approval_status": "pending_dean_approval"}]
+    assert fetch_one(
+        "SELECT allocated_stock FROM resources WHERE id = ?", (resource["id"],)
+    )["allocated_stock"] == 2
+    assert fetch_one(
+        "SELECT count(*) AS count FROM outbox WHERE event_id = ? AND status = 'held'",
+        (pending_event["event_id"],),
+    )["count"] == 1
+
+
+@pytest.mark.anyio
+async def test_supervisor_approval_rechecks_room_overlap_and_rolls_back():
+    venue = await create_venue(
+        name="Approval-time conflict hall",
+        capacity=300,
+        location="Block F",
+        requires_special_approval=True,
+    )
+    pending_event = create_event_request(
+        name="Pending room event",
+        brief="Requires supervisor approval",
+        event_type="conference",
+        expected_participants=200,
+        organizer_department="Computing Club",
+        organizer_email="organiser@galgotias.edu",
+        room_id=venue["id"],
+        start_time="2026-12-12 09:00:00",
+        end_time="2026-12-12 12:00:00",
+    )
+    conflicting_event = create_event_request(
+        name="Confirmed room event",
+        brief="Books the room before approval",
+        event_type="workshop",
+        expected_participants=50,
+        organizer_department="Robotics Club",
+        organizer_email="organiser@galgotias.edu",
+        room_id=venue["id"],
+        start_time="2026-12-12 10:00:00",
+        end_time="2026-12-12 13:00:00",
+    )
+    execute_query(
+        """UPDATE bookings
+           SET status = 'confirmed', approval_status = 'approved'
+           WHERE event_id = ?""",
+        (conflicting_event["event_id"],),
+    )
+
+    result = approve_event_by_supervisor(pending_event["event_id"])
+
+    assert result["success"] is False
+    assert result["violation"]["rule"] == "room_overlap"
+    event_state = fetch_one(
+        "SELECT approval_status, status FROM events WHERE id = ?",
+        (pending_event["event_id"],),
+    )
+    assert event_state == {
+        "approval_status": "pending_dean_approval",
+        "status": "planned",
+    }
+    own_bookings = fetch_all(
+        "SELECT status, approval_status FROM bookings WHERE event_id = ?",
+        (pending_event["event_id"],),
+    )
+    assert own_bookings == [{"status": "pending", "approval_status": "pending_dean_approval"}]
+    assert fetch_one(
+        "SELECT count(*) AS count FROM outbox WHERE event_id = ? AND status = 'held'",
+        (pending_event["event_id"],),
+    )["count"] == 1
+
+
 @pytest.mark.anyio
 async def test_event_lifecycle_rejection():
     venue = await create_venue(name="Mini Hall", capacity=100, location="Ground Floor")
@@ -219,6 +365,30 @@ async def test_event_lifecycle_rejection():
     for b in bookings:
         assert b["status"] == "cancelled"
 
+def test_supervisor_approval_rolls_back_when_blast_radius_is_exceeded(monkeypatch):
+    event = create_event_request(
+        name="Large Campus Forum",
+        brief="A forum requiring supervisor approval",
+        event_type="conference",
+        expected_participants=200,
+        organizer_department="Computing Club",
+        organizer_email="organiser@galgotias.edu",
+    )
+    monkeypatch.setattr(event_workflow_service.kavach, "max_blast_radius", 1)
+    with pytest.raises(InvariantViolation, match="blast_radius_exceeded"):
+        approve_event_by_supervisor(event["event_id"])
+
+    updated_event = fetch_one(
+        "SELECT approval_status, status FROM events WHERE id = ?",
+        (event["event_id"],),
+    )
+    assert updated_event["approval_status"] == "pending_dean_approval"
+    assert updated_event["status"] == "planned"
+    assert fetch_one(
+        "SELECT count(*) AS count FROM outbox WHERE event_id = ? AND status = 'held'",
+        (event["event_id"],),
+    )["count"] == 1
+
 @pytest.mark.anyio
 async def test_attendee_waitlist_auto_promotion_and_checkin():
     # Create an event with room capacity of 2
@@ -241,8 +411,8 @@ async def test_attendee_waitlist_auto_promotion_and_checkin():
     # 1. Register student 1 -> CONFIRMED
     r1 = attendee_mgr.register_student(
         event_id=event_id,
-        name="Alice Kumar",
-        email="alice@galgotias.edu",
+        name="Alex Example",
+        email="alex@example.invalid",
         department="Computer Science",
         year=3,
         interests=["AI"]
@@ -252,8 +422,8 @@ async def test_attendee_waitlist_auto_promotion_and_checkin():
     # 2. Register student 2 -> CONFIRMED
     r2 = attendee_mgr.register_student(
         event_id=event_id,
-        name="Bob Sharma",
-        email="bob@galgotias.edu",
+        name="Bailey Example",
+        email="bailey@example.invalid",
         department="Data Science",
         year=2,
         interests=["ML"]
@@ -263,25 +433,25 @@ async def test_attendee_waitlist_auto_promotion_and_checkin():
     # 3. Register student 3 -> WAITLISTED (capacity of 2 reached!)
     r3 = attendee_mgr.register_student(
         event_id=event_id,
-        name="Charlie Verma",
-        email="charlie@galgotias.edu",
+        name="Casey Example",
+        email="casey@example.invalid",
         department="AI",
         year=1,
         interests=["Robotics"]
     )
     assert r3["status"] == "waitlisted"
 
-    # 4. Student 1 cancels -> Charlie MUST BE AUTO-PROMOTED to CONFIRMED!
+    # 4. Student 1 cancels -> Casey MUST BE AUTO-PROMOTED to CONFIRMED!
     cancel_res = attendee_mgr.cancel_registration(r1["registration_id"])
     assert cancel_res["success"] is True
     assert cancel_res.get("waitlist_promotion_executed") is True
-    assert cancel_res["promoted_student"]["email"] == "charlie@galgotias.edu"
+    assert cancel_res["promoted_student"]["email"] == "casey@example.invalid"
 
     # Verify in DB
     charlie_reg = fetch_one("SELECT status FROM registrations WHERE id = ?", (r3["registration_id"],))
     assert charlie_reg["status"] == "confirmed"
 
-    # 5. Gate Check-in for Bob
+    # 5. Gate Check-in for Bailey
     checkin_res = attendee_mgr.check_in_attendee(r2["registration_id"])
     assert checkin_res["success"] is True
     bob_reg = fetch_one("SELECT status FROM registrations WHERE id = ?", (r2["registration_id"],))
@@ -295,7 +465,7 @@ async def test_http_api_event_plan_and_supervisor_actions():
         v = await create_venue(name="Auditorium C", capacity=300, location="Block C")
 
         # 1. Login as Organiser
-        await client.post("/login", data={"email": "organiser@galgotias.edu", "password": "Organiser@123"})
+        await client.post("/login", data={"email": "organiser@galgotias.edu", "password": TEST_PASSWORDS["ORGANISER_PASSWORD"]})
 
         # Submit Event Plan
         plan_resp = await client.post(
@@ -316,7 +486,7 @@ async def test_http_api_event_plan_and_supervisor_actions():
 
         # 2. Login as Supervisor
         await client.get("/logout")
-        await client.post("/login", data={"email": "admin@galgotias.edu", "password": "Admin@123"})
+        await client.post("/login", data={"email": "admin@galgotias.edu", "password": TEST_PASSWORDS["SUPERVISOR_PASSWORD"]})
 
         # Supervisor approves
         appr_resp = await client.post(

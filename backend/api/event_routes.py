@@ -60,6 +60,12 @@ async def create_event_plan_endpoint(
     start_time = data.get("start_time", "2026-11-15 10:00:00")
     end_time = data.get("end_time", "2026-11-15 13:00:00")
     requisitions = data.get("requisitions", [])
+    try:
+        budget = float(data.get("budget") or 0)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=400, detail="Budget must be a valid number."
+        ) from exc
 
     if not name:
         raise HTTPException(status_code=400, detail="Event name is required.")
@@ -75,7 +81,8 @@ async def create_event_plan_endpoint(
             room_id=room_id,
             start_time=start_time,
             end_time=end_time,
-            requisitions=requisitions
+            requisitions=requisitions,
+            budget=budget,
         )
 
         accept = request.headers.get("accept", "")
@@ -118,6 +125,8 @@ async def approve_event_endpoint(
             supervisor_email=user.get("email", "admin@galgotias.edu"),
             remarks=remarks or ""
         )
+        if not res.get("success", False):
+            return JSONResponse(status_code=409, content=res)
         accept = request.headers.get("accept", "")
         if "text/html" in accept or request.headers.get("content-type") == "application/x-www-form-urlencoded":
             return RedirectResponse(url="/supervisor?approved=1", status_code=status.HTTP_302_FOUND)
@@ -153,7 +162,7 @@ async def reject_event_endpoint(
 @router.get("/{event_id}")
 async def get_event_endpoint(
     event_id: str,
-    user: Dict[str, Any] = Depends(require_role(["supervisor", "organiser", "participant", "data_manager"]))
+    user: Dict[str, Any] = Depends(require_role(["supervisor", "organiser"]))
 ):
     """Returns event details, bookings, registrations, and outbox log."""
     details = get_event_with_details(event_id)

@@ -5,6 +5,7 @@ Autonomous Agent DB Tools, Deterministic Tool Calling, and Kavach-Guarded Autopi
 
 import pytest
 import httpx
+from conftest import TEST_PASSWORDS
 from backend.api.main import app
 from backend.services.admin_service import reset_all_operational_data
 from backend.services.inventory_service import create_venue, create_equipment
@@ -76,7 +77,8 @@ async def test_agent_tool_requisition_campus_resources_success():
         items_json=[{"resource_id": eq["id"], "quantity": 5}],
         date="2026-12-10",
         start_time="09:00:00",
-        end_time="14:00:00"
+        end_time="14:00:00",
+        budget=25000,
     )
 
     assert res["status"] == "committed"
@@ -102,7 +104,8 @@ async def test_agent_tool_requisition_kavach_rollback_on_violation():
         items_json=[],
         date="2026-12-10",
         start_time="09:00:00",
-        end_time="14:00:00"
+        end_time="14:00:00",
+        budget=25000,
     )
 
     assert res["status"] == "rolled_back"
@@ -112,14 +115,69 @@ async def test_agent_tool_requisition_kavach_rollback_on_violation():
     bookings = fetch_all("SELECT * FROM bookings WHERE event_id = 'ev_test_agent_fail'")
     assert len(bookings) == 0
 
+
+@pytest.mark.anyio
+async def test_agent_requisition_rejects_cost_above_passed_event_budget():
+    venue = await create_venue(
+        name="Budget Test Hall", capacity=100, location="Test Block"
+    )
+    projector = await create_equipment(
+        name="Budget Test Projector", category="equipment", stock=2
+    )
+    result = tool_requisition_campus_resources(
+        event_id="ev_test_budget_limit",
+        room_id=venue["id"],
+        attendance=50,
+        items_json=f'[{{"resource_id":"{projector["id"]}","quantity":1,"cost":501}}]',
+        date="2026-12-20",
+        start_time="09:00:00",
+        end_time="10:00:00",
+        budget=500,
+        event_details={
+            "name": "Budget Limited Event",
+            "brief": "Test budget enforcement",
+            "event_type": "workshop",
+            "expected_participants": 50,
+            "organizer_department": "Test Department",
+        },
+    )
+
+    assert result["status"] == "rolled_back"
+    assert result["violation"]["rule"] == "budget_exceeded"
+    assert fetch_one(
+        "SELECT id FROM events WHERE id = ?", ("ev_test_budget_limit",)
+    ) is None
+
 @pytest.mark.anyio
 async def test_http_agent_run_endpoint():
     # Create venue for autonomous planner to find
     await create_venue(name="Main Campus Convention Hall", capacity=300, location="Admin Block")
     await create_equipment(name="Extension Boards (Spike Strips)", category="equipment", stock=50)
+    from backend.core.database.connection import execute_query
+    execute_query(
+        "INSERT INTO resources (id, category, name, stock) VALUES (?, ?, ?, ?)",
+        ("res_ext_boards", "equipment", "Extension Boards", 50),
+    )
+    execute_query(
+        "INSERT INTO resources (id, category, name, stock) VALUES (?, ?, ?, ?)",
+        ("res_first_aid", "misc", "First Aid Kits", 10),
+    )
+    execute_query(
+        "INSERT INTO resources (id, category, name, stock) VALUES (?, ?, ?, ?)",
+        ("res_food_lunch", "food", "Lunch Boxes", 1000),
+    )
 
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        login = await client.post(
+            "/login",
+            json={
+                "email": "organiser@galgotias.edu",
+                "password": TEST_PASSWORDS["ORGANISER_PASSWORD"],
+            },
+        )
+        assert login.status_code == 200
+
         # Call POST /agent/run
         resp = await client.post(
             "/agent/run",
@@ -127,12 +185,13 @@ async def test_http_agent_run_endpoint():
                 "prompt": "Organize a campus coding hackathon for 180 students",
                 "date": "2026-12-20",
                 "start_time": "09:00:00",
-                "end_time": "17:00:00"
+                "end_time": "17:00:00",
+                "budget": 25000
             }
         )
 
         assert resp.status_code == 200
         data = resp.json()
-        assert data["success"] is True
+        assert data["success"] is True, data
         assert len(data["timeline"]) >= 4
         assert "Main Campus Convention Hall" in data["venue"]

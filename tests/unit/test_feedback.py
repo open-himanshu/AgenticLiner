@@ -3,6 +3,7 @@ Unit tests for Module 6: Automated Feedback Intelligence Engine.
 """
 import pytest
 from backend.modules.module6_feedback.analyzer import FeedbackAnalyzer
+from backend.core.database.demo_people import HERO_SPEAKER
 
 def test_sentiment_analysis():
     analyzer = FeedbackAnalyzer()
@@ -27,7 +28,7 @@ def test_thematic_detection():
 def test_batch_feedback_aggregation():
     analyzer = FeedbackAnalyzer()
     sample_comments = [
-        {"id": 1, "comment": "Great session, learned a lot from Dr. Vartika!", "rating": 5},
+        {"id": 1, "comment": f"Great session, learned a lot from {HERO_SPEAKER['name']}!", "rating": 5},
         {"id": 2, "comment": "Food was delayed and water was not available.", "rating": 2},
         {"id": 3, "comment": "Excellent coding contest and well organized.", "rating": 5},
         {"id": 4, "comment": "Projector screen was blurry in the seminar hall.", "rating": 2}

@@ -7,6 +7,8 @@ import os
 import pytest
 from pathlib import Path
 from fastapi.testclient import TestClient
+from conftest import TEST_PASSWORDS
+from backend.services.pass_service import get_or_create_student_profile
 from backend.api.main import app
 from backend.services.analytics_service import (
     get_analytics_dashboard_data,
@@ -60,9 +62,9 @@ def test_get_analytics_dashboard_data():
 def test_issue_and_verify_certificate():
     # 1. Issue certificate
     cert = issue_verifiable_certificate(
-        student_name="Aryan Khandelwal",
+        student_name="Jordan Example",
         event_id="ev_001",
-        student_id="stud_aryan_01",
+        student_id="stud_jordan_01",
         verify_base_url="http://localhost:8000/verify"
     )
     cert_id = cert["certificate_id"]
@@ -74,7 +76,7 @@ def test_issue_and_verify_certificate():
     v1 = verify_certificate_by_id(cert_id)
     assert v1 is not None
     assert v1["valid"] is True
-    assert v1["student_name"] == "Aryan Khandelwal"
+    assert v1["student_name"] == "Jordan Example"
     assert v1["verified_count"] == 1
 
     # 3. Verify certificate (second time: increments count)
@@ -86,10 +88,18 @@ def test_issue_and_verify_certificate():
     assert v_fake is None
 
 def test_http_feedback_and_certificate_api_endpoints(client):
+    client.post(
+        "/login",
+        data={
+            "email": "student@galgotias.edu",
+            "password": TEST_PASSWORDS["PARTICIPANT_PASSWORD"],
+        },
+    )
+    student = get_or_create_student_profile("student@galgotias.edu")
     # 1. POST /api/feedback/submit
     fb_res = client.post("/api/feedback/submit", json={
         "event_id": "ev_001",
-        "student_id": "stud_http_01",
+        "student_id": student["id"],
         "rating": 5,
         "comment": "Outstanding technical workshop and delicious lunch!"
     })
@@ -98,10 +108,17 @@ def test_http_feedback_and_certificate_api_endpoints(client):
     assert fb_data["status"] == "saved"
     assert fb_data["analysis"]["sentiment"] == "positive"
 
+    client.post(
+        "/login",
+        data={
+            "email": "organiser@galgotias.edu",
+            "password": TEST_PASSWORDS["ORGANISER_PASSWORD"],
+        },
+    )
     # 2. POST /api/certificates/generate
     gen_res = client.post("/api/certificates/generate", json={
         "student_id": "stud_http_gen",
-        "student_name": "Priya Sharma",
+        "student_name": "Jordan Example",
         "event_id": "ev_001",
         "event_name": "Galgotias AI Innovation Summit"
     })
@@ -119,7 +136,7 @@ def test_http_feedback_and_certificate_api_endpoints(client):
     # 4. GET /verify/{cert_id} (Web page verification)
     web_res = client.get(f"/verify/{cert_id}")
     assert web_res.status_code == 200
-    assert "Priya Sharma" in web_res.text
+    assert "Jordan Example" in web_res.text
     assert "AUTHENTIC &amp; VERIFIED CREDENTIAL" in web_res.text
     assert "GALGOTIAS UNIVERSITY" in web_res.text
 
@@ -127,6 +144,101 @@ def test_http_feedback_and_certificate_api_endpoints(client):
     fake_res = client.get("/verify/CERT-FAKE-00000000")
     assert fake_res.status_code == 404
     assert "CREDENTIAL NOT FOUND" in fake_res.text
+
+
+def test_certificate_qr_url_uses_configured_verification_route(client, monkeypatch):
+    import qrcode
+
+    encoded_urls = []
+    original_add_data = qrcode.QRCode.add_data
+
+    def capture_qr_data(qr, data, *args, **kwargs):
+        encoded_urls.append(data)
+        return original_add_data(qr, data, *args, **kwargs)
+
+    monkeypatch.setattr(qrcode.QRCode, "add_data", capture_qr_data)
+    monkeypatch.setenv("PUBLIC_BASE_URL", "http://testserver")
+    client.post(
+        "/login",
+        data={
+            "email": "organiser@galgotias.edu",
+            "password": TEST_PASSWORDS["ORGANISER_PASSWORD"],
+        },
+    )
+
+    generated = client.post(
+        "/api/certificates/generate",
+        json={
+            "student_id": "stud_qr_test",
+            "student_name": "QR Test Student",
+            "event_id": "ev_001",
+            "event_name": "Test Event",
+        },
+    )
+
+    assert generated.status_code == 200
+    verify_url = encoded_urls[-1]
+    assert verify_url == generated.json()["verify_url"]
+    assert verify_url.startswith("http://testserver/verify/CERT-2026-")
+    verified = client.get(verify_url.removeprefix("http://testserver"))
+    assert verified.status_code == 200
+    assert "QR Test Student" in verified.text
+
+
+def test_executive_report_uses_database_sentiment_and_violation_counts(monkeypatch):
+    from backend.modules.module7_analytics import generator as analytics_generator
+
+    event_id = "ev_001"
+    execute_query(
+        "INSERT INTO feedback (id, event_id, rating, comment, sentiment) VALUES (?, ?, ?, ?, ?)",
+        ("report_fb_positive", event_id, 5, "Good session", "positive"),
+    )
+    execute_query(
+        "INSERT INTO feedback (id, event_id, rating, comment, sentiment) VALUES (?, ?, ?, ?, ?)",
+        ("report_fb_neutral", event_id, 3, "Average session", "neutral"),
+    )
+    execute_query(
+        "INSERT INTO feedback (id, event_id, rating, comment, sentiment) VALUES (?, ?, ?, ?, ?)",
+        ("report_fb_negative", event_id, 1, "Poor session", "negative"),
+    )
+    for audit_id, result in (
+        ("report_audit_blocked_1", "BLOCKED"),
+        ("report_audit_blocked_2", "BLOCKED"),
+        ("report_audit_failed", "FAILED"),
+    ):
+        execute_query(
+            "INSERT INTO audit_log (id, event_id, actor, action, result) VALUES (?, ?, ?, ?, ?)",
+            (audit_id, event_id, "test", "test_action", result),
+        )
+
+    captured_elements = []
+
+    class CapturingDocument:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def build(self, elements):
+            captured_elements.extend(elements)
+
+    monkeypatch.setattr(
+        analytics_generator, "SimpleDocTemplate", CapturingDocument
+    )
+    analytics_generator.EventAnalyticsEngine().generate_executive_report_pdf(event_id)
+
+    report_table = next(
+        element for element in captured_elements
+        if isinstance(element, analytics_generator.Table)
+    )
+    table_text = " ".join(
+        str(cell)
+        for row in report_table._cellvalues
+        for cell in row
+    )
+    assert "33.3% Positive" in table_text
+    assert "33.3% Neutral" in table_text
+    assert "33.3% Negative" in table_text
+    assert "2 BLOCKED" in table_text
+
 
 def test_analytics_page_render_authenticated(client):
     # 1. Unauthenticated request should be rejected / redirected
@@ -136,7 +248,7 @@ def test_analytics_page_render_authenticated(client):
     # 2. Login as supervisor
     login_res = client.post("/login", json={
         "email": "admin@galgotias.edu",
-        "password": "Admin@123"
+        "password": TEST_PASSWORDS["SUPERVISOR_PASSWORD"]
     })
     assert login_res.status_code in [200, 302]
 

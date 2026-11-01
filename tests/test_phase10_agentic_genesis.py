@@ -7,13 +7,24 @@ and universal on-the-fly operational commands.
 
 import pytest
 from fastapi.testclient import TestClient
+from conftest import TEST_PASSWORDS
 from backend.api.main import app
 from backend.services.agentic_genesis_service import (
     parse_natural_language_event_prompt,
     execute_autonomous_event_genesis,
     execute_universal_command
 )
+from backend.services import agentic_genesis_service
 from backend.core.database.connection import fetch_one
+from backend.core.safety.kavach import KavachEngine
+
+
+@pytest.fixture(autouse=True)
+def use_offline_event_parser(monkeypatch):
+    monkeypatch.setattr(
+        agentic_genesis_service, "parse_with_gemini_api", lambda prompt: None
+    )
+
 
 @pytest.fixture
 def client():
@@ -61,6 +72,27 @@ def test_autonomous_event_genesis_execution():
     assert notif is not None
     assert notif["status"] == "held"
 
+
+def test_genesis_outbox_announcement_uses_kavach_savepoint(monkeypatch):
+    engine = KavachEngine()
+    operations = []
+    original_execute = engine.execute_with_kavach
+
+    def record_execute(*args, **kwargs):
+        operations.append(args[3])
+        return original_execute(*args, **kwargs)
+
+    monkeypatch.setattr(engine, "execute_with_kavach", record_execute)
+    monkeypatch.setattr(agentic_genesis_service, "kavach", engine)
+
+    result = execute_autonomous_event_genesis(
+        "Organize a campus workshop for 40 students with 10k budget."
+    )
+
+    assert result["success"] is True
+    assert "stage_event_announcement" in operations
+
+
 def test_universal_command_add_venue():
     cmd = "Add venue Sarabhai Space Lab with 220 seats in Block E Floor 2"
     res = execute_universal_command(cmd)
@@ -94,14 +126,22 @@ def test_universal_command_turnout_query():
     assert "data" in res
 
 def test_universal_command_certificate():
-    cmd = "Generate certificate for Aryan Saxena"
+    cmd = "Generate certificate for Riley Example"
     res = execute_universal_command(cmd)
     assert res["success"] is True
     assert res["action"] == "CERTIFICATE_GENERATED"
-    assert "Aryan Saxena" in res["message"]
+    assert "Riley Example" in res["message"]
     assert "certificate_id" in res["data"]
 
 def test_http_agent_genesis_and_command_endpoints(client):
+    login = client.post(
+        "/login",
+        json={
+            "email": "organiser@galgotias.edu",
+            "password": TEST_PASSWORDS["ORGANISER_PASSWORD"],
+        },
+    )
+    assert login.status_code == 200
     # 1. POST /api/agent/genesis
     res1 = client.post("/api/agent/genesis", json={
         "prompt": "Organize an Autonomous AI agents seminar for 100 students with sound system and 20k budget."
@@ -109,6 +149,7 @@ def test_http_agent_genesis_and_command_endpoints(client):
     assert res1.status_code == 200
     data1 = res1.json()
     assert data1["success"] is True
+    assert data1["parser"] in {"gemini", "regex_fallback"}
     assert "event_id" in data1
     assert len(data1["execution_timeline"]) == 5
 

@@ -1,5 +1,6 @@
 import pytest
 import httpx
+from conftest import TEST_PASSWORDS
 from backend.api.main import app
 from backend.services.inventory_service import (
     create_venue,
@@ -70,20 +71,20 @@ async def test_equipment_creation_and_csv_export():
 async def test_speaker_creation_and_csv_export():
     # 1. Create speaker
     spk = await create_speaker(
-        name="Dr. Jane AI Scientist",
+        name="Dr. Byte Example",
         department="School of Computing",
         topics="Deep Learning, Robotics",
         email="jane.ai@research.edu",
         phone="9876543210",
         custom_image_url="/static/uploads/speaker_jane.jpg"
     )
-    assert spk["name"] == "Dr. Jane AI Scientist"
+    assert spk["name"] == "Dr. Byte Example"
     assert spk["department"] == "School of Computing"
 
     # 2. Check CSV export
     csv_str = export_table_to_csv("speakers")
     assert "id,name,department,topics,email" in csv_str
-    assert "Dr. Jane AI Scientist" in csv_str
+    assert "Dr. Byte Example" in csv_str
 
 @pytest.mark.anyio
 async def test_api_inventory_endpoints():
@@ -92,7 +93,7 @@ async def test_api_inventory_endpoints():
         # First authenticate as data_manager
         login_res = await client.post(
             "/login",
-            data={"email": "datamanager@galgotias.edu", "password": "Data@123"},
+            data={"email": "datamanager@galgotias.edu", "password": TEST_PASSWORDS["DATA_MANAGER_PASSWORD"]},
             headers={"Accept": "text/html"}
         )
         assert login_res.status_code == 302
@@ -132,7 +133,7 @@ async def test_api_csv_export_downloads():
         # Authenticate as data_manager
         await client.post(
             "/login",
-            data={"email": "datamanager@galgotias.edu", "password": "Data@123"},
+            data={"email": "datamanager@galgotias.edu", "password": TEST_PASSWORDS["DATA_MANAGER_PASSWORD"]},
             headers={"Accept": "text/html"}
         )
 

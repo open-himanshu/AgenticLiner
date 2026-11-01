@@ -26,6 +26,17 @@ def log(msg=""):
     print(msg, flush=True)
 
 def main():
+    if os.getenv("ALLOW_PUBLIC_TUNNEL") != "1":
+        log(
+            "[!] Refusing to start: set ALLOW_PUBLIC_TUNNEL=1 only after review. "
+            "This launcher exposes the application and its endpoints to the public internet."
+        )
+        sys.exit(1)
+
+    log(
+        "[!] WARNING: The public tunnel exposes the login page, application, and "
+        "reachable endpoints to anyone with the tunnel URL."
+    )
     log("\n" + "="*70)
     log("[*] STARTING AGENTICLINER LIVE SERVER...")
     log("="*70)

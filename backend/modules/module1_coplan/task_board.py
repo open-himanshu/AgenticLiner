@@ -8,7 +8,7 @@ from typing import List, Dict, Any
 DEFAULT_CHECKLISTS = {
     "hackathon": [
         {"day": "D-7 (1 Week Prior)", "task": "Lock Auditorium and AI Specialized Labs with Facility Head", "role": "Faculty Coordinator", "completed": True},
-        {"day": "D-7 (1 Week Prior)", "task": "Deploy online student registration portal and waitlist rules", "role": "Tech Lead (Himanshu)", "completed": True},
+        {"day": "D-7 (1 Week Prior)", "task": "Deploy online student registration portal and waitlist rules", "role": "Tech Lead (Morgan Example)", "completed": True},
         {"day": "D-3 (3 Days Prior)", "task": "Print official campus standees, banners, and participant badges", "role": "Design Lead (Diya)", "completed": True},
         {"day": "D-3 (3 Days Prior)", "task": "Reserve 35 extension spike power strips for student coding tables", "role": "Logistics Lead (Ashish)", "completed": True},
         {"day": "D-1 (Eve of Event)", "task": "Acoustics & Mic sound test in Main Auditorium A", "role": "Student Volunteer", "completed": False},

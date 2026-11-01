@@ -5,6 +5,7 @@ Automated Pytest Suite for Authentication, Strong Password Policy, OTP Verificat
 import pytest
 import httpx
 import uuid
+from conftest import TEST_PASSWORDS
 from backend.api.main import app
 from backend.services.auth_service import (
     hash_password,
@@ -58,7 +59,7 @@ def test_strong_password_policy():
     assert "special symbol" in err
 
 def test_authenticate_user_service():
-    user, err = authenticate_user("admin@galgotias.edu", "Admin@123")
+    user, err = authenticate_user("admin@galgotias.edu", TEST_PASSWORDS["SUPERVISOR_PASSWORD"])
     assert user is not None
     assert err is None
     assert user["role"] == "supervisor"
@@ -105,7 +106,7 @@ async def test_supervisor_login_and_access():
         # Login as supervisor
         res = await client.post(
             "/login",
-            data={"email": "admin@galgotias.edu", "password": "Admin@123"},
+            data={"email": "admin@galgotias.edu", "password": TEST_PASSWORDS["SUPERVISOR_PASSWORD"]},
             headers={"Accept": "text/html"}
         )
         assert res.status_code == 302
@@ -123,7 +124,7 @@ async def test_cross_role_access_forbidden():
         # Login as organiser
         res = await client.post(
             "/login",
-            data={"email": "organiser@galgotias.edu", "password": "Organiser@123"},
+            data={"email": "organiser@galgotias.edu", "password": TEST_PASSWORDS["ORGANISER_PASSWORD"]},
             headers={"Accept": "text/html"}
         )
         assert res.status_code == 302
@@ -149,7 +150,7 @@ async def test_data_manager_login_and_cross_role_blocked():
         # Login as data manager
         res = await client.post(
             "/login",
-            data={"email": "datamanager@galgotias.edu", "password": "Data@123"},
+            data={"email": "datamanager@galgotias.edu", "password": TEST_PASSWORDS["DATA_MANAGER_PASSWORD"]},
             headers={"Accept": "text/html"}
         )
         assert res.status_code == 302
@@ -169,7 +170,7 @@ async def test_logout():
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
         # Login as student
-        await client.post("/login", data={"email": "student@galgotias.edu", "password": "Student@123"})
+        await client.post("/login", data={"email": "student@galgotias.edu", "password": TEST_PASSWORDS["PARTICIPANT_PASSWORD"]})
         res = await client.get("/participant")
         assert res.status_code == 200
 
@@ -184,7 +185,10 @@ async def test_logout():
         assert "/login" in res.headers["location"]
 
 @pytest.mark.anyio
-async def test_signup_otp_and_verification_flow():
+async def test_signup_otp_and_verification_flow(monkeypatch):
+    from backend.api import auth_routes
+
+    monkeypatch.setattr(auth_routes, "is_smtp_configured", lambda: False)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
         # 1. Submit signup form with strong password
@@ -192,7 +196,7 @@ async def test_signup_otp_and_verification_flow():
         res = await client.post(
             "/signup",
             data={
-                "full_name": "Dr. Sunita Rao",
+                "full_name": "Dr. Nova Example",
                 "email": new_email,
                 "role": "organiser",
                 "department": "School of AI",
@@ -226,12 +230,12 @@ async def test_signup_otp_and_verification_flow():
             data={"email": new_email, "purpose": "signup", "otp_code": otp_code}
         )
         assert res_ok.status_code == 302
-        assert res_ok.headers["location"] == "/organiser"
+        assert res_ok.headers["location"] == "/participant"
 
-        # 4. Confirm newly registered user can access /organiser
-        res_dashboard = await client.get("/organiser")
+        # 4. Public sign-up cannot grant privileged roles.
+        res_dashboard = await client.get("/participant")
         assert res_dashboard.status_code == 200
-        assert "Dr. Sunita Rao" in res_dashboard.text
+        assert "Dr. Nova Example" in res_dashboard.text
 
 @pytest.mark.anyio
 async def test_signup_weak_password_rejected():
@@ -253,7 +257,10 @@ async def test_signup_weak_password_rejected():
         assert "at least 8 characters" in res.text
 
 @pytest.mark.anyio
-async def test_forgot_and_reset_password_flow():
+async def test_forgot_and_reset_password_flow(monkeypatch):
+    from backend.api import auth_routes
+
+    monkeypatch.setattr(auth_routes, "is_smtp_configured", lambda: False)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
         target_email = "student@galgotias.edu"
@@ -299,16 +306,18 @@ async def test_forgot_and_reset_password_flow():
         assert res_login.headers["location"] == "/participant"
 
 @pytest.mark.anyio
-async def test_google_auth_fast_login_and_role_access():
-    transport = httpx.ASGITransport(app=app)
+async def test_google_auth_fast_login_and_role_access(monkeypatch):
+    monkeypatch.setenv("ALLOW_DEMO_LOGIN", "1")
+    monkeypatch.delenv("ALLOW_PUBLIC_TUNNEL", raising=False)
+    transport = httpx.ASGITransport(app=app, client=("127.0.0.1", 12345))
     async with httpx.AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
         # Sign in with Google as an Organiser
         res = await client.post(
             "/auth/google",
             json={
                 "demo_google": True,
-                "email": "prof.sharma.google@galgotias.edu",
-                "name": "Prof. Sharma",
+                "email": "organiser@galgotias.edu",
+                "name": "Untrusted Name",
                 "role": "organiser",
                 "department": "Computer Science (CSE)"
             }
@@ -317,13 +326,190 @@ async def test_google_auth_fast_login_and_role_access():
         data = res.json()
         assert data["success"] is True
         assert data["redirect_url"] == "/organiser"
-        assert data["user"]["email"] == "prof.sharma.google@galgotias.edu"
+        assert data["user"]["email"] == "organiser@galgotias.edu"
         assert data["user"]["role"] == "organiser"
 
         # Verify session cookie was issued and can access /organiser
         res_dash = await client.get("/organiser")
         assert res_dash.status_code == 200
-        assert "Prof. Sharma" in res_dash.text
+        assert "Student Club Organiser" in res_dash.text
+
+
+@pytest.mark.anyio
+async def test_firebase_login_rejects_tampered_token_without_network(monkeypatch):
+    from backend.api import auth_routes
+
+    verification_calls = []
+
+    def reject_token(token):
+        verification_calls.append(token)
+        raise ValueError("Invalid Firebase ID token")
+
+    def reject_network(*args, **kwargs):
+        raise AssertionError("Tests must not make network requests.")
+
+    monkeypatch.setattr(auth_routes, "verify_firebase_id_token", reject_token, raising=False)
+    monkeypatch.setattr(auth_routes.urllib.request, "urlopen", reject_network)
+    monkeypatch.setenv("FIREBASE_PROJECT_ID", "test-firebase-project")
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/auth/firebase-login",
+            json={"id_token": "tampered-token"},
+        )
+
+    assert response.status_code == 401
+    assert verification_calls == ["tampered-token"]
+
+
+def test_firebase_verifier_uses_configured_project_id(monkeypatch):
+    from backend.api import auth_routes
+
+    initialized_apps = []
+    app = object()
+
+    def no_initialized_app(name):
+        raise ValueError(name)
+
+    def initialize_app(options, name):
+        initialized_apps.append((options, name))
+        return app
+
+    monkeypatch.setenv("FIREBASE_PROJECT_ID", "configured-firebase-project")
+    monkeypatch.setattr(auth_routes.firebase_admin, "get_app", no_initialized_app)
+    monkeypatch.setattr(auth_routes.firebase_admin, "initialize_app", initialize_app)
+    monkeypatch.setattr(
+        auth_routes.firebase_auth,
+        "verify_id_token",
+        lambda token, app: {"email": "verified@example.com"},
+    )
+
+    claims = auth_routes.verify_firebase_id_token("firebase-token")
+
+    assert claims["email"] == "verified@example.com"
+    assert initialized_apps == [
+        (
+            {"projectId": "configured-firebase-project"},
+            "agenticliner-configured-firebase-project",
+        )
+    ]
+
+
+@pytest.mark.anyio
+async def test_firebase_login_unknown_email_gets_participant_role(monkeypatch):
+    from backend.api import auth_routes
+
+    def verify_token(token):
+        assert token == "valid-token"
+        return {
+            "email": "new-participant@example.com",
+            "email_verified": True,
+            "name": "Verified Participant",
+        }
+
+    def reject_network(*args, **kwargs):
+        raise AssertionError("Tests must not make network requests.")
+
+    monkeypatch.setattr(auth_routes, "verify_firebase_id_token", verify_token, raising=False)
+    monkeypatch.setattr(auth_routes.urllib.request, "urlopen", reject_network)
+    monkeypatch.setenv("FIREBASE_PROJECT_ID", "test-firebase-project")
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/auth/firebase-login",
+            json={
+                "id_token": "valid-token",
+                "email": "admin@galgotias.edu",
+                "role": "supervisor",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["user"]["email"] == "new-participant@example.com"
+    assert response.json()["user"]["role"] == "participant"
+
+
+@pytest.mark.anyio
+async def test_firebase_login_uses_database_role_for_existing_user(monkeypatch):
+    from backend.api import auth_routes
+
+    def reject_network(*args, **kwargs):
+        raise AssertionError("Tests must not make network requests.")
+
+    monkeypatch.setattr(
+        auth_routes,
+        "verify_firebase_id_token",
+        lambda token: {
+            "email": "admin@galgotias.edu",
+            "email_verified": True,
+            "name": "Verified Admin",
+        },
+        raising=False,
+    )
+    monkeypatch.setattr(auth_routes.urllib.request, "urlopen", reject_network)
+    monkeypatch.setenv("FIREBASE_PROJECT_ID", "test-firebase-project")
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/auth/firebase-login",
+            json={
+                "id_token": "valid-token",
+                "email": "organiser@galgotias.edu",
+                "role": "participant",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["user"]["email"] == "admin@galgotias.edu"
+    assert response.json()["user"]["role"] == "supervisor"
+
+
+@pytest.mark.anyio
+async def test_demo_login_is_disabled_by_default(monkeypatch):
+    monkeypatch.delenv("ALLOW_DEMO_LOGIN", raising=False)
+    monkeypatch.delenv("ALLOW_PUBLIC_TUNNEL", raising=False)
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/auth/google",
+            json={"demo_google": True, "email": "organiser@galgotias.edu"},
+        )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_demo_login_is_refused_when_public_tunnel_is_enabled(monkeypatch):
+    monkeypatch.setenv("ALLOW_DEMO_LOGIN", "1")
+    monkeypatch.setenv("ALLOW_PUBLIC_TUNNEL", "1")
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/auth/google",
+            json={"demo_google": True, "email": "organiser@galgotias.edu"},
+        )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_demo_login_is_refused_for_non_loopback_client(monkeypatch):
+    monkeypatch.setenv("ALLOW_DEMO_LOGIN", "1")
+    monkeypatch.delenv("ALLOW_PUBLIC_TUNNEL", raising=False)
+
+    transport = httpx.ASGITransport(app=app, client=("203.0.113.10", 12345))
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/auth/google",
+            json={"demo_google": True, "email": "organiser@galgotias.edu"},
+        )
+
+    assert response.status_code == 403
 
 @pytest.mark.anyio
 async def test_email_service_safety():
@@ -334,4 +520,3 @@ async def test_email_service_safety():
     if not is_smtp_configured():
         assert ok is False
         assert "SMTP is not configured" in err
-

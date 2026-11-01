@@ -5,6 +5,7 @@ Purge Dummy Data, Real Zero-Counts, Helpful Empty States, and Admin Reset Data A
 
 import pytest
 import httpx
+from conftest import TEST_PASSWORDS
 from backend.api.main import app
 from backend.services.admin_service import reset_all_operational_data
 from backend.services.seed_users import seed_users
@@ -19,7 +20,7 @@ async def test_supervisor_dashboard_zero_counts_and_empty_state():
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
         # Login as supervisor
-        login_res = await client.post("/login", data={"email": "admin@galgotias.edu", "password": "Admin@123"})
+        login_res = await client.post("/login", data={"email": "admin@galgotias.edu", "password": TEST_PASSWORDS["SUPERVISOR_PASSWORD"]})
         assert login_res.status_code == 302
         assert login_res.headers["location"] == "/supervisor"
 
@@ -47,7 +48,7 @@ async def test_organiser_dashboard_zero_counts_and_empty_state():
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
         # Login as organiser
-        login_res = await client.post("/login", data={"email": "organiser@galgotias.edu", "password": "Organiser@123"})
+        login_res = await client.post("/login", data={"email": "organiser@galgotias.edu", "password": TEST_PASSWORDS["ORGANISER_PASSWORD"]})
         assert login_res.status_code == 302
         assert login_res.headers["location"] == "/organiser"
 
@@ -64,7 +65,7 @@ async def test_data_manager_dashboard_zero_counts_and_empty_state():
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
         # Login as data manager
-        login_res = await client.post("/login", data={"email": "datamanager@galgotias.edu", "password": "Data@123"})
+        login_res = await client.post("/login", data={"email": "datamanager@galgotias.edu", "password": TEST_PASSWORDS["DATA_MANAGER_PASSWORD"]})
         assert login_res.status_code == 302
         assert login_res.headers["location"] == "/data-manager"
 
@@ -82,13 +83,13 @@ async def test_admin_reset_access_control_and_execution():
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
         # 1. Non-admin (organiser) attempting to reset data MUST get 403 Forbidden
-        await client.post("/login", data={"email": "organiser@galgotias.edu", "password": "Organiser@123"})
+        await client.post("/login", data={"email": "organiser@galgotias.edu", "password": TEST_PASSWORDS["ORGANISER_PASSWORD"]})
         res_forbidden = await client.post("/admin/reset-data")
         assert res_forbidden.status_code == 403
 
         # 2. Supervisor invokes reset data
         await client.get("/logout")
-        await client.post("/login", data={"email": "admin@galgotias.edu", "password": "Admin@123"})
+        await client.post("/login", data={"email": "admin@galgotias.edu", "password": TEST_PASSWORDS["SUPERVISOR_PASSWORD"]})
         
         # Test HTML form submission redirect
         res_reset_html = await client.post(
