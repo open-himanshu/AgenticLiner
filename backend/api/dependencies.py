@@ -4,7 +4,6 @@ Validates session cookies and enforces strict role-based access control (RBAC) o
 """
 
 from fastapi import Request, HTTPException, status
-from fastapi.responses import RedirectResponse
 from typing import Optional, List, Dict, Any
 
 def get_session_user(request: Request) -> Optional[Dict[str, Any]]:

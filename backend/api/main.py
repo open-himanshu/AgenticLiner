@@ -3,7 +3,7 @@ AgenticLiner FastAPI Main Application (University Edition v2.1).
 Complete End-to-End Implementation for all 7 Modules and 17 Screens of SparkX 3.0 Challenge #1.
 """
 
-from fastapi import FastAPI, Request, Form, HTTPException, Response, Depends, status
+from fastapi import FastAPI, Request, HTTPException, Response, Depends, status
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -17,11 +17,9 @@ import uuid
 import logging
 import secrets
 
-from backend.core.database.connection import get_connection, fetch_all, fetch_one, execute_query
+from backend.core.database.connection import get_connection, fetch_all, fetch_one
 from backend.core.database.demo_people import HERO_SPEAKER
-from backend.core.planner.agent import AutopilotAgent
 from backend.core.planner.agent_mode import run_autopilot_with_fallback
-from backend.core.scheduler.solver import EventScheduler
 from backend.modules.module1_coplan.task_board import get_event_task_board
 from backend.modules.module1_coplan.brief_parser import parse_event_brief, adaptive_intake
 from backend.modules.module2_scheduling.attendee_manager import AttendeeManager
@@ -48,14 +46,13 @@ from backend.services.schedule_service import (
 from backend.services.analytics_service import (
     get_analytics_dashboard_data,
     record_feedback,
-    issue_verifiable_certificate,
     verify_certificate_by_id
 )
 from backend.services.agentic_genesis_service import (
     execute_autonomous_event_genesis,
     execute_universal_command
 )
-from backend.api.dependencies import require_auth, require_role, get_session_user
+from backend.api.dependencies import require_role, get_session_user
 from backend.core.safety.kavach import KavachEngine
 
 app = FastAPI(title="AgenticLiner - Academic Event Platform", version="2.2.0")
@@ -125,7 +122,6 @@ async def custom_http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 # Core Engines
-autopilot_agent = AutopilotAgent()
 attendee_mgr = AttendeeManager()
 resource_opt = ResourceOptimizer()
 participant_xp = ParticipantExperienceEngine()
@@ -314,7 +310,7 @@ async def organiser_planner(
     tasks = get_event_task_board("hackathon")
     return templates.TemplateResponse(
         request=request,
-        name="index.html",
+        name="planner.html",
         context={
             "user": user,
             "catalog": catalog,
@@ -908,3 +904,4 @@ async def verify_certificate(cert_id: str, request: Request):
         },
         status_code=200 if cert_info else 404
     )
+

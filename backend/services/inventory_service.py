@@ -4,17 +4,16 @@ Allows coordinators and data managers to add venues, equipment, speakers, and ev
 with photos, categories, and details, while maintaining underlying database tables and auto-generated CSV datasets.
 """
 
-import os
 import uuid
 import csv
 import io
 import json
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from fastapi import HTTPException, UploadFile
 
-from backend.core.database.connection import get_connection, fetch_all, fetch_one, execute_query
+from backend.core.database.connection import fetch_all, execute_query
 
 logger = logging.getLogger(__name__)
 

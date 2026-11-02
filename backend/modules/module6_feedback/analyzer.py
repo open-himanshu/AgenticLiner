@@ -1,5 +1,5 @@
 """
-Module 6: Automated Feedback Intelligence Engine
+Module 6: Lexicon-Based Feedback Sentiment Scoring & Thematic Classifier
 Implements:
 1. Sentiment analysis (Positive, Neutral, Negative)
 2. Thematic classification (Venue/Infra, Speaker/Content, Food/Hospitality, Organization)
@@ -130,3 +130,4 @@ class FeedbackAnalyzer:
             "top_concerns": concerns[:4],
             "analyzed_items": analyzed_items
         }
+

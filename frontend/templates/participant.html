@@ -263,8 +263,8 @@
 
             if (!isLiveLlm && data.fallback_reason) {
                 const fallbackNote = document.createElement('div');
-                fallbackNote.className = 'text-warning-emphasis mt-1';
-                fallbackNote.innerText = data.fallback_reason;
+                fallbackNote.className = 'text-secondary mt-1 small fst-italic';
+                fallbackNote.innerText = `ℹ️ ${data.fallback_reason}`;
                 botDiv.appendChild(fallbackNote);
             }
             chatLog.appendChild(botDiv);

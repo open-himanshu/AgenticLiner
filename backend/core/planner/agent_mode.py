@@ -17,10 +17,9 @@ from __future__ import annotations
 import json
 import os
 import re
-import time
 import uuid
 from datetime import date as CalendarDate, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from backend.core.planner.call_llm import call_llm, get_provider_config, ProviderError
 from backend.core.planner.tools import (
@@ -29,7 +28,6 @@ from backend.core.planner.tools import (
     tool_recommend_from_history,
     tool_requisition_campus_resources,
 )
-from backend.core.safety.kavach import KavachEngine
 
 MAX_STEPS = 8
 MAX_ASK_USER = 2

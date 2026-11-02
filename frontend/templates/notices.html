@@ -87,7 +87,7 @@
                                 <td><span class="badge bg-secondary">{{ n.type }}</span></td>
                                 <td>
                                     {% if n.status == 'sent' %}
-                                    <span class="badge bg-success-subtle text-success border border-success">SENT</span>
+                                    <span class="badge bg-success-subtle text-success border border-success" title="Logged to campus outbox register">DISPATCHED (LOGGED)</span>
                                     {% elif n.status == 'held' %}
                                     <span class="badge bg-warning-subtle text-warning-emphasis border border-warning">HELD (STAGED)</span>
                                     {% else %}

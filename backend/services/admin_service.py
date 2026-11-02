@@ -36,6 +36,9 @@ def reset_all_operational_data(supervisor_email: str = "admin@galgotias.edu") ->
     """
     logger.info(f"Initiating full database reset requested by {supervisor_email}")
     
+    purged_tables = []
+    errors = []
+
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("PRAGMA foreign_keys = OFF;")
@@ -43,8 +46,10 @@ def reset_all_operational_data(supervisor_email: str = "admin@galgotias.edu") ->
         for table in ALL_OPERATIONAL_TABLES:
             try:
                 cursor.execute(f"DELETE FROM {table};")
+                purged_tables.append(table)
             except Exception as e:
                 logger.warning(f"Could not purge table {table}: {e}")
+                errors.append(f"{table}: {e}")
                 
         cursor.execute("PRAGMA foreign_keys = ON;")
         conn.commit()
@@ -62,9 +67,12 @@ def reset_all_operational_data(supervisor_email: str = "admin@galgotias.edu") ->
         )
     except Exception as e:
         logger.warning(f"Could not record reset in audit log: {e}")
+        errors.append(f"audit_log: {e}")
 
+    is_success = len(errors) == 0
     return {
-        "success": True,
-        "message": "All operational datasets successfully purged to clean zero-state.",
-        "tables_purged": ALL_OPERATIONAL_TABLES
+        "success": is_success,
+        "message": "All operational datasets successfully purged to clean zero-state." if is_success else "Operational reset completed with purge errors.",
+        "tables_purged": purged_tables,
+        "errors": errors
     }

@@ -414,7 +414,7 @@ def _call_ollama(
                 ) from None
             delay = _retry_delay(error.headers, error_body)
             time.sleep(delay)
-        except urllib.error.URLError as error:
+        except urllib.error.URLError:
             raise ProviderError(
                 "Ollama is not running or is unreachable."
             ) from None
@@ -506,4 +506,5 @@ def call_llm(
     result["provider"] = provider
     result["model"] = model
     return result
+
 

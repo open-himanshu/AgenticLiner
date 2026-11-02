@@ -11,7 +11,6 @@ import re
 from typing import Dict, Any, List, Optional
 from backend.core.planner.tools import (
     tool_find_free_venues,
-    tool_check_equipment,
     tool_recommend_from_history,
     tool_requisition_campus_resources
 )

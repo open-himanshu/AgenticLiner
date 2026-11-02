@@ -87,7 +87,6 @@
             {% set user = request.session.get('user') %}
             <a class="navbar-brand d-flex align-items-center gap-2" href="{% if user %}{% if user.role == 'supervisor' %}/supervisor{% elif user.role == 'organiser' %}/organiser{% elif user.role == 'data_manager' %}/data-manager{% else %}/participant{% endif %}{% else %}/login{% endif %}">
                 <span class="fs-4">🚀 AgenticLiner</span>
-                <span class="badge badge-kavach py-1 px-2">🛡️ Kavach Protected</span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
                 <span class="navbar-toggler-icon"></span>
@@ -206,6 +205,7 @@
     </nav>
 
     <!-- Universal Autonomous Agent Command Bar -->
+    {% if user and user.role in ['organiser', 'supervisor'] %}
     <div class="py-2 px-4 shadow-sm" style="background: linear-gradient(90deg, #090d16 0%, #1e293b 100%); border-bottom: 2px solid #3b82f6;">
         <div class="container-fluid px-0 d-flex align-items-center justify-content-between flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 820px;">
@@ -214,9 +214,6 @@
                 </span>
                 <div class="input-group input-group-sm">
                     <input type="text" class="form-control text-white bg-dark border-secondary" id="universalAgentInput" placeholder="Command AgenticLiner (e.g. 'Organise 2-day Robotics & AI Summit for 200 students with dinner and 35k budget' or 'Add venue Kalam Hall with 400 seats')..." style="font-size: 0.85rem;">
-                    <button class="btn btn-outline-light border-secondary" type="button" id="btnVoiceCommand" title="Voice Input">
-                        <i class="bi bi-mic"></i>
-                    </button>
                     <button class="btn btn-primary fw-bold px-3" type="button" id="btnUniversalAgentRun">
                         <i class="bi bi-send-fill me-1"></i> Execute
                     </button>
@@ -241,6 +238,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- Main Content Container -->
     <main class="py-4">
@@ -344,36 +342,11 @@
             }
         }
 
-        // Voice to Text Feature
-        const btnVoice = document.getElementById('btnVoiceCommand');
-        if (btnVoice && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-            const recognizer = new SpeechRec();
-            recognizer.continuous = false;
-            recognizer.lang = 'en-IN';
-
-            recognizer.onstart = function() {
-                btnVoice.classList.add('btn-danger');
-                btnVoice.classList.remove('btn-outline-light');
-            };
-            recognizer.onresult = function(event) {
-                const transcript = event.results[0][0].transcript;
-                document.getElementById('universalAgentInput').value = transcript;
-                btnVoice.classList.remove('btn-danger');
-                btnVoice.classList.add('btn-outline-light');
-            };
-            recognizer.onerror = recognizer.onend = function() {
-                btnVoice.classList.remove('btn-danger');
-                btnVoice.classList.add('btn-outline-light');
-            };
-
-            btnVoice.addEventListener('click', () => {
-                try { recognizer.start(); } catch (e) { recognizer.stop(); }
-            });
-        }
 
         // Universal Agent Runner
-        document.getElementById('btnUniversalAgentRun').addEventListener('click', async () => {
+        const btnUniversalRun = document.getElementById('btnUniversalAgentRun');
+        if (btnUniversalRun) {
+            btnUniversalRun.addEventListener('click', async () => {
             const input = document.getElementById('universalAgentInput');
             const command = input.value.trim();
             if (!command) {
@@ -457,12 +430,17 @@
             }
         });
 
+        }
+
         // Enter key to run
-        document.getElementById('universalAgentInput').addEventListener('keypress', (e) => {
+        const universalInput = document.getElementById('universalAgentInput');
+        if (universalInput) {
+            universalInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 document.getElementById('btnUniversalAgentRun').click();
             }
         });
+        }
     </script>
     {% block extra_scripts %}{% endblock %}
 </body>

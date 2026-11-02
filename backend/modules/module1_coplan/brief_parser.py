@@ -1,11 +1,11 @@
 """
-Module 1: AI Event Planning Copilot - Event Brief Parser & Adaptive Intake Engine.
+Module 1: Event Brief Parser & Adaptive Intake Engine.
 Parses natural language event briefs, extracts structured operational requirements,
 and prompts clarifying questions when critical campus details are missing.
 """
 
 import re
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 def adaptive_intake(raw_text: str) -> Dict[str, Any]:
     """
@@ -111,3 +111,4 @@ def parse_event_brief(raw_text: str) -> Dict[str, Any]:
         "is_complete": intake["is_complete"],
         "clarification_questions": intake["clarification_questions"]
     }
+

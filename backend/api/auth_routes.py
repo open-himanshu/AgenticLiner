@@ -4,7 +4,7 @@ Handles login, signup, real email OTP dispatch (Option A), Google One-Tap/OAuth 
 password resets, and role-based redirects.
 """
 
-from fastapi import APIRouter, Request, Form, HTTPException, status, Depends
+from fastapi import APIRouter, Request, Form, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path

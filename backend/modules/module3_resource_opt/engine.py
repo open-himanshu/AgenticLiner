@@ -7,7 +7,7 @@ Implements:
 """
 
 import math
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 import pandas as pd
 from sklearn.linear_model import Ridge
 from backend.core.database.connection import get_connection

@@ -35,3 +35,6 @@ Thumbs.db
 .vscode/
 
 backend/data/generated_docs/
+
+eval/benchmark/results.json
+status_run/

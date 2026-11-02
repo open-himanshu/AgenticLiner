@@ -6,7 +6,7 @@ Dean approval / rejection, and event detail views.
 
 from fastapi import APIRouter, Request, Form, HTTPException, Depends, status
 from fastapi.responses import RedirectResponse, JSONResponse
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 import json
 import logging
 

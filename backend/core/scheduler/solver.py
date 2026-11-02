@@ -9,7 +9,7 @@ Solves conflict-free timetable scheduling satisfying:
 """
 
 from ortools.sat.python import cp_model
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional
 
 class EventScheduler:
     def __init__(self, rooms: List[Dict[str, Any]], slots: List[str], sessions: List[Dict[str, Any]], speakers: Optional[List[Dict[str, Any]]] = None):
@@ -35,7 +35,6 @@ class EventScheduler:
         for s in self.sessions:
             s_id = s["id"]
             attendance = s.get("expected_attendance", 0)
-            speaker_id = s.get("speaker_id")
 
             for r in self.rooms:
                 r_id = r["id"]

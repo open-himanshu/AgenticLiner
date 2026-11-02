@@ -4,10 +4,9 @@ Integrates Sentiment Analysis, Thematic Detection, Real-time Aggregation,
 and Cryptographic QR-Enabled Certificate Issuance.
 """
 
-import os
 import uuid
-from typing import Dict, Any, List, Optional
-from backend.core.database.connection import get_connection, fetch_all, fetch_one, execute_query
+from typing import Dict, Any, Optional
+from backend.core.database.connection import fetch_all, fetch_one, execute_query
 from backend.modules.module6_feedback.analyzer import FeedbackAnalyzer
 from backend.modules.module7_analytics.generator import EventAnalyticsEngine
 

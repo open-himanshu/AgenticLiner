@@ -3,16 +3,11 @@ Student Digital Pass & Gate Scanning API Routes.
 Provides instant gate QR scanning, pass verification, and registration processing.
 """
 
-from fastapi import APIRouter, Request, HTTPException, Depends, Query, status
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from typing import Dict, Any, Optional
+from fastapi import APIRouter, Request, Depends, Query
+from fastapi.responses import HTMLResponse, JSONResponse
+from typing import Dict, Any
 import logging
 
-from backend.services.pass_service import (
-    get_or_create_student_profile,
-    get_student_passes,
-    get_personalized_recommendations_for_student
-)
 from backend.modules.module2_scheduling.attendee_manager import AttendeeManager
 from backend.core.database.connection import fetch_one
 from backend.api.dependencies import require_role

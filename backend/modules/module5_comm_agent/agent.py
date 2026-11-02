@@ -7,7 +7,7 @@ Implements:
 """
 
 import uuid
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 from backend.core.database.connection import get_connection
 from backend.core.safety.kavach import KavachEngine, InvariantViolation
 
@@ -260,23 +260,3 @@ class CommunicationAgent:
             if close_conn:
                 conn.close()
 
-    def generate_faqs(self, event_name: str, venue_name: str) -> List[Dict[str, str]]:
-        """Generates standard grounded event FAQs."""
-        return [
-            {
-                "question": f"Where is {event_name} being hosted?",
-                "answer": f"The event is held at {venue_name}, Galgotias University campus."
-            },
-            {
-                "question": "Will I receive a verifiable certificate?",
-                "answer": "Yes, every registered attendee who completes session check-in will receive a digital verifiable PDF certificate with a scannable QR code."
-            },
-            {
-                "question": "Are meals and refreshments provided?",
-                "answer": "Yes, refreshments and lunch boxes are allocated for all confirmed participants."
-            },
-            {
-                "question": "What should I bring to the event?",
-                "answer": "Please carry your University student ID card and your laptop with chargers (for hackathons/workshops)."
-            }
-        ]

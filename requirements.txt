@@ -10,7 +10,6 @@ python-multipart>=0.0.9
 # AI & Solver Stack
 google-genai>=0.1.0
 ortools>=9.9.3963
-sqlglot>=23.0.0
 
 # ML & Data Science
 scikit-learn>=1.4.0
@@ -21,7 +20,6 @@ numpy>=1.26.0
 reportlab>=4.1.0
 qrcode>=7.4.2
 pillow>=10.0.0
-apscheduler>=3.10.4
 
 # Auth & Security
 bcrypt>=4.0.0
