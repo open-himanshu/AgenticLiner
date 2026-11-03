@@ -184,6 +184,11 @@ python backend/services/seed_users.py
 ```
 
 ### 5. Start the Web Server
+Easiest command (recommended):
+```powershell
+python run.py
+```
+Or directly via uvicorn:
 ```powershell
 python -m uvicorn backend.api.main:app --host 127.0.0.1 --port 8000 --reload
 ```

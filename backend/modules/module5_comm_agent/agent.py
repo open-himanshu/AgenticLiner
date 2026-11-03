@@ -8,6 +8,10 @@ Implements:
 
 import uuid
 from typing import Dict, Any, Optional
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv(usecwd=True))
+
 from backend.core.database.connection import get_connection
 from backend.core.safety.kavach import KavachEngine, InvariantViolation
 
@@ -109,16 +113,16 @@ class CommunicationAgent:
                             "model": llm_resp.get("model"),
                         }
                     fallback_reason = "LLM returned an empty answer; using grounded rules."
-            except ProviderError:
+            except ProviderError as pe:
+                logger.error(f"Campus Assistant ProviderError: {pe}", exc_info=True)
                 fallback_reason = (
                     "LLM request failed; using grounded rules."
                     if provider_call_started
                     else "LLM provider is not configured; using grounded rules."
                 )
-                logger.warning(fallback_reason)
-            except Exception:
-                fallback_reason = "LLM request failed; using grounded rules."
-                logger.warning(fallback_reason)
+            except Exception as e:
+                logger.error(f"Campus Assistant Unexpected Error: {e}", exc_info=True)
+                fallback_reason = "LLM request failed; using grounded rules." 
 
             # Match query against sessions
             matched_session = None

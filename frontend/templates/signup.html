@@ -144,7 +144,10 @@
                             <div class="col-sm-6">
                                 <label for="role" class="form-label small fw-semibold text-secondary">Account Role</label>
                                 <select class="form-select" id="role" name="role" required>
-                                    <option value="participant" selected>Participant (Student)</option>
+                                    <option value="participant" {% if form_data.get('role') == 'participant' %}selected{% endif %}>Participant (Student)</option>
+                                    <option value="organiser" {% if form_data.get('role') == 'organiser' %}selected{% endif %}>Event Organiser (Club Lead)</option>
+                                    <option value="supervisor" {% if form_data.get('role') == 'supervisor' %}selected{% endif %}>Supervisor (Dean / Admin)</option>
+                                    <option value="data_manager" {% if form_data.get('role') == 'data_manager' %}selected{% endif %}>Data Manager (Logistics & Inventory)</option>
                                 </select>
                             </div>
                             <div class="col-sm-6">
@@ -246,7 +249,25 @@
                             <div class="fw-semibold text-truncate">Casey Example</div>
                             <div class="small text-muted text-truncate">casey@example.invalid</div>
                         </div>
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">Google</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">Organiser</span>
+                    </div>
+
+                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="signupWithGoogleAccount('dean.office@galgotias.edu', 'University Dean (Admin)')">
+                        <div class="google-avatar bg-danger">D</div>
+                        <div class="flex-grow-1 overflow-hidden">
+                            <div class="fw-semibold text-truncate">Dean Office</div>
+                            <div class="small text-muted text-truncate">dean.office@galgotias.edu</div>
+                        </div>
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle small">Supervisor</span>
+                    </div>
+
+                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="signupWithGoogleAccount('datamanager@galgotias.edu', 'Logistics Data Manager')">
+                        <div class="google-avatar bg-warning text-dark">M</div>
+                        <div class="flex-grow-1 overflow-hidden">
+                            <div class="fw-semibold text-truncate">Campus Data Manager</div>
+                            <div class="small text-muted text-truncate">datamanager@galgotias.edu</div>
+                        </div>
+                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle small">Data Manager</span>
                     </div>
 
                     <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="signupWithGoogleAccount('student@galgotias.edu', 'Campus Student')">
@@ -255,7 +276,7 @@
                             <div class="fw-semibold text-truncate">Campus Student</div>
                             <div class="small text-muted text-truncate">student@galgotias.edu</div>
                         </div>
-                        <span class="badge bg-success-subtle text-success border border-success-subtle small">Campus</span>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle small">Student</span>
                     </div>
                 </div>
 

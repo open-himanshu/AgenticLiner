@@ -3,6 +3,9 @@ AgenticLiner FastAPI Main Application (University Edition v2.1).
 Complete End-to-End Implementation for all 7 Modules and 17 Screens of SparkX 3.0 Challenge #1.
 """
 
+from dotenv import load_dotenv, find_dotenv
+load_dotenv(find_dotenv(usecwd=True))
+
 from fastapi import FastAPI, Request, HTTPException, Response, Depends, status
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -905,3 +908,11 @@ async def verify_certificate(cert_id: str, request: Request):
         status_code=200 if cert_info else 404
     )
 
+
+
+if __name__ == "__main__":
+    import uvicorn
+    print("=" * 65)
+    print("🚀 Starting AgenticLiner Live Server on http://127.0.0.1:8000")
+    print("=" * 65)
+    uvicorn.run("backend.api.main:app", host="127.0.0.1", port=8000, reload=True)

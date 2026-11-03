@@ -245,14 +245,14 @@ async def signup_submit(
             pass
 
     google_client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+    # Security Policy: Public registration always provisions Participant role to prevent privilege escalation.
+    role = "participant"
     form_data = {
         "full_name": full_name or "",
         "email": email or "",
-        "role": role or "participant",
+        "role": role,
         "department": department or "School of AI"
     }
-    role = "participant"
-    form_data["role"] = role
 
     if not full_name or not email or not password:
         return templates.TemplateResponse(
