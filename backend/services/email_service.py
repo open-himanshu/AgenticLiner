@@ -9,17 +9,21 @@ import logging
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Tuple, Optional
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-load_dotenv()
+load_dotenv(find_dotenv(usecwd=True))
 
 logger = logging.getLogger(__name__)
 
 def is_smtp_configured() -> bool:
-    """Returns True if SMTP_USER and SMTP_PASSWORD are set in the environment."""
+    """Returns True if SMTP_USER and SMTP_PASSWORD are set in the environment and not placeholders."""
     user = os.getenv("SMTP_USER", "").strip()
     pwd = os.getenv("SMTP_PASSWORD", "").strip()
-    return bool(user and pwd)
+    if not user or not pwd:
+        return False
+    if "your_email" in user.lower() or "your_" in pwd.lower():
+        return False
+    return True
 
 def send_email_otp(
     to_email: str,
@@ -35,6 +39,9 @@ def send_email_otp(
     smtp_port = int(os.getenv("SMTP_PORT", "587"))
     smtp_user = os.getenv("SMTP_USER", "").strip()
     smtp_password = os.getenv("SMTP_PASSWORD", "").strip()
+    # Strip spaces from app password if present (e.g. Gmail 16-character format 'xxxx xxxx xxxx xxxx')
+    if len(smtp_password.replace(" ", "")) == 16:
+        smtp_password = smtp_password.replace(" ", "")
     smtp_from_name = os.getenv("SMTP_FROM_NAME", "AgenticLiner Galgotias University").strip()
     from_email = smtp_user if smtp_user else os.getenv("SMTP_FROM_EMAIL", "noreply@galgotias.edu").strip()
 
@@ -122,16 +129,53 @@ Team AgenticLiner
             server = smtplib.SMTP(smtp_host, smtp_port, timeout=12)
             server.starttls()
             
+        clean_to_email = to_email.strip().lower()
         server.login(smtp_user, smtp_password)
-        server.sendmail(from_email, [to_email], msg.as_string())
+        server.sendmail(from_email, [clean_to_email], msg.as_string())
         server.quit()
-        logger.info(f"Successfully dispatched OTP email to {to_email}")
+        logger.info(f"Successfully dispatched OTP email to {clean_to_email}")
         return True, None
-    except smtplib.SMTPAuthenticationError:
-        err = "SMTP Authentication Failed: Please check your Gmail/SMTP email and App Password."
-        logger.error(err)
+    except smtplib.SMTPAuthenticationError as e:
+        err = "SMTP Authentication Failed: Invalid credentials. For Gmail, generate a 16-letter App Password at https://myaccount.google.com/apppasswords."
+        logger.error(f"{err} Details: {e}")
+        return False, err
+    except smtplib.SMTPServerDisconnected as e:
+        err = (
+            "Google SMTP Disconnected: Google rejected the login credentials and closed the connection. "
+            "For Gmail, you CANNOT use your regular Gmail password; you MUST use a 16-letter Google App Password "
+            "(format: 'abcd efgh ijkl mnop') generated at: https://myaccount.google.com/apppasswords"
+        )
+        logger.error(f"{err} Details: {e}")
+        return False, err
+    except (smtplib.SMTPConnectError, TimeoutError, OSError) as e:
+        err = f"SMTP Connection Failed: Unable to reach {smtp_host}:{smtp_port}. Check network or firewall."
+        logger.error(f"{err} Details: {e}")
         return False, err
     except Exception as e:
         err = f"Failed to send email: {str(e)}"
         logger.error(err)
         return False, err
+
+
+if __name__ == "__main__":
+    import sys
+    print("=" * 60)
+    print("AgenticLiner SMTP Configuration Test Tool")
+    print("=" * 60)
+    configured = is_smtp_configured()
+    print(f"[*] SMTP Configured in environment: {configured}")
+    if len(sys.argv) > 1:
+        target_email = sys.argv[1].strip()
+        print(f"[*] Attempting test OTP dispatch to: {target_email}")
+        ok, err = send_email_otp(
+            to_email=target_email,
+            otp_code="987654",
+            purpose="signup",
+            recipient_name="Campus Tester"
+        )
+        if ok:
+            print(f"[+] SUCCESS: Test OTP sent successfully to {target_email}!")
+        else:
+            print(f"[-] FAILED: {err}")
+    else:
+        print("[*] Usage to send test email: python -m backend.services.email_service your_email@gmail.com")

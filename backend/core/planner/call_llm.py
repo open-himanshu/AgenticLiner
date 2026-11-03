@@ -19,8 +19,18 @@ import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import Any, Dict, List, Optional
+from dotenv import load_dotenv, find_dotenv
 
-DEFAULT_OLLAMA_MODEL = "qwen3.5:9b"
+load_dotenv(find_dotenv(usecwd=True))
+
+DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"
+GEMINI_MODEL_ALIASES = {
+    "gemini-2.5-flash": "gemini-3.1-flash-lite",
+    "gemini-2.0-flash": "gemini-3.1-flash-lite",
+    "gemini-1.5-flash": "gemini-3.1-flash-lite",
+    "gemini-3.8-flash": "gemini-3.1-flash-lite",
+}
+DEFAULT_OLLAMA_MODEL = "qwen3.5:9b" 
 MAX_RATE_LIMIT_RETRIES = 6
 
 
@@ -97,9 +107,10 @@ def get_provider_config() -> Dict[str, str]:
     provider = _clean_env("PROVIDER", "gemini").lower()
     if provider == "gemini":
         api_key = _clean_env("GEMINI_API_KEY")
-        model = _clean_env("GEMINI_MODEL")
-        if not api_key or not model:
-            raise ProviderError("GEMINI_API_KEY and GEMINI_MODEL must be set.")
+        model = _clean_env("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+        model = GEMINI_MODEL_ALIASES.get(model, model)
+        if not api_key:
+            raise ProviderError("GEMINI_API_KEY must be set in environment.")
         return {"provider": "gemini", "model": model, "api_key": api_key}
     elif provider == "groq":
         api_key = _clean_env("GROQ_API_KEY")

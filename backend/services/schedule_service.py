@@ -92,8 +92,10 @@ def solve_timetable(
     sessions = sessions or DEFAULT_SESSIONS
     slots = slots or DEFAULT_SLOTS
     rooms = get_scheduling_rooms(custom_rooms)
+    db_speakers = fetch_all("SELECT id, name, availability_json FROM speakers")
+    speakers = [dict(s) for s in db_speakers] if db_speakers else []
 
-    scheduler = EventScheduler(rooms=rooms, slots=slots, sessions=sessions)
+    scheduler = EventScheduler(rooms=rooms, slots=slots, sessions=sessions, speakers=speakers)
     result = scheduler.solve()
 
     if not result.get("success"):
