@@ -37,6 +37,10 @@ from backend.core.planner.dialogue_engine import (
     MAX_ASK_USER,
     AutopilotDialogueSession,
 )
+from backend.core.planner.recommendation_engine import (
+    generate_campus_recommendations,
+    synthesize_turnkey_bundles,
+)
 from backend.core.planner.memory_engine import (
     record_committed_event,
     get_memory_badge_summary,
@@ -172,6 +176,20 @@ class DialogueReplyRequest(BaseModel):
 
 class DialogueResetRequest(BaseModel):
     session_id: str
+
+class RecommendationRequest(BaseModel):
+    event_type: str = "general"
+    headcount: int = 100
+    duration_hours: float = 4.0
+    current_items: List[str] = Field(default_factory=list)
+    budget_limit: Optional[float] = None
+    current_allocated_cost: float = 0.0
+
+class ApplyBundleRequest(BaseModel):
+    session_id: Optional[str] = None
+    bundle_id: str
+    event_type: str = "general"
+    headcount: int = 100
 
 class MemoryNoteRequest(BaseModel):
     note: str
@@ -928,6 +946,59 @@ async def reset_autopilot_memory_api(
         content={
             "success": did_reset,
             "message": "Organiser memory profile erased successfully."
+        }
+    )
+
+
+@app.post("/api/autopilot/recommendations")
+async def get_autopilot_recommendations_api(
+    req: RecommendationRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
+    """Pillar 4: Returns Netflix/Flipkart-style historical recommendations and turnkey kits."""
+    recs = generate_campus_recommendations(
+        event_type=req.event_type,
+        headcount=req.headcount,
+        duration_hours=req.duration_hours,
+        current_items=req.current_items,
+        budget_limit=req.budget_limit,
+        current_allocated_cost=req.current_allocated_cost,
+        user_id=user.get("email")
+    )
+    return JSONResponse(content={"success": True, "recommendations": recs.model_dump()})
+
+
+@app.post("/api/autopilot/recommendations/apply-bundle")
+async def apply_recommendation_bundle_api(
+    req: ApplyBundleRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
+    """Pillar 4: Applies a turnkey recommendation bundle to the active dialogue session."""
+    session = get_session(req.session_id) if req.session_id else None
+    bundles = synthesize_turnkey_bundles(
+        event_type=req.event_type,
+        headcount=req.headcount
+    )
+    matched_bundle = next((b for b in bundles if b.bundle_id == req.bundle_id), None)
+    if not matched_bundle:
+        raise HTTPException(status_code=404, detail="Requested bundle not found.")
+
+    added_items = []
+    if session:
+        for item in matched_bundle.items:
+            if item.item_name not in session.accumulated_entities.requested_items:
+                session.accumulated_entities.requested_items.append(item.item_name)
+                added_items.append(item.item_name)
+        session.assumptions_made.append(f"Applied turnkey bundle: {matched_bundle.bundle_name}")
+    else:
+        added_items = [i.item_name for i in matched_bundle.items]
+
+    return JSONResponse(
+        content={
+            "success": True,
+            "bundle_applied": matched_bundle.bundle_name,
+            "items_added": added_items,
+            "total_bundle_cost": matched_bundle.total_cost
         }
     )
 

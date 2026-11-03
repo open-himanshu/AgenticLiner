@@ -34,6 +34,7 @@ from backend.core.planner.natural_intake import (
     validate_prompt_safety,
 )
 
+from backend.core.planner.recommendation_engine import generate_campus_recommendations
 from backend.core.planner.memory_engine import (
     enrich_entities_with_organiser_memory,
     extract_explicit_memory_facts,
@@ -309,7 +310,29 @@ def _merge_reply_into_entities(
         if "event_type" in ent.missing_critical_fields:
             ent.missing_critical_fields.remove("event_type")
 
-    # 4. Check Logistics Items in reply
+    # 4. Check Logistics Items & Recommendation Bundles (Pillar 4)
+    if "bundle" in lower or "kit" in lower or "pack" in lower or "power" in lower:
+        if "power" in lower or "hackathon" in lower or "dev" in lower:
+            for item in ["Heavy Duty Extension Spike Boards", "Ultra HD 4K Laser Projector", "Wireless Handheld Mic Set (Pair)"]:
+                if item not in ent.requested_items:
+                    ent.requested_items.append(item)
+            session.assumptions_made.append("Added 'Hackathon Developer & Power Pack' bundle from recommendations.")
+        elif "stage" in lower or "cultural" in lower or "audio" in lower:
+            for item in ["JBL High-Power Sound & PA System", "Stage LED Par Lights & Spotlights", "Lapel / Collar Mic (Wireless)"]:
+                if item not in ent.requested_items:
+                    ent.requested_items.append(item)
+            session.assumptions_made.append("Added 'Cultural Stage & Audio Gala Pack' bundle from recommendations.")
+        elif "seminar" in lower or "keynote" in lower or "academic" in lower:
+            for item in ["Ultra HD 4K Laser Projector", "Wireless Handheld Mic Set (Pair)", "Student Volunteers (Registration & Helpdesk)"]:
+                if item not in ent.requested_items:
+                    ent.requested_items.append(item)
+            session.assumptions_made.append("Added 'Executive Keynote & Seminar Kit' bundle from recommendations.")
+        elif "snack" in lower or "refreshment" in lower or "hospitality" in lower:
+            if "Standard Refreshment Snack Box" not in ent.requested_items:
+                ent.requested_items.append("Standard Refreshment Snack Box")
+            session.assumptions_made.append("Added 'Campus Refreshment & Snack Pack' bundle from recommendations.")
+
+    # Standard individual logistics items
     if any(k in lower for k in ["mic", "microphone"]) and "Cordless Microphones" not in ent.requested_items:
         ent.requested_items.append("Cordless Microphones")
     if any(k in lower for k in ["sound", "audio", "speaker"]) and "High-Power Sound System" not in ent.requested_items:
@@ -412,7 +435,24 @@ def _formulate_counter_question(
         tts = "Lagbhag kitne students participate karenge taaki sahi venue allot kiya ja sake?"
         return question, dedup, tts
 
-    # General event format clarification
+    # Recommendation Pitch (Pillar 4: Netflix/Flipkart Style Bundle Suggestions)
+    recs = generate_campus_recommendations(
+        event_type=ent.event_type,
+        headcount=ent.estimated_headcount or 100,
+        current_items=ent.requested_items,
+        budget_limit=ent.budget_limit
+    )
+    if recs.curated_bundles:
+        bundle = recs.curated_bundles[0]
+        question = (
+            f"Galgotias ke pichle {ent.event_type}s me {bundle.match_percentage}% organisers ne "
+            f"'{bundle.bundle_name}' book kiya tha. Kya aap ye package add karna chahte hain?"
+        )
+        quick_replies = recs.quick_chips
+        tts = recs.conversational_pitch or question
+        return question, quick_replies, tts
+
+    # General event format fallback
     question = "Event ka format kya rahega aur kya special audio/visual logistics chahiye?"
     quick_replies = [
         "Hackathon with Power Strips",

@@ -258,4 +258,12 @@ The following high-priority gaps identified in the independent evaluation were r
    - **Interactive UI:** Added live memory indicator badge (`#memoryBadgeContainer`) and memory inspection modal (`#memoryModal`) on `frontend/templates/autopilot.html`.
    - **Verification:** Verified with 6 dedicated unit & integration tests (`tests/test_memory_engine.py`), bringing the full test suite to 204 passed tests (100% pass rate).
 
-
+9. **Pillar 4: Netflix / Flipkart-Style Historical Recommendation Engine:**
+   - **Delivered:** Implemented `backend/core/planner/recommendation_engine.py` combining Netflix-style blueprint nearest-neighbor matching and Flipkart-style Market Basket Association Mining with confidence scores and Kavach budget guardrails.
+   - **Netflix Past Blueprint Matching:** Mines `historical_events` table for past successful Galgotias events with identical or similar format (e.g. *Technojam Hackathon*, *Galgotias Annual Cultural Fest*, *AI & Robotics Workshop*), calculating multidimensional vector distance, match percentage (80%-98%), and student ratings (4.5★ - 4.9★).
+   - **Flipkart Frequently Booked Together (FBT):** Uses association matrix heuristics to compute conditional probabilities $P(\\text{Item} \\mid \\text{EventType})$ with authentic social proof tags (*"Booked by 95% of campus hackathon organisers"*), dynamic headcount scaling, and duplicate deduction.
+   - **Curated Turnkey Logistics Bundles:** Synthesizes 1-click packages ("Hackathon Developer & Power Pack", "Cultural Stage & Audio Gala Pack", "Executive Keynote Kit", "Campus Refreshment Pack") with budget guardrails checking available event funds before allocation.
+   - **Dialogue & Voice Engine Integration:** Dialogue sessions proactively formulate recommendation counter-questions and seamlessly detect spoken or typed bundle adoption phrases (*"Please add the hackathon power bundle"*), merging resources directly into the active brief.
+   - **Interactive Autopilot UI:** Upgraded `frontend/templates/autopilot.html` with `#recommendationSection`, displaying past event matches, match % badges, 1-click bundle cards (`[ + Add Bundle to Event ]`), and individual FBT accessories.
+   - **REST Endpoints:** Exposed `POST /api/autopilot/recommendations` and `POST /api/autopilot/recommendations/apply-bundle` with full RBAC authentication.
+   - **Verification:** Verified with 6 dedicated unit & integration tests (`tests/test_recommendation_engine.py`), bringing the full test suite to 210 passed tests (100% pass rate).

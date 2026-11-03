@@ -125,7 +125,14 @@ The Autopilot engine operates in two coordinated modes with automatic fallback:
    * **Intake & Dialogue Enrichment:** Incomplete or ambiguous prompts automatically recall the organiser's typical batch size and favourite gear, eliminating redundant counter-questions and personalizing quick-reply suggestion chips.
    * **Privacy & User Control:** Strict per-organiser isolation with `GET /api/autopilot/memory` and `POST /reset` endpoints, alongside an interactive memory badge and inspection modal on `autopilot.html`.
 
-6. **Kavach Transaction Sandboxing (`kavach.py`):**
+6. **Netflix / Flipkart-Style Historical Recommendation Engine (Pillar 4 - Recommendation Engine):**
+   * **Netflix Past Blueprint Matching (`recommendation_engine.py`):** Mines `historical_events` for past successful campus events matching format and scale, computing multidimensional vector distance, match percentage badges (80%–98%), and student satisfaction ratings (4.5★–4.9★).
+   * **Flipkart Frequently Booked Together (FBT):** Market Basket association matrix computing conditional item probabilities with social proof tags (*"Booked by 95% of campus hackathon organisers"*), dynamic headcount scaling, and duplicate deduction.
+   * **Curated Turnkey Logistics Bundles:** 1-click curated kits ("Hackathon Developer & Power Pack", "Cultural Stage & Audio Gala Pack", "Executive Keynote Kit", "Refreshment Pack") with budget validation against Kavach limits (`fits_budget: bool`).
+   * **Conversational Dialogue & Natural Speech Integration:** Proactively surfaces bundles during clarification questions and detects natural language or voice requests (*"Please add the hackathon power bundle"*), merging resources into the brief.
+   * **Interactive Autopilot UI (`autopilot.html`):** Renders `#recommendationSection` with Netflix blueprint match banners, match % badges, 1-click bundle cards (`[ + Add Bundle to Event ]`), and individual accessory carousels.
+
+7. **Kavach Transaction Sandboxing (`kavach.py`):**
    * Uses SQLite savepoints (`SAVEPOINT sp_...`) to isolate all changes during a planning run.
    * Enforces 6 campus invariants: No room overlaps, capacity compliance, speaker simultaneity, stock availability, budget compliance, and notification recipient limits.
    * Staged outbox notices are held until successful commit (`status = 'held' -> 'sent'`). If an invariant fails, state is atomically rolled back to the savepoint and logged in `audit_log`.

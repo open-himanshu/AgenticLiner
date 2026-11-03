@@ -319,6 +319,98 @@
     let dialogueVoice = null;
     let activeDialogueSessionId = null;
 
+    async function fetchAndRenderRecommendations(eventType, headcount) {
+        const recSection = document.getElementById('recommendationSection');
+        const bundlesList = document.getElementById('turnkeyBundlesList');
+        const bpTitle = document.getElementById('matchedBlueprintTitle');
+        const bpBadge = document.getElementById('matchedBlueprintBadge');
+        if (!recSection || !bundlesList) return;
+
+        try {
+            const resp = await fetch('/api/autopilot/recommendations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    event_type: eventType || 'general',
+                    headcount: headcount || 100,
+                    duration_hours: 4.0
+                })
+            });
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const recs = data.recommendations;
+            if (!recs) return;
+
+            // 1. Netflix Blueprint Match
+            if (recs.matched_event) {
+                bpTitle.textContent = `${recs.matched_event.title} (${recs.matched_event.student_rating}★)`;
+                bpBadge.textContent = `${recs.matched_event.match_percentage}% Match`;
+            }
+
+            // 2. Flipkart Bundles
+            bundlesList.innerHTML = '';
+            (recs.curated_bundles || []).forEach(bundle => {
+                const card = document.createElement('div');
+                card.className = 'p-2 bg-white rounded border';
+                const itemsSummary = bundle.items.map(i => `${i.quantity}x ${i.item_name}`).join(', ');
+                card.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div>
+                            <strong class="text-primary small d-block">${bundle.bundle_name}</strong>
+                            <span class="badge bg-warning text-dark border" style="font-size: 0.65rem;">${bundle.badge_text}</span>
+                        </div>
+                        <span class="badge bg-light text-dark border">₹${bundle.total_cost.toLocaleString()}</span>
+                    </div>
+                    <p class="text-muted mb-2" style="font-size: 0.72rem;">${itemsSummary}</p>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-xs btn-outline-success py-1 px-2 fw-semibold" style="font-size: 0.72rem;" onclick="applyTurnkeyBundle('${bundle.bundle_id}', '${bundle.bundle_name}', ${bundle.total_cost})">
+                            <i class="bi bi-cart-plus me-1"></i> + Add Bundle to Event
+                        </button>
+                    </div>
+                `;
+                bundlesList.appendChild(card);
+            });
+
+            recSection.classList.remove('d-none');
+        } catch (err) {
+            console.warn('Failed to load recommendations:', err);
+        }
+    }
+
+    async function applyTurnkeyBundle(bundleId, bundleName, bundleCost) {
+        if (!activeDialogueSessionId) {
+            // Pre-fill prompt with bundle items
+            const promptEl = document.getElementById('agentPrompt');
+            if (promptEl) {
+                promptEl.value += ` with ${bundleName}`;
+            }
+            alert(`Added '${bundleName}' to your event brief!`);
+            return;
+        }
+
+        try {
+            const resp = await fetch('/api/autopilot/recommendations/apply-bundle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: activeDialogueSessionId,
+                    bundle_id: bundleId
+                })
+            });
+            const data = await resp.json();
+            if (resp.ok && data.success) {
+                appendDialogueBubble('user', `Add ${bundleName}`);
+                appendDialogueBubble('agent', `Turnkey package '${bundleName}' (₹${bundleCost.toLocaleString()}) add kar diya gaya hai!`);
+                if (autopilotVoice) {
+                    autopilotVoice.speakAssistantVoice(`Bundle ${bundleName} added to event.`);
+                }
+            }
+        } catch (e) {
+            alert('Failed to apply bundle: ' + e);
+        }
+    }
+
+
     async function loadMemoryBadge() {
         try {
             const resp = await fetch('/api/autopilot/memory');
@@ -747,6 +839,7 @@
             }
 
             activeDialogueSessionId = startData.session_id;
+            fetchAndRenderRecommendations(startData.entities ? startData.entities.event_type : 'general', startData.entities ? startData.entities.estimated_headcount : 100);
 
             // If critical details are missing, enter interactive dialogue mode!
             if (!startData.is_ready_for_planning) {
