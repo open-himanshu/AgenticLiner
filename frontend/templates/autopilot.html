@@ -488,6 +488,19 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Pillar 6: Tripartite Stakeholder Notification Outbox Feed -->
+                    <div class="mt-3 p-3 bg-white rounded border" id="summaryStakeholdersBox">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold mb-0 text-dark small">
+                                <i class="bi bi-send-check-fill text-primary me-1"></i> Autonomous Stakeholder Broadcast Feed (Pillar 6)
+                            </h6>
+                            <span class="badge bg-success" id="summaryStakeholderCount">All Notified</span>
+                        </div>
+                        <div class="d-flex flex-column gap-2" id="summaryStakeholderNotices">
+                            <!-- Injected notices for Dean, Organiser, Students -->
+                        </div>
+                    </div>
                     <div class="mt-3 text-end">
                         <a href="/schedule" class="btn btn-sm btn-outline-primary fw-semibold me-2">
                             <i class="bi bi-calendar3 me-1"></i> View In Timetable
@@ -1144,8 +1157,37 @@
             if (titleEl) titleEl.textContent = `Event '${currentDraftPlan ? currentDraftPlan.event_name : "Campus Event"}' Successfully Allocated & Locked!`;
         }
 
+        // Pillar 6: Render Stakeholder Outbox Broadcast Feed
+        const dispatch = data.stakeholder_dispatch;
+        const noticesContainer = document.getElementById('summaryStakeholderNotices');
+        const countBadge = document.getElementById('summaryStakeholderCount');
+        if (dispatch && noticesContainer) {
+            noticesContainer.innerHTML = '';
+            if (countBadge) countBadge.textContent = `${dispatch.total_dispatched} Notices Dispatched`;
+            (dispatch.records || []).forEach(rec => {
+                const row = document.createElement('div');
+                row.className = 'd-flex justify-content-between align-items-center p-2 rounded bg-light border small';
+                const roleBadge = rec.stakeholder_type === 'dean' ?
+                    '<span class="badge bg-danger-subtle text-danger border border-danger">🏛️ Dean</span>' :
+                    (rec.stakeholder_type === 'organiser' ?
+                        '<span class="badge bg-success-subtle text-success border border-success">📋 Organiser</span>' :
+                        '<span class="badge bg-primary-subtle text-primary border border-primary">🎓 Student</span>');
+                row.innerHTML = `
+                    <div class="d-flex align-items-center gap-2">
+                        ${roleBadge}
+                        <div>
+                            <strong class="d-block text-dark" style="font-size:0.75rem;">${rec.subject}</strong>
+                            <span class="text-muted" style="font-size:0.7rem;">To: ${rec.recipient}</span>
+                        </div>
+                    </div>
+                    <span class="badge bg-success" style="font-size:0.68rem;">✓ Outbox Sent</span>
+                `;
+                noticesContainer.appendChild(row);
+            });
+        }
+
         if (autopilotVoice) {
-            autopilotVoice.speakAssistantVoice(data.verbal_ack || "Lock kar diya! Booking process complete ho gayi hai.");
+            autopilotVoice.speakAssistantVoice(data.verbal_ack || "Lock kar diya! Dean, Organiser aur students ko notification bhej diya gaya hai.");
         }
         loadMemoryBadge();
     }

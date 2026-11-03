@@ -157,6 +157,57 @@ Team AgenticLiner
         return False, err
 
 
+def send_stakeholder_email(
+    to_email: str,
+    subject: str,
+    text_content: str,
+    html_content: str
+) -> Tuple[bool, Optional[str]]:
+    """
+    Sends rich HTML campus event notification emails to stakeholders (Dean, Organiser, Students).
+    Returns (True, None) on success, or (False, error_message) on failure.
+    """
+    smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com").strip()
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user = os.getenv("SMTP_USER", "").strip()
+    smtp_password = os.getenv("SMTP_PASSWORD", "").strip()
+    if len(smtp_password.replace(" ", "")) == 16:
+        smtp_password = smtp_password.replace(" ", "")
+    smtp_from_name = os.getenv("SMTP_FROM_NAME", "AgenticLiner Galgotias University").strip()
+    from_email = smtp_user if smtp_user else os.getenv("SMTP_FROM_EMAIL", "noreply@galgotias.edu").strip()
+
+    if not is_smtp_configured():
+        return False, "SMTP is not configured in .env (SMTP_USER/SMTP_PASSWORD missing)."
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f'"{smtp_from_name}" <{from_email}>'
+    msg["To"] = to_email
+
+    part1 = MIMEText(text_content, "plain")
+    part2 = MIMEText(html_content, "html")
+    msg.attach(part1)
+    msg.attach(part2)
+
+    try:
+        if smtp_port == 465:
+            server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=12)
+        else:
+            server = smtplib.SMTP(smtp_host, smtp_port, timeout=12)
+            server.starttls()
+
+        clean_to_email = to_email.strip().lower()
+        server.login(smtp_user, smtp_password)
+        server.sendmail(from_email, [clean_to_email], msg.as_string())
+        server.quit()
+        logger.info(f"Successfully dispatched stakeholder notification email to {clean_to_email}")
+        return True, None
+    except Exception as e:
+        err = f"Failed to send stakeholder email: {str(e)}"
+        logger.warning(err)
+        return False, err
+
+
 if __name__ == "__main__":
     import sys
     print("=" * 60)

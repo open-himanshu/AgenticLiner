@@ -280,3 +280,17 @@ The following high-priority gaps identified in the independent evaluation were r
       - **Confirmation Card (`#preCommitConfirmationCard`):** Displays Executive Pill, itemized logistics table with 1-click delete buttons, Dean administrative sign-off flags, and full audit trail of assumed defaults.
     - **REST Endpoints:** Exposed `POST /api/autopilot/draft`, `POST /api/autopilot/delta`, and `POST /api/autopilot/confirm` with full RBAC authentication.
     - **Verification:** Verified with 7 dedicated unit & integration tests (`tests/test_confirmation_fast.py`), bringing the full test suite to 217 passed tests (100% pass rate).
+
+11. **Pillar 6: Autonomous Multi-Stakeholder Notification & Real SMTP Broadcast:**
+    - **Delivered:** Implemented `backend/core/planner/notification_engine.py` and upgraded `backend/services/email_service.py` (`send_stakeholder_email`) to autonomously notify all three campus event constituencies:
+      1. **University Dean / Supervisor (`admin@galgotias.edu`):** Executive briefing on allocated venue, participant scale, budget utilization, and flagged Dean administrative approval requests (`[Action Required: Dean Approval]`).
+      2. **Event Manager / Organiser (`organiser@galgotias.edu`):** Itemized booking confirmation receipt, equipment pickup checklist, and direct timetable grid link (`/schedule`).
+      3. **Registered Students / Department Attendees:** Campus event invitations with interactive Digital QR Gate Pass claim links (`/participant?event_id=...`).
+    - **Transactional Outbox Persistence & Audit Integrity:**
+      - Dispatches notifications via SQLite `outbox` table (`status='sent'`), ensuring zero duplicate notices and permanent auditable history in `audit_log` under action `STAKEHOLDER_BROADCAST`.
+      - Integrated with optional real SMTP email broadcast (`is_smtp_configured()`) for production email dispatch.
+    - **Interactive Generative UI (`autopilot.html`):**
+      - Added `#summaryStakeholdersBox` inside the final booking confirmation view, showing real-time timestamps, recipient emails, role badges (`[🏛️ Dean]`, `[📋 Organiser]`, `[🎓 Student]`), and live delivery checkmarks.
+      - Spoken assistant confirmation: *"Lock kar diya! Dean Office, Event Manager aur students ko notifications dispatch kar diye gaye hain."*
+    - **REST Endpoints:** `GET /api/autopilot/outbox/{event_id}` returning all dispatched outbox notices.
+    - **Verification:** Verified with 6 dedicated unit & integration tests (`tests/test_stakeholder_notifications.py`), bringing the full test suite to 223 passed tests (100% pass rate).

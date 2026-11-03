@@ -138,7 +138,16 @@ The Autopilot engine operates in two coordinated modes with automatic fallback:
    * **Speculative Background Draft Engine (`confirmation_engine.py`):** Pre-computes venue availability, equipment costs, and Dean approvals in memory before commit (0 database mutations until explicit confirmation).
    * **ChatGPT-Style Interactive Voice Orb & Card UI (`autopilot.html`):** Renders fluid animated neon sphere with 5 reactive physical states (`idle`, `listening`, `thinking`, `speaking`, `confirmed`) alongside itemized logistics tables and Dean sign-off warnings.
 
-8. **Kavach Transaction Sandboxing (`kavach.py`):**
+8. **Autonomous Multi-Stakeholder Notification & Real SMTP Broadcast (Pillar 6):**
+   * **Tripartite Audience Dispatch (`notification_engine.py`):** Autonomously generates customized contextual notifications for all three campus constituencies upon event commit:
+     - **University Dean / Supervisor (`admin@galgotias.edu`):** Executive briefing on venue, scale, and budget with approval call-to-action (`[Action Required: Dean Approval]`).
+     - **Event Manager / Organiser (`organiser@galgotias.edu`):** Itemized booking receipt, equipment pickup checklist, and direct timetable link (`/schedule`).
+     - **Registered Students / Attendees:** Campus event invitation with dynamic Digital QR Gate Pass verification links (`/participant?event_id=...`).
+   * **Transactional Outbox & Audit Trail:** Persists all dispatches into SQLite `outbox` table (`status='sent'`) with permanent audit history in `audit_log` under action `STAKEHOLDER_BROADCAST`.
+   * **Production SMTP Bridge (`email_service.py`):** Supports real email transmission using Google App Passwords / campus mail servers when configured.
+   * **Live UI Outbox Feed (`autopilot.html`):** Renders `#summaryStakeholdersBox` showing real-time dispatch timestamps, recipient emails, and delivery status badges alongside spoken audio confirmation.
+
+9. **Kavach Transaction Sandboxing (`kavach.py`):**
    * Uses SQLite savepoints (`SAVEPOINT sp_...`) to isolate all changes during a planning run.
    * Enforces 6 campus invariants: No room overlaps, capacity compliance, speaker simultaneity, stock availability, budget compliance, and notification recipient limits.
    * Staged outbox notices are held until successful commit (`status = 'held' -> 'sent'`). If an invariant fails, state is atomically rolled back to the savepoint and logged in `audit_log`.

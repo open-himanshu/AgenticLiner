@@ -37,6 +37,11 @@ from backend.core.planner.dialogue_engine import (
     MAX_ASK_USER,
     AutopilotDialogueSession,
 )
+from backend.core.planner.notification_engine import (
+    generate_all_stakeholder_notifications,
+    dispatch_stakeholder_notifications,
+    get_event_outbox_notices,
+)
 from backend.core.planner.fast_intent import classify_fast_intent
 from backend.core.planner.confirmation_engine import (
     synthesize_speculative_draft,
@@ -1109,14 +1114,49 @@ async def confirm_autopilot_draft_api(
             }
         )
 
+    event_id = commit_res.get("details", {}).get("event_id")
+
+    # Pillar 6: Multi-Stakeholder Notification Broadcast (Dean, Organiser, Students)
+    booked_items_names = [r.name for r in draft.resources]
+    stakeholder_notifs = generate_all_stakeholder_notifications(
+        event_id=event_id,
+        event_name=draft.event_name,
+        event_type=draft.event_type,
+        target_date=draft.target_date,
+        start_time=draft.start_time,
+        end_time=draft.end_time,
+        venue_name=draft.venue.name,
+        headcount=draft.headcount,
+        total_cost=draft.total_cost,
+        booked_items=booked_items_names,
+        requires_dean_approval=draft.requires_dean_approval,
+        dean_reasons=draft.dean_reasons
+    )
+    dispatch_info = dispatch_stakeholder_notifications(
+        event_id=event_id,
+        notifications=stakeholder_notifs,
+        send_real_smtp=os.getenv("SEND_REAL_SMTP", "false").lower() in ["true", "1"]
+    )
+
     return JSONResponse(content={
         "success": True,
         "status": "committed",
-        "event_id": commit_res.get("details", {}).get("event_id"),
+        "event_id": event_id,
         "event_name": draft.event_name,
-        "verbal_ack": "Lock kar diya! Galgotias campus booking confirm ho gayi hai.",
-        "commit_details": commit_res
+        "verbal_ack": "Lock kar diya! Dean Office, Event Manager, aur students ko notifications dispatch kar diye gaye hain.",
+        "commit_details": commit_res,
+        "stakeholder_dispatch": dispatch_info
     })
+
+
+@app.get("/api/autopilot/outbox/{event_id}")
+async def get_event_outbox_api(
+    event_id: str,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
+    """Pillar 6: Retrieves all outbox broadcast notices sent for an event."""
+    notices = get_event_outbox_notices(event_id)
+    return JSONResponse(content={"success": True, "event_id": event_id, "outbox": notices})
 
 
 @app.post("/api/autopilot/run")
