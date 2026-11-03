@@ -237,3 +237,9 @@ The following high-priority gaps identified in the independent evaluation were r
 
 5. **Multi-Role RBAC Account Chooser & Easy Server Launcher:**
    - **Delivered:** Added 4-role switcher (Organiser, Supervisor, Data Manager, Participant) to Google demo modals in `frontend/templates/login.html` and `signup.html`. Added one-command server launcher `python run.py`.
+
+
+6. **Pillar 1: Voice Command & Natural Language Event Intake Engine:**
+   - **Delivered:** Integrated zero-dependency native Web Speech API (`voice_engine.js`) on `autopilot.html` and `organiser.html` with pulsing mic states (Idle, Listening, Processing, Denied), live interim soundwave streaming, and TTS voice synthesis.
+   - **Entity Extraction Engine:** Built `backend/core/planner/natural_intake.py` with relative datetime resolution (*"kal shaam"*, *"this Friday evening"*, *"tomorrow 4 PM"*), qualitative scale parsing (*"chhota batch"*, *"all-college fest"*), proactive clarifying counter-questions, and Kavach destructive-command filtering.
+   - **Verification:** Verified with 13 dedicated unit & integration tests (`tests/test_voice_engine.py` and `tests/test_natural_intake.py`), bringing full test suite to 182 passed tests (100% pass rate).

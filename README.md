@@ -109,7 +109,13 @@ The Autopilot engine operates in two coordinated modes with automatic fallback:
 2. **Fixed Pipeline Fallback (`agent.py`):**
    * If the configured LLM provider is unavailable or rate-limited, the system seamlessly falls back to the deterministic pipeline (`mode: fixed_fallback`), guaranteeing zero downtime during evaluations.
 
-3. **Kavach Transaction Sandboxing (`kavach.py`):**
+3. **Voice & Natural Language Intake (Pillar 1 - Web Speech STT/TTS & Entity Engine):**
+   * **Hands-Free Speech-to-Text (STT):** Organisers can click the interactive 🎙️ mic button or speak in English, Hindi, or Hinglish (e.g., *"Kal shaam ko 4 baje 80 bacho ke liye robotics workshop book kardo"*). Interim speech results stream live into the prompt box.
+   * **Relative Datetime & Entity Engine (`natural_intake.py`):** Translates colloquial expressions (*"tomorrow"*, *"this Friday evening"*, *"parso"*, *"18:00:00"*) to exact ISO timestamps and categorizes event types without rigid regexes.
+   * **Proactive Clarifying Counter-Questions:** Missing critical fields (dates, scale) trigger conversational counter-questions before attempting venue lock.
+   * **Text-to-Speech (TTS) Voice Feedback:** Speaks out confirmations and status updates via native browser SpeechSynthesis (with audio ON/MUTE toggle).
+
+4. **Kavach Transaction Sandboxing (`kavach.py`):**
    * Uses SQLite savepoints (`SAVEPOINT sp_...`) to isolate all changes during a planning run.
    * Enforces 6 campus invariants: No room overlaps, capacity compliance, speaker simultaneity, stock availability, budget compliance, and notification recipient limits.
    * Staged outbox notices are held until successful commit (`status = 'held' -> 'sent'`). If an invariant fails, state is atomically rolled back to the savepoint and logged in `audit_log`.
