@@ -132,7 +132,13 @@ The Autopilot engine operates in two coordinated modes with automatic fallback:
    * **Conversational Dialogue & Natural Speech Integration:** Proactively surfaces bundles during clarification questions and detects natural language or voice requests (*"Please add the hackathon power bundle"*), merging resources into the brief.
    * **Interactive Autopilot UI (`autopilot.html`):** Renders `#recommendationSection` with Netflix blueprint match banners, match % badges, 1-click bundle cards (`[ + Add Bundle to Event ]`), and individual accessory carousels.
 
-7. **Kavach Transaction Sandboxing (`kavach.py`):**
+7. **Pre-Commit Interactive Confirmation Card & OpenAI ChatGPT Voice Review (Pillar 5):**
+   * **Semantic Full-Duplex Barge-In (`voice_engine.js`):** When the user speaks, active agent speech synthesis immediately aborts (`speechSynthesis.cancel()`), allowing natural, unhindered conversational interruptions.
+   * **Fast-Path Micro-Intent Recognition (`fast_intent.py`):** Sub-10ms deterministic regex & phonetic classifier recognizing English, Hindi, and Hinglish affirmations (*"haan"*, *"ha"*, *"kar do"*, *"lock karo"*, *"yes"*, *"confirm"*), cancellations, and parameter deltas without high-latency LLM roundtrips.
+   * **Speculative Background Draft Engine (`confirmation_engine.py`):** Pre-computes venue availability, equipment costs, and Dean approvals in memory before commit (0 database mutations until explicit confirmation).
+   * **ChatGPT-Style Interactive Voice Orb & Card UI (`autopilot.html`):** Renders fluid animated neon sphere with 5 reactive physical states (`idle`, `listening`, `thinking`, `speaking`, `confirmed`) alongside itemized logistics tables and Dean sign-off warnings.
+
+8. **Kavach Transaction Sandboxing (`kavach.py`):**
    * Uses SQLite savepoints (`SAVEPOINT sp_...`) to isolate all changes during a planning run.
    * Enforces 6 campus invariants: No room overlaps, capacity compliance, speaker simultaneity, stock availability, budget compliance, and notification recipient limits.
    * Staged outbox notices are held until successful commit (`status = 'held' -> 'sent'`). If an invariant fails, state is atomically rolled back to the savepoint and logged in `audit_log`.

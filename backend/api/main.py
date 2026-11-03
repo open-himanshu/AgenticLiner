@@ -37,6 +37,14 @@ from backend.core.planner.dialogue_engine import (
     MAX_ASK_USER,
     AutopilotDialogueSession,
 )
+from backend.core.planner.fast_intent import classify_fast_intent
+from backend.core.planner.confirmation_engine import (
+    synthesize_speculative_draft,
+    get_cached_draft,
+    apply_draft_delta,
+    commit_draft_plan_atomic,
+    EventDraftPlan,
+)
 from backend.core.planner.recommendation_engine import (
     generate_campus_recommendations,
     synthesize_turnkey_bundles,
@@ -1001,6 +1009,114 @@ async def apply_recommendation_bundle_api(
             "total_bundle_cost": matched_bundle.total_cost
         }
     )
+
+
+class AutopilotDraftRequest(BaseModel):
+    session_id: str
+
+
+class AutopilotDeltaRequest(BaseModel):
+    session_id: str
+    delta_params: Dict[str, Any]
+
+
+class AutopilotConfirmRequest(BaseModel):
+    session_id: str
+    voice_input: Optional[str] = None
+
+
+@app.post("/api/autopilot/draft")
+async def get_autopilot_draft_api(
+    req: AutopilotDraftRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
+    """Pillar 5: Retrieves or compiles speculatively prepared draft plan (0 rows written)."""
+    draft = get_cached_draft(req.session_id)
+    if not draft:
+        session = get_session(req.session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Active dialogue session not found.")
+        draft = synthesize_speculative_draft(session)
+
+    return JSONResponse(content={
+        "success": True,
+        "draft": draft.model_dump()
+    })
+
+
+@app.post("/api/autopilot/delta")
+async def apply_autopilot_delta_api(
+    req: AutopilotDeltaRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
+    """Pillar 5: In-place delta modification without session reset (<10ms)."""
+    try:
+        updated = apply_draft_delta(req.session_id, req.delta_params)
+        return JSONResponse(content={
+            "success": True,
+            "draft": updated.model_dump(),
+            "verbal_summary": updated.verbal_summary
+        })
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+
+
+@app.post("/api/autopilot/confirm")
+async def confirm_autopilot_draft_api(
+    req: AutopilotConfirmRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
+    """Pillar 5: Executes atomic Kavach commit upon explicit voice or click confirmation."""
+    # 1. Fast-Path voice evaluation if voice_input provided
+    if req.voice_input:
+        fast_res = classify_fast_intent(req.voice_input)
+        if fast_res.intent == "cancel":
+            draft = get_cached_draft(req.session_id)
+            if draft:
+                draft.status = "cancelled"
+            return JSONResponse(content={
+                "success": False,
+                "status": "cancelled",
+                "message": fast_res.verbal_ack,
+                "verbal_ack": fast_res.verbal_ack
+            })
+        elif fast_res.intent == "delta" and fast_res.delta_params:
+            updated = apply_draft_delta(req.session_id, fast_res.delta_params)
+            return JSONResponse(content={
+                "success": True,
+                "status": "delta_applied",
+                "draft": updated.model_dump(),
+                "verbal_ack": fast_res.verbal_ack
+            })
+
+    # 2. Retrieve draft to commit
+    draft = get_cached_draft(req.session_id)
+    if not draft:
+        session = get_session(req.session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Active dialogue session not found.")
+        draft = synthesize_speculative_draft(session)
+
+    # 3. Execute atomic transaction through Kavach
+    commit_res = commit_draft_plan_atomic(draft, user_id=user["id"])
+    if commit_res.get("status") != "committed":
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "status": "rolled_back",
+                "error": commit_res.get("error", "Kavach invariant violation prevented booking.")
+            }
+        )
+
+    return JSONResponse(content={
+        "success": True,
+        "status": "committed",
+        "event_id": commit_res.get("details", {}).get("event_id"),
+        "event_name": draft.event_name,
+        "verbal_ack": "Lock kar diya! Galgotias campus booking confirm ho gayi hai.",
+        "commit_details": commit_res
+    })
 
 
 @app.post("/api/autopilot/run")

@@ -112,8 +112,15 @@ class WebSpeechVoiceEngine {
      * Handler when microphone starts listening
      */
     onSpeechStart() {
+        // OpenAI-Style Full-Duplex Barge-In:
+        // Cancel agent speech immediately when user starts speaking
+        if (window.speechSynthesis && window.speechSynthesis.speaking) {
+            window.speechSynthesis.cancel();
+        }
+
         this.isListening = true;
         this.setButtonState('listening');
+        if (window.voiceOrb) window.voiceOrb.setState('listening');
         this.showBanner(true, 'Listening... Bolna shuru karein (Aap English ya Hindi me bol sakte hain)...');
         this.updateBadge('Listening...', 'bg-danger text-white');
     }
@@ -142,6 +149,12 @@ class WebSpeechVoiceEngine {
             // Auto-scroll textarea to end
             inputEl.scrollTop = inputEl.scrollHeight;
         }
+
+        if (finalTranscript && typeof this.onConfirmationCallback === 'function') {
+            const cb = this.onConfirmationCallback;
+            this.onConfirmationCallback = null;
+            cb(finalTranscript.trim());
+        }
     }
 
     /**
@@ -150,6 +163,9 @@ class WebSpeechVoiceEngine {
     onSpeechEnd() {
         this.isListening = false;
         this.setButtonState('idle');
+        if (window.voiceOrb && window.voiceOrb.state !== 'speaking' && window.voiceOrb.state !== 'confirmed') {
+            window.voiceOrb.setState('idle');
+        }
         this.showBanner(false);
         this.updateBadge('Ready', 'bg-light text-secondary border');
 
@@ -316,18 +332,93 @@ class WebSpeechVoiceEngine {
                 utterance.voice = preferredVoice;
             }
 
-            if (onComplete) {
-                utterance.onend = onComplete;
-                utterance.onerror = onComplete;
-            }
+            if (window.voiceOrb) window.voiceOrb.setState('speaking');
+
+            const wrappedComplete = () => {
+                if (window.voiceOrb && window.voiceOrb.state !== 'confirmed') {
+                    window.voiceOrb.setState('idle');
+                }
+                if (onComplete) onComplete();
+            };
+
+            utterance.onend = wrappedComplete;
+            utterance.onerror = wrappedComplete;
 
             window.speechSynthesis.speak(utterance);
         } catch (err) {
             console.warn('[VoiceEngine] TTS error:', err);
+            if (window.voiceOrb) window.voiceOrb.setState('idle');
             if (onComplete) onComplete();
+        }
+    }
+
+    /**
+     * Primed single-turn confirmation listener (ChatGPT Realtime style)
+     */
+    listenForConfirmation(callback) {
+        this.onConfirmationCallback = callback;
+        if (!this.isListening) {
+            this.startSpeechRecognition();
+        }
+    }
+
+    /**
+     * Sub-50ms Fast-Path Intent Recognition (Client-side helper)
+     */
+    classifyFastIntent(text) {
+        const clean = (text || '').trim().toLowerCase();
+        const confirmPatterns = /\b(yes|yep|yeah|yup|sure|confirm|confirmed|book\s*it|lock\s*it|go\s*ahead|proceed|done|perfect|looks\s*good|all\s*good|fine|ok|okay|haan?|ha|hnn|kar\s*do|kardo|kar\s*dijiye|lock\s*karo|lock\s*kar\s*do|theek\s*hai|thik\s*hai|sahi\s*hai|chalo|pakka|final\s*karo|final\s*hai|book\s*karo|book\s*kar\s*do|chalega)\b/i;
+        const cancelPatterns = /\b(no|nope|cancel|stop|abort|don'?t\s*book|nevermind|wait|hold\s*on|hold\s*up|nahi|na|mat\s*karna|mat\s*karo|ruko|ruk\s*jao|rok\s*do|cancel\s*karo|rehne\s*do|chhod\s*do|nahi\s*chahiye)\b/i;
+
+        if (cancelPatterns.test(clean)) return { intent: 'cancel', text: clean };
+        if (confirmPatterns.test(clean)) return { intent: 'confirm', text: clean };
+        return { intent: 'delta', text: clean };
+    }
+}
+
+/**
+ * ChatGPT-Style Interactive Voice Orb Controller
+ * Renders and animates fluid neon sphere across 5 distinct states:
+ * 'idle', 'listening', 'thinking', 'speaking', 'confirmed'
+ */
+class VoiceOrbController {
+    constructor(elementId = 'chatgptVoiceOrb') {
+        this.elementId = elementId;
+        this.state = 'idle';
+        this.init();
+    }
+
+    init() {
+        this.el = document.getElementById(this.elementId);
+        if (this.el) {
+            this.setState('idle');
+        }
+    }
+
+    setState(newState) {
+        this.state = newState;
+        this.el = document.getElementById(this.elementId);
+        if (!this.el) return;
+
+        this.el.classList.remove('orb-idle', 'orb-listening', 'orb-thinking', 'orb-speaking', 'orb-confirmed');
+        this.el.classList.add(`orb-${newState}`);
+
+        const label = document.getElementById('voiceOrbStatusLabel');
+        if (label) {
+            const labels = {
+                idle: 'Voice Assistant Ready',
+                listening: 'Listening to your reply...',
+                thinking: 'Thinking Fast...',
+                speaking: 'Speaking Summary...',
+                confirmed: 'Booking Confirmed!'
+            };
+            label.textContent = labels[newState] || newState;
         }
     }
 }
 
-// Global initialization helper
+// Global initialization helpers
 window.WebSpeechVoiceEngine = WebSpeechVoiceEngine;
+window.VoiceOrbController = VoiceOrbController;
+window.voiceOrb = new VoiceOrbController('chatgptVoiceOrb');
+
