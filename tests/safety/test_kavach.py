@@ -351,3 +351,27 @@ def test_kavach_retry_succeeds_after_planner_adjusts_request(test_db):
     assert result["details"] == {"planned": True}
     assert len(calls) == 2
     assert calls[1][0] == "[retryable] planner: change the request"
+
+
+def test_kavach_verify_speaker_clash(test_db):
+    kavach = KavachEngine()
+    test_db.execute(
+        """INSERT OR IGNORE INTO speakers (id, name, department)
+           VALUES ('spk_test_clash', 'Dr. Test Clash', 'AI')"""
+    )
+    test_db.execute(
+        """INSERT INTO sessions (id, event_id, title, speaker_id, start_time, end_time)
+           VALUES ('sess_test_a', 'ev_001', 'Morning Keynote', 'spk_test_clash',
+                   '2026-11-25 10:00:00', '2026-11-25 11:30:00')"""
+    )
+    # Different time window - should pass without error
+    kavach.verify_speaker_clash(
+        test_db, 'spk_test_clash', '2026-11-25 12:00:00', '2026-11-25 13:00:00'
+    )
+    # Overlapping time window - should raise InvariantViolation
+    with pytest.raises(InvariantViolation) as exc_info:
+        kavach.verify_speaker_clash(
+            test_db, 'spk_test_clash', '2026-11-25 10:30:00', '2026-11-25 12:00:00'
+        )
+    assert exc_info.value.rule == "speaker_simultaneity_clash"
+    assert "Dr. Test Clash" in str(exc_info.value)

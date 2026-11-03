@@ -23,15 +23,7 @@ from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv(usecwd=True))
 
-DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
-GEMINI_MODEL_ALIASES = {
-    "gemini-2.5-flash": "gemini-3.5-flash-lite",
-    "gemini-2.0-flash": "gemini-3.5-flash-lite",
-    "gemini-1.5-flash": "gemini-3.5-flash-lite",
-    "gemini-3.8-flash": "gemini-3.5-flash-lite",
-    "gemini-3.1-flash-lite": "gemini-3.5-flash-lite",
-    "gemini-flash-latest": "gemini-3.5-flash-lite",
-}
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 DEFAULT_OLLAMA_MODEL = "qwen3.5:9b" 
 MAX_RATE_LIMIT_RETRIES = 6
 
@@ -109,8 +101,7 @@ def get_provider_config() -> Dict[str, str]:
     provider = _clean_env("PROVIDER", "gemini").lower()
     if provider == "gemini":
         api_key = _clean_env("GEMINI_API_KEY")
-        model = _clean_env("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
-        model = GEMINI_MODEL_ALIASES.get(model, model)
+        model = _clean_env("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
         if not api_key:
             raise ProviderError("GEMINI_API_KEY must be set in environment.")
         return {"provider": "gemini", "model": model, "api_key": api_key}

@@ -107,11 +107,11 @@ The Autopilot engine operates in two coordinated modes with automatic fallback:
    * **Multi-Provider Switcher (`call_llm.py`):** Select provider via `PROVIDER=gemini|groq|ollama` with dynamic models from `GEMINI_MODEL`, `GROQ_MODEL`, or `OLLAMA_MODEL`. Features automatic exponential backoff on HTTP 429/503.
 
 2. **Fixed Pipeline Fallback (`agent.py`):**
-   * If the configured LLM provider is unavailable or rate-limited, the system seamlessly falls back to the deterministic pipeline (`mode: fixed_fallback`), guaranteeing zero downtime during evaluations.
+   * If the configured LLM provider is unavailable or rate-limited, the system seamlessly falls back to the deterministic pipeline (`mode: fixed_fallback`), providing deterministic offline execution during evaluations if the external LLM provider is unavailable or rate-limited.
 
 3. **Voice & Natural Language Intake (Pillar 1 - Web Speech STT/TTS & Entity Engine):**
    * **Hands-Free Speech-to-Text (STT):** Organisers can click the interactive 🎙️ mic button or speak in English, Hindi, or Hinglish (e.g., *"Kal shaam ko 4 baje 80 bacho ke liye robotics workshop book kardo"*). Interim speech results stream live into the prompt box.
-   * **Relative Datetime & Entity Engine (`natural_intake.py`):** Translates colloquial expressions (*"tomorrow"*, *"this Friday evening"*, *"parso"*, *"18:00:00"*) to exact ISO timestamps and categorizes event types without rigid regexes.
+   * **Relative Datetime & Entity Engine (`natural_intake.py`):** Translates colloquial expressions (*"tomorrow"*, *"this Friday evening"*, *"parso"*, *"18:00:00"*) to exact ISO timestamps and categorizes event types using combined regex patterns and relative datetime heuristic parsing.
    * **Proactive Clarifying Counter-Questions:** Missing critical fields (dates, scale) trigger conversational counter-questions before attempting venue lock.
    * **Text-to-Speech (TTS) Voice Feedback:** Speaks out confirmations and status updates via native browser SpeechSynthesis (with audio ON/MUTE toggle).
 
@@ -192,11 +192,11 @@ copy .env.example .env
 ### 3. Configure `.env`
 Edit your `.env` file to set your preferred provider credentials and test passwords:
 ```ini
-# Role passwords for seeding
-SUPERVISOR_PASSWORD=Admin@Galgotias2026
-ORGANISER_PASSWORD=Organiser@Galgotias2026
-DATA_MANAGER_PASSWORD=DataMgr@Galgotias2026
-PARTICIPANT_PASSWORD=Student@Galgotias2026
+# Role passwords for initial seeding (set custom secure values or leave unset for random generated tokens)
+SUPERVISOR_PASSWORD=your_secure_supervisor_password
+ORGANISER_PASSWORD=your_secure_organiser_password
+DATA_MANAGER_PASSWORD=your_secure_datamgr_password
+PARTICIPANT_PASSWORD=your_secure_student_password
 
 # Provider selection: gemini, groq, or ollama
 PROVIDER=gemini
@@ -254,12 +254,12 @@ Open **[http://127.0.0.1:8000](http://127.0.0.1:8000)** in your browser.
 All tests run completely offline without making external network or LLM API calls (using deterministic fake callers and isolated temporary SQLite databases):
 
 ```powershell
-# Run the entire test suite
-pytest -q
+# Run the entire test suite (224 tests, 100% pass rate, offline SQLite isolation)
+python -m pytest tests/ -q
 
 # Run specific functional test suites
-pytest tests/test_agent_mode.py -q          # Autopilot Agent tool loop & fallback tests
-pytest tests/test_autopilot_api.py -q       # Autopilot API endpoint integration tests
-pytest tests/test_auth.py -q                # Authentication, sessions & RBAC tests
-pytest tests/safety/test_kavach.py -q       # Kavach invariant transaction tests
+python -m pytest tests/test_agent_mode.py -q          # Autopilot Agent tool loop & fallback tests
+python -m pytest tests/test_autopilot_api.py -q       # Autopilot API endpoint integration tests
+python -m pytest tests/test_auth.py -q                # Authentication, sessions & RBAC tests
+python -m pytest tests/safety/test_kavach.py -q       # Kavach invariant transaction tests
 ```

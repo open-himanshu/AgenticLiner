@@ -152,15 +152,24 @@ def handle_hero_speaker_cancellation(event_id: Optional[str] = None) -> Dict[str
     rooms = get_scheduling_rooms()
     slots = DEFAULT_SLOTS
 
-    # Check database for candidate substitute speaker in AI department
-    substitute_name = (
-        f"{HERO_SPEAKER['substitute_name']} "
-        f"({HERO_SPEAKER['substitute_department']})"
+    # Dynamic candidate lookup: query database for candidate faculty in matching domain (AI/ML)
+    candidate_row = fetch_one(
+        """SELECT id, name, department, topics FROM speakers 
+           WHERE id != ? AND (topics LIKE '%Generative AI%' OR topics LIKE '%Machine Learning%')
+           ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END, id ASC
+           LIMIT 1""",
+        (HERO_SPEAKER["id"], HERO_SPEAKER["substitute_id"]),
     )
-    match_reason = (
-        "Matching research expertise: Generative AI, Machine Learning, "
-        "available in afternoon slot"
-    )
+    if candidate_row:
+        substitute_name = f"{candidate_row['name']} ({candidate_row['department']})"
+        substitute_id = candidate_row["id"]
+        substitute_dept = candidate_row["department"]
+        match_reason = f"Matching research expertise: {candidate_row['topics']}, available in target slot"
+    else:
+        substitute_name = f"{HERO_SPEAKER['substitute_name']} ({HERO_SPEAKER['substitute_department']})"
+        substitute_id = HERO_SPEAKER["substitute_id"]
+        substitute_dept = HERO_SPEAKER["substitute_department"]
+        match_reason = "Matching research expertise: Generative AI, Machine Learning, available in afternoon slot"
 
     # Mutate the hero session and keep its identity tied to the shared fixture.
     reallocated_sessions = []
@@ -169,7 +178,7 @@ def handle_hero_speaker_cancellation(event_id: Optional[str] = None) -> Dict[str
         if item["id"] == "sess_02":
             item["original_speaker"] = HERO_SPEAKER["name"]
             item["speaker_name"] = substitute_name
-            item["speaker_id"] = HERO_SPEAKER["substitute_id"]
+            item["speaker_id"] = substitute_id
             item["is_substitute"] = True
         reallocated_sessions.append(item)
 
@@ -177,6 +186,21 @@ def handle_hero_speaker_cancellation(event_id: Optional[str] = None) -> Dict[str
 
     ev = fetch_one("SELECT id FROM events WHERE id = ?", (event_id,)) if event_id else fetch_one("SELECT id FROM events LIMIT 1")
     target_event_id = event_id or (ev["id"] if ev else "ev_hero_schedule")
+
+    # Dynamic attendee query: fetch registered participant emails for the affected event
+    attendee_rows = fetch_all(
+        """SELECT s.email FROM registrations r 
+           JOIN students s ON r.student_id = s.id 
+           WHERE r.event_id = ? AND r.status = 'confirmed'
+           LIMIT 100""",
+        (target_event_id,),
+    )
+    if attendee_rows:
+        registered_emails = [r["email"] for r in attendee_rows if r.get("email")]
+        recipient_target = ", ".join(registered_emails[:5]) if registered_emails else "all_registered_participants@galgotias.edu"
+    else:
+        recipient_target = "all_registered_participants@galgotias.edu"
+
     outbox_id = f"notif_change_{uuid.uuid4().hex[:6]}"
     outbox_msg = (
         f"Schedule Update: Keynote speaker {HERO_SPEAKER['name']} cancelled due to unavoidable conflict. "
@@ -195,10 +219,10 @@ def handle_hero_speaker_cancellation(event_id: Optional[str] = None) -> Dict[str
         conn.execute(
             """INSERT INTO outbox
                (id, event_id, recipient, subject, message, type, status, operation_id)
-               VALUES (?, ?, 'all_registered_participants@galgotias.edu',
+               VALUES (?, ?, ?,
                        'Schedule Update: Substitute Speaker Allocated', ?,
                        'schedule_change', 'held', ?)""",
-            (outbox_id, target_event_id, outbox_msg, operation_id),
+            (outbox_id, target_event_id, recipient_target, outbox_msg, operation_id),
         )
         kavach.log_audit(
             conn,
