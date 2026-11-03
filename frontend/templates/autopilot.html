@@ -26,9 +26,45 @@
             <div class="card card-custom p-4 bg-white mb-4">
                 <h5 class="fw-bold mb-3"><i class="bi bi-chat-left-dots text-primary me-2"></i>Organiser Request</h5>
                 
+                <!-- Live Speech Banner (#voiceStatusBanner) -->
+                <div id="voiceStatusBanner" class="alert alert-info py-2 px-3 small d-flex align-items-center justify-content-between mb-2 shadow-sm d-none" style="border-radius: 8px;">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="d-inline-flex align-items-center" id="soundwaveBars">
+                            <span class="soundwave-bar"></span>
+                            <span class="soundwave-bar"></span>
+                            <span class="soundwave-bar"></span>
+                            <span class="soundwave-bar"></span>
+                        </div>
+                        <span id="voiceStatusText" class="fw-semibold text-danger">Listening... (Aap English ya Hindi/Hinglish me bol sakte hain)...</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" id="btnStopVoice">Stop</button>
+                </div>
+
                 <div class="mb-3">
-                    <label class="form-label small fw-semibold">Event Prompt</label>
-                    <textarea class="form-control" id="agentPrompt" rows="3" placeholder="Describe the campus event, e.g. Organize an AI hackathon for 150 students with workshops, lunch, and stage mics..."></textarea>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small fw-semibold mb-0">Event Prompt (Type or Speak)</label>
+                        <!-- Voice TTS Toggle (#toggleVoiceFeedback) -->
+                        <button type="button" class="btn btn-sm btn-link text-decoration-none text-muted p-0 d-flex align-items-center gap-1" id="toggleVoiceFeedback" title="Toggle Assistant Voice Feedback (TTS)">
+                            <i class="bi bi-volume-up-fill text-primary" id="ttsIcon"></i>
+                            <span class="small text-muted" id="ttsLabel" style="font-size: 0.73rem;">Voice Audio ON</span>
+                        </button>
+                    </div>
+
+                    <div class="position-relative">
+                        <textarea class="form-control pe-5" id="agentPrompt" rows="3" placeholder="Describe the campus event, e.g. Organize an AI hackathon for 150 students with workshops, lunch, and stage mics..."></textarea>
+                        
+                        <!-- Pulsing Mic Button (#btnVoiceInput) -->
+                        <button type="button" class="btn voice-mic-btn state-idle" id="btnVoiceInput" title="Click to Speak / Bol kar batayein" aria-label="Microphone input">
+                            <i class="bi bi-mic-fill" id="micIcon"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                        <span class="text-muted" style="font-size: 0.72rem;" id="voiceHintText">
+                            <i class="bi bi-info-circle me-1"></i>Click 🎙️ to speak in Hindi or English
+                        </span>
+                        <span id="voiceStateBadge" class="badge bg-light text-secondary border" style="font-size: 0.68rem;">Idle</span>
+                    </div>
                 </div>
 
                 <div class="mb-3">
@@ -148,7 +184,43 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="/static/js/voice_engine.js"></script>
 <script>
+    // Initialize Web Speech Voice Engine for Autopilot
+    let autopilotVoice = null;
+    document.addEventListener('DOMContentLoaded', () => {
+        autopilotVoice = new WebSpeechVoiceEngine({
+            inputSelector: '#agentPrompt',
+            btnSelector: '#btnVoiceInput',
+            iconSelector: '#micIcon',
+            bannerSelector: '#voiceStatusBanner',
+            statusTextSelector: '#voiceStatusText',
+            stateBadgeSelector: '#voiceStateBadge',
+            ttsToggleSelector: '#toggleVoiceFeedback',
+            ttsIconSelector: '#ttsIcon',
+            ttsLabelSelector: '#ttsLabel',
+            lang: 'en-IN'
+        });
+
+        // Wire Stop Button
+        const stopBtn = document.getElementById('btnStopVoice');
+        if (stopBtn) {
+            stopBtn.addEventListener('click', () => {
+                if (autopilotVoice) autopilotVoice.stopSpeechRecognition();
+            });
+        }
+
+        // Check if prompt was passed in URL query param
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlPrompt = urlParams.get('prompt');
+        if (urlPrompt) {
+            const promptEl = document.getElementById('agentPrompt');
+            if (promptEl) {
+                promptEl.value = decodeURIComponent(urlPrompt);
+                promptEl.focus();
+            }
+        }
+    });
     function setScenario(promptText, dateValue) {
         document.getElementById('agentPrompt').value = promptText;
         if (dateValue) {
@@ -228,6 +300,9 @@
                 document.getElementById('summaryTitle').innerText = result.event_name;
                 document.getElementById('summaryVenue').innerText = result.venue;
                 summaryCard.style.display = 'block';
+                if (autopilotVoice) {
+                    autopilotVoice.speakAssistantVoice("Event successfully booked in " + (result.venue || "designated campus hall") + ". Notices staged to Outbox.");
+                }
             } else {
                 statusContainer.innerHTML = `<span class="badge bg-danger">Kavach Invariant Triggered</span>`;
                 const errDiv = document.createElement('div');
