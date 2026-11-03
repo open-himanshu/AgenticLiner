@@ -67,6 +67,18 @@
                     </div>
                 </div>
 
+                <!-- Clarification Questions Box (Counter-Questions) -->
+                <div id="clarificationBox" class="alert alert-warning border border-warning shadow-sm small mb-3 d-none" style="border-radius: 8px;">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <i class="bi bi-question-circle-fill text-warning fs-5"></i>
+                        <strong class="text-dark">Clarification Needed:</strong>
+                    </div>
+                    <ul class="mb-2 ps-3" id="clarificationList"></ul>
+                    <div class="small text-muted">
+                        <i class="bi bi-mic me-1"></i>Aap bol kar ya prompt me add karke dobara click karein.
+                    </div>
+                </div>
+
                 <div class="mb-3">
                     <label class="form-label small fw-semibold">Target Event Date</label>
                     <input type="date" class="form-control form-control-sm" id="agentDate">
@@ -244,16 +256,76 @@
         }
 
         btn.disabled = true;
-        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Agent Running...`;
-        statusContainer.innerHTML = `<span class="badge bg-warning text-dark"><span class="spinner-grow spinner-grow-sm me-1"></span> Executing Tools</span>`;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Understanding Brief...`;
+        statusContainer.innerHTML = `<span class="badge bg-info text-dark"><span class="spinner-grow spinner-grow-sm me-1"></span> Analyzing Intent</span>`;
         container.innerHTML = '';
         summaryCard.style.display = 'none';
+        const clarBox = document.getElementById('clarificationBox');
+        if (clarBox) clarBox.classList.add('d-none');
 
         try {
+            // Step A: Parse intent and check completeness (Pillar 1)
+            const parseResp = await fetch('/api/autopilot/parse-intent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: prompt, voice_mode: true })
+            });
+
+            const intentData = await parseResp.json();
+
+            if (!parseResp.ok || !intentData.is_safe) {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
+                statusContainer.innerHTML = `<span class="badge bg-danger">Safety Blocked</span>`;
+                alert(intentData.error || 'Request was blocked by safety policy.');
+                if (autopilotVoice) autopilotVoice.speakAssistantVoice('This command was blocked by safety policy.');
+                return;
+            }
+
+            // If critical info is missing, show counter-questions and ask user!
+            if (!intentData.is_ready_for_planning) {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
+                statusContainer.innerHTML = `<span class="badge bg-warning text-dark">Clarification Needed</span>`;
+                
+                if (clarBox) {
+                    const listEl = document.getElementById('clarificationList');
+                    listEl.innerHTML = '';
+                    (intentData.counter_questions || []).forEach(q => {
+                        const li = document.createElement('li');
+                        li.className = 'fw-semibold text-dark';
+                        li.textContent = q;
+                        listEl.appendChild(li);
+                    });
+                    clarBox.classList.remove('d-none');
+                }
+
+                if (autopilotVoice && intentData.tts_response) {
+                    autopilotVoice.speakAssistantVoice(intentData.tts_response);
+                }
+                return;
+            }
+
+            // If intent resolved a specific target_date or budget, auto-fill them
+            let finalDate = targetDate;
+            if (intentData.entities && intentData.entities.target_date) {
+                finalDate = intentData.entities.target_date;
+                document.getElementById('agentDate').value = finalDate;
+            }
+            let finalBudget = budget;
+            if (intentData.entities && intentData.entities.budget_limit) {
+                finalBudget = intentData.entities.budget_limit;
+                document.getElementById('agentBudget').value = finalBudget;
+            }
+
+            // Step B: Proceed to Autonomous Tool Calling Execution
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Agent Running...`;
+            statusContainer.innerHTML = `<span class="badge bg-warning text-dark"><span class="spinner-grow spinner-grow-sm me-1"></span> Executing Tools</span>`;
+
             const response = await fetch('/api/autopilot/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: prompt, date: targetDate, budget: budget })
+                body: JSON.stringify({ prompt: prompt, date: finalDate, budget: finalBudget })
             });
 
             const result = await response.json();

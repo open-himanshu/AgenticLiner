@@ -23,6 +23,12 @@ import secrets
 from backend.core.database.connection import get_connection, fetch_all, fetch_one
 from backend.core.database.demo_people import HERO_SPEAKER
 from backend.core.planner.agent_mode import run_autopilot_with_fallback
+from backend.core.planner.natural_intake import (
+    validate_prompt_safety,
+    extract_event_entities_llm,
+    assess_intake_completeness,
+    ExtractedEventEntities,
+)
 from backend.modules.module1_coplan.task_board import get_event_task_board
 from backend.modules.module1_coplan.brief_parser import parse_event_brief, adaptive_intake
 from backend.modules.module2_scheduling.attendee_manager import AttendeeManager
@@ -133,6 +139,10 @@ feedback_analyzer = FeedbackAnalyzer()
 analytics_engine = EventAnalyticsEngine()
 
 # --- Request Models ---
+class ParseIntentRequest(BaseModel):
+    prompt: str
+    voice_mode: bool = False
+
 class AutopilotRequest(BaseModel):
     prompt: str
     date: str = "2026-11-25"
@@ -679,6 +689,49 @@ async def api_universal_command(
     """Executes on-the-fly natural language operational commands anywhere on campus platform."""
     res = execute_universal_command(command=req.command)
     return JSONResponse(content=res)
+
+@app.post("/api/autopilot/parse-intent")
+async def parse_autopilot_intent(
+    req: ParseIntentRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
+    """
+    Pillar 1 - Section 2: Parses natural language / voice input,
+    extracts structured event entities without rigid regex, and assesses completeness.
+    """
+    # 1. Safety validation (Kavach filter)
+    is_safe, safety_err = validate_prompt_safety(req.prompt)
+    if not is_safe:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "is_safe": False,
+                "error": safety_err,
+                "tts_response": "This request was blocked by safety policy."
+            }
+        )
+
+    # 2. Extract entities using LLM (with deterministic fallback)
+    user_context = {
+        "name": user.get("full_name") or user.get("username"),
+        "department": user.get("department", "School of AI")
+    }
+    entities = extract_event_entities_llm(prompt=req.prompt, user_context=user_context)
+
+    # 3. Assess completeness & counter-questions
+    is_ready, counter_questions, tts_text = assess_intake_completeness(entities)
+
+    return JSONResponse(
+        content={
+            "success": True,
+            "is_safe": True,
+            "is_ready_for_planning": is_ready,
+            "entities": entities.model_dump(),
+            "counter_questions": counter_questions,
+            "tts_response": tts_text
+        }
+    )
 
 @app.post("/api/autopilot/run")
 @app.post("/agent/run", dependencies=[Depends(require_role(["organiser", "supervisor"]))])
