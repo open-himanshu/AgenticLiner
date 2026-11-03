@@ -243,3 +243,10 @@ The following high-priority gaps identified in the independent evaluation were r
    - **Delivered:** Integrated zero-dependency native Web Speech API (`voice_engine.js`) on `autopilot.html` and `organiser.html` with pulsing mic states (Idle, Listening, Processing, Denied), live interim soundwave streaming, and TTS voice synthesis.
    - **Entity Extraction Engine:** Built `backend/core/planner/natural_intake.py` with relative datetime resolution (*"kal shaam"*, *"this Friday evening"*, *"tomorrow 4 PM"*), qualitative scale parsing (*"chhota batch"*, *"all-college fest"*), proactive clarifying counter-questions, and Kavach destructive-command filtering.
    - **Verification:** Verified with 13 dedicated unit & integration tests (`tests/test_voice_engine.py` and `tests/test_natural_intake.py`), bringing full test suite to 182 passed tests (100% pass rate).
+
+7. **Pillar 2: Conversational Multi-Turn Dialogue & Loop-Protected Counter-Question Engine:**
+   - **Delivered:** Created `backend/core/planner/dialogue_engine.py` with session tracking (`AutopilotDialogueSession`), multi-turn context fusion without state loss, smart quick-reply suggestion chips, and conversational endpoints (`/api/autopilot/session/start`, `/reply`, `/reset`).
+   - **Strict Loop Circuit Breaker:** Implemented hard limit `MAX_ASK_USER = 2`. If parameters remain ambiguous after 2 turns, the agent automatically terminates the question loop, applies sensible Galgotias campus defaults (upcoming Friday 10:00 AM, 100 headcount, standard logistics package), logs clear assumptions, and commits straight into venue planning—preventing infinite conversational loops and user frustration.
+   - **Interactive UI Thread:** Replaced static clarification box on `frontend/templates/autopilot.html` with an interactive dialogue card (`#agentDialogueBox`), turn counter badge, inline voice microphone for spoken replies, 1-click quick-reply chips, and fast-path campus defaults skip.
+   - **Verification:** Verified with 7 dedicated unit & integration tests (`tests/test_dialogue_engine.py`), bringing the full test suite to 198 passed tests (100% pass rate).
+

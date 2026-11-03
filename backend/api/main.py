@@ -29,6 +29,14 @@ from backend.core.planner.natural_intake import (
     assess_intake_completeness,
     ExtractedEventEntities,
 )
+from backend.core.planner.dialogue_engine import (
+    get_or_create_session,
+    get_session,
+    reset_session,
+    fuse_dialogue_reply,
+    MAX_ASK_USER,
+    AutopilotDialogueSession,
+)
 from backend.modules.module1_coplan.task_board import get_event_task_board
 from backend.modules.module1_coplan.brief_parser import parse_event_brief, adaptive_intake
 from backend.modules.module2_scheduling.attendee_manager import AttendeeManager
@@ -142,6 +150,19 @@ analytics_engine = EventAnalyticsEngine()
 class ParseIntentRequest(BaseModel):
     prompt: str
     voice_mode: bool = False
+
+class DialogueStartRequest(BaseModel):
+    prompt: str
+    session_id: Optional[str] = None
+    voice_mode: bool = False
+
+class DialogueReplyRequest(BaseModel):
+    session_id: str
+    reply: str
+    voice_mode: bool = False
+
+class DialogueResetRequest(BaseModel):
+    session_id: str
 
 class AutopilotRequest(BaseModel):
     prompt: str
@@ -732,6 +753,123 @@ async def parse_autopilot_intent(
             "tts_response": tts_text
         }
     )
+
+@app.post("/api/autopilot/session/start")
+async def start_dialogue_session(
+    req: DialogueStartRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
+    """
+    Pillar 2 - Turn 0/1: Ingests initial prompt, checks safety, creates/resumes session,
+    and returns initial analysis + clarifying counter-questions if incomplete.
+    """
+    is_safe, safety_err = validate_prompt_safety(req.prompt)
+    if not is_safe:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "is_safe": False,
+                "error": safety_err,
+                "tts_response": "This request was blocked by safety policy."
+            }
+        )
+
+    user_context = {
+        "name": user.get("full_name") or user.get("username"),
+        "department": user.get("department", "School of AI")
+    }
+
+    session, is_new = get_or_create_session(
+        prompt=req.prompt,
+        user_id=user.get("email", "organiser"),
+        user_context=user_context,
+        session_id=req.session_id
+    )
+
+    return JSONResponse(
+        content={
+            "success": True,
+            "session_id": session.session_id,
+            "status": session.status,
+            "turn_count": session.turn_count,
+            "max_turns": session.max_turns,
+            "is_ready_for_planning": session.status == "ready_to_plan",
+            "current_question": session.current_question,
+            "quick_replies": session.quick_replies,
+            "tts_response": session.tts_response,
+            "entities": session.accumulated_entities.model_dump(),
+            "assumptions_made": session.assumptions_made,
+            "turns": [t.model_dump() for t in session.turns]
+        }
+    )
+
+
+@app.post("/api/autopilot/session/reply")
+async def reply_dialogue_session(
+    req: DialogueReplyRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
+    """
+    Pillar 2 - Multi-Turn Reply Handler:
+    Fuses user's spoken or typed reply into accumulated entities.
+    STRICT LOOP CIRCUIT BREAKER: If turn_count >= 2, automatically fills campus defaults
+    and transitions to 'ready_to_plan'. Prevents infinite clarification loops.
+    """
+    session = get_session(req.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Dialogue session not found or expired.")
+
+    is_safe, safety_err = validate_prompt_safety(req.reply)
+    if not is_safe:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "is_safe": False,
+                "error": safety_err,
+                "tts_response": "This input was blocked by safety policy."
+            }
+        )
+
+    user_context = {
+        "name": user.get("full_name") or user.get("username"),
+        "department": user.get("department", "School of AI")
+    }
+
+    session = fuse_dialogue_reply(
+        session=session,
+        user_reply=req.reply,
+        user_context=user_context
+    )
+
+    return JSONResponse(
+        content={
+            "success": True,
+            "session_id": session.session_id,
+            "status": session.status,
+            "turn_count": session.turn_count,
+            "max_turns": session.max_turns,
+            "is_ready_for_planning": session.status == "ready_to_plan",
+            "current_question": session.current_question,
+            "quick_replies": session.quick_replies,
+            "tts_response": session.tts_response,
+            "entities": session.accumulated_entities.model_dump(),
+            "assumptions_made": session.assumptions_made,
+            "turns": [t.model_dump() for t in session.turns]
+        }
+    )
+
+
+@app.post("/api/autopilot/session/reset")
+async def reset_dialogue_session_api(
+    req: DialogueResetRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
+    """Resets an active dialogue session."""
+    did_reset = reset_session(req.session_id)
+    return JSONResponse(content={"success": did_reset, "session_id": req.session_id})
+
 
 @app.post("/api/autopilot/run")
 @app.post("/agent/run", dependencies=[Depends(require_role(["organiser", "supervisor"]))])

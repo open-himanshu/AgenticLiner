@@ -115,7 +115,12 @@ The Autopilot engine operates in two coordinated modes with automatic fallback:
    * **Proactive Clarifying Counter-Questions:** Missing critical fields (dates, scale) trigger conversational counter-questions before attempting venue lock.
    * **Text-to-Speech (TTS) Voice Feedback:** Speaks out confirmations and status updates via native browser SpeechSynthesis (with audio ON/MUTE toggle).
 
-4. **Kavach Transaction Sandboxing (`kavach.py`):**
+4. **Conversational Multi-Turn Dialogue & Loop Circuit Breaker (Pillar 2 - Dialogue Engine):**
+   * **Stateful Dialogue Sessions (`dialogue_engine.py`):** Multi-turn clarification loop tracking accumulated entities, questions asked, and dialogue history via `/api/autopilot/session/start` and `/reply`.
+   * **STRICT LOOP CIRCUIT BREAKER (`MAX_ASK_USER = 2`):** Prevents infinite clarifying loops or repetitive agent questioning. If parameters remain ambiguous after 2 turns, the agent automatically terminates questioning, fills sensible Galgotias campus defaults (upcoming Friday 10:00 AM, 100 headcount, standard logistics package), logs assumptions in the activity timeline, and commits directly to venue booking.
+   * **Interactive Dialogue Card & Quick-Reply Chips (`autopilot.html`):** Renders interactive chat bubbles with turn badges (*"Turn 1 of 2"*), 1-click quick-reply chips (*"This Friday 10 AM"*, *"Tomorrow 5 PM"*, *"100 Students"*), inline microphone for spoken replies, and a 1-click campus defaults skip button.
+
+5. **Kavach Transaction Sandboxing (`kavach.py`):**
    * Uses SQLite savepoints (`SAVEPOINT sp_...`) to isolate all changes during a planning run.
    * Enforces 6 campus invariants: No room overlaps, capacity compliance, speaker simultaneity, stock availability, budget compliance, and notification recipient limits.
    * Staged outbox notices are held until successful commit (`status = 'held' -> 'sent'`). If an invariant fails, state is atomically rolled back to the savepoint and logged in `audit_log`.

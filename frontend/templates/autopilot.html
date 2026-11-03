@@ -2,6 +2,44 @@
 
 {% block title %}AgenticLiner - Autopilot Agentic Engine{% endblock %}
 
+
+<style>
+    .chat-bubble-agent {
+        background-color: #f1f5f9;
+        color: #1e293b;
+        border-radius: 12px 12px 12px 2px;
+        padding: 8px 12px;
+        max-width: 90%;
+        font-size: 0.82rem;
+        border: 1px solid #e2e8f0;
+    }
+    .chat-bubble-user {
+        background-color: #0d6efd;
+        color: #ffffff;
+        border-radius: 12px 12px 2px 12px;
+        padding: 8px 12px;
+        max-width: 90%;
+        font-size: 0.82rem;
+        align-self: flex-end;
+    }
+    .chip-btn {
+        border-radius: 16px;
+        font-size: 0.72rem;
+        padding: 3px 10px;
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .chip-btn:hover {
+        background-color: #0d6efd;
+        color: #ffffff;
+        border-color: #0d6efd;
+        transform: translateY(-1px);
+    }
+</style>
+
 {% block content %}
 <div class="container-fluid px-4">
     <!-- Header -->
@@ -67,19 +105,63 @@
                     </div>
                 </div>
 
-                <!-- Clarification Questions Box (Counter-Questions) -->
-                <div id="clarificationBox" class="alert alert-warning border border-warning shadow-sm small mb-3 d-none" style="border-radius: 8px;">
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <i class="bi bi-question-circle-fill text-warning fs-5"></i>
-                        <strong class="text-dark">Clarification Needed:</strong>
+                <!-- Interactive Dialogue & Counter-Questions Engine (Pillar 2) -->
+                <div id="agentDialogueBox" class="card border border-warning shadow-sm mb-3 d-none" style="border-radius: 10px; background: #fffdf5;">
+                    <div class="card-header bg-warning bg-opacity-10 border-bottom border-warning d-flex justify-content-between align-items-center py-2 px-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-robot text-warning fs-5"></i>
+                            <strong class="text-dark small">AI Agent Clarification</strong>
+                            <span id="dialogueTurnBadge" class="badge bg-warning text-dark border border-warning" style="font-size: 0.7rem;">Turn 1 of 2</span>
+                        </div>
+                        <span class="badge bg-light text-muted border small" style="font-size: 0.65rem;" title="Loop Circuit Breaker: Automatically commits with campus defaults after Turn 2">
+                            <i class="bi bi-shield-check text-success me-1"></i>Loop Guard (Max 2 Turns)
+                        </span>
                     </div>
-                    <ul class="mb-2 ps-3" id="clarificationList"></ul>
-                    <div class="small text-muted">
-                        <i class="bi bi-mic me-1"></i>Aap bol kar ya prompt me add karke dobara click karein.
-                    </div>
-                </div>
+                    <div class="card-body p-3">
+                        <!-- Dialogue Thread Bubbles -->
+                        <div id="dialogueThread" class="d-flex flex-column gap-2 mb-3" style="max-height: 220px; overflow-y: auto;">
+                            <!-- Filled dynamically -->
+                        </div>
 
-                <div class="mb-3">
+                        <!-- Smart Quick-Reply Chips -->
+                        <div id="quickRepliesSection" class="mb-3">
+                            <div class="small text-muted fw-semibold mb-1" style="font-size: 0.75rem;">
+                                <i class="bi bi-lightning-charge-fill text-warning me-1"></i>Quick Options:
+                            </div>
+                            <div id="quickReplyChips" class="d-flex flex-wrap gap-1">
+                                <!-- Chips dynamically injected -->
+                            </div>
+                        </div>
+
+                        <!-- Assumptions Banner (Shown when loop breaker activates) -->
+                        <div id="assumptionsBanner" class="alert alert-info py-2 px-3 small mb-3 d-none" style="font-size: 0.78rem;">
+                            <i class="bi bi-info-circle-fill me-1"></i>
+                            <strong id="assumptionsTitle">Campus Defaults Applied:</strong>
+                            <ul id="assumptionsList" class="mb-0 mt-1 ps-3"></ul>
+                        </div>
+
+                        <!-- Reply Input & Controls -->
+                        <div id="dialogueInputArea">
+                            <div class="input-group input-group-sm mb-2">
+                                <input type="text" class="form-control" id="dialogueReplyInput" placeholder="Speak or type answer (e.g. This Friday 5 PM, 100 students)...">
+                                <button class="btn btn-outline-secondary" type="button" id="btnDialogueVoiceInput" title="Speak reply with microphone">
+                                    <i class="bi bi-mic" id="dialogueMicIcon"></i>
+                                </button>
+                                <button class="btn btn-primary fw-semibold px-3" type="button" id="btnSendReply">
+                                    <i class="bi bi-send-fill me-1"></i> Reply
+                                </button>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <button class="btn btn-link btn-sm text-decoration-none text-muted p-0" id="btnSkipClarification" style="font-size: 0.72rem;">
+                                    <i class="bi bi-arrow-right-circle me-1"></i> Skip & Use Campus Defaults
+                                </button>
+                                <button class="btn btn-link btn-sm text-decoration-none text-danger p-0" id="btnResetDialogue" style="font-size: 0.72rem;">
+                                    <i class="bi bi-x-circle me-1"></i> Reset Dialogue
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div><div class="mb-3">
                     <label class="form-label small fw-semibold">Target Event Date</label>
                     <input type="date" class="form-control form-control-sm" id="agentDate">
                     <div class="form-text" style="font-size: 0.75rem;">Select event date. The agent verifies venue availability and checks capacity.</div>
@@ -198,9 +280,13 @@
 {% block extra_scripts %}
 <script src="/static/js/voice_engine.js"></script>
 <script>
-    // Initialize Web Speech Voice Engine for Autopilot
+    // Initialize Web Speech Voice Engines (Pillar 1 & Pillar 2)
     let autopilotVoice = null;
+    let dialogueVoice = null;
+    let activeDialogueSessionId = null;
+
     document.addEventListener('DOMContentLoaded', () => {
+        // Main prompt voice engine
         autopilotVoice = new WebSpeechVoiceEngine({
             inputSelector: '#agentPrompt',
             btnSelector: '#btnVoiceInput',
@@ -214,11 +300,23 @@
             lang: 'en-IN'
         });
 
+        // Dialogue reply voice engine
+        dialogueVoice = new WebSpeechVoiceEngine({
+            inputSelector: '#dialogueReplyInput',
+            btnSelector: '#btnDialogueVoiceInput',
+            iconSelector: '#dialogueMicIcon',
+            bannerSelector: '#voiceStatusBanner',
+            statusTextSelector: '#voiceStatusText',
+            stateBadgeSelector: '#voiceStateBadge',
+            lang: 'en-IN'
+        });
+
         // Wire Stop Button
         const stopBtn = document.getElementById('btnStopVoice');
         if (stopBtn) {
             stopBtn.addEventListener('click', () => {
                 if (autopilotVoice) autopilotVoice.stopSpeechRecognition();
+                if (dialogueVoice) dialogueVoice.stopSpeechRecognition();
             });
         }
 
@@ -232,7 +330,56 @@
                 promptEl.focus();
             }
         }
+
+        // Wire dialogue controls
+        const btnSendReply = document.getElementById('btnSendReply');
+        if (btnSendReply) {
+            btnSendReply.addEventListener('click', () => {
+                const replyInput = document.getElementById('dialogueReplyInput');
+                if (replyInput && replyInput.value.trim()) {
+                    sendDialogueReply(replyInput.value.trim());
+                }
+            });
+        }
+
+        const dialogueInput = document.getElementById('dialogueReplyInput');
+        if (dialogueInput) {
+            dialogueInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (dialogueInput.value.trim()) {
+                        sendDialogueReply(dialogueInput.value.trim());
+                    }
+                }
+            });
+        }
+
+        const btnSkip = document.getElementById('btnSkipClarification');
+        if (btnSkip) {
+            btnSkip.addEventListener('click', () => {
+                sendDialogueReply("skip and use campus defaults");
+            });
+        }
+
+        const btnReset = document.getElementById('btnResetDialogue');
+        if (btnReset) {
+            btnReset.addEventListener('click', async () => {
+                if (activeDialogueSessionId) {
+                    try {
+                        await fetch('/api/autopilot/session/reset', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ session_id: activeDialogueSessionId })
+                        });
+                    } catch (e) { console.warn(e); }
+                }
+                activeDialogueSessionId = null;
+                const diagBox = document.getElementById('agentDialogueBox');
+                if (diagBox) diagBox.classList.add('d-none');
+            });
+        }
     });
+
     function setScenario(promptText, dateValue) {
         document.getElementById('agentPrompt').value = promptText;
         if (dateValue) {
@@ -240,88 +387,147 @@
         }
     }
 
-    document.getElementById('btnRunAgent').addEventListener('click', async () => {
-        const prompt = document.getElementById('agentPrompt').value;
-        const targetDate = document.getElementById('agentDate').value || '2026-11-28';
-        const budgetInput = document.getElementById('agentBudget');
-        const budget = Number(budgetInput.value);
+    function appendDialogueBubble(speaker, text) {
+        const thread = document.getElementById('dialogueThread');
+        if (!thread) return;
+        const bubble = document.createElement('div');
+        if (speaker === 'agent') {
+            bubble.className = 'chat-bubble-agent';
+            bubble.innerHTML = `<i class="bi bi-robot text-primary me-1"></i> ${text}`;
+        } else {
+            bubble.className = 'chat-bubble-user';
+            bubble.innerHTML = `<i class="bi bi-person-fill me-1"></i> ${text}`;
+        }
+        thread.appendChild(bubble);
+        thread.scrollTop = thread.scrollHeight;
+    }
+
+    function renderQuickReplies(replies) {
+        const chipsContainer = document.getElementById('quickReplyChips');
+        const section = document.getElementById('quickRepliesSection');
+        if (!chipsContainer || !section) return;
+        chipsContainer.innerHTML = '';
+        if (!replies || replies.length === 0) {
+            section.classList.add('d-none');
+            return;
+        }
+        section.classList.remove('d-none');
+        replies.forEach(txt => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'chip-btn';
+            btn.textContent = txt;
+            btn.addEventListener('click', () => {
+                sendDialogueReply(txt);
+            });
+            chipsContainer.appendChild(btn);
+        });
+    }
+
+    async function sendDialogueReply(replyText) {
+        if (!activeDialogueSessionId) return;
+        const inputEl = document.getElementById('dialogueReplyInput');
+        const btnSend = document.getElementById('btnSendReply');
+        if (inputEl) inputEl.value = '';
+        if (btnSend) btnSend.disabled = true;
+
+        appendDialogueBubble('user', replyText);
+
+        try {
+            const resp = await fetch('/api/autopilot/session/reply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: activeDialogueSessionId,
+                    reply: replyText,
+                    voice_mode: true
+                })
+            });
+
+            const data = await resp.json();
+            if (btnSend) btnSend.disabled = false;
+
+            if (!resp.ok || !data.success) {
+                alert(data.error || 'Failed to process clarification reply.');
+                return;
+            }
+
+            // Update Turn Badge
+            const turnBadge = document.getElementById('dialogueTurnBadge');
+            if (turnBadge) {
+                turnBadge.textContent = `Turn ${data.turn_count} of ${data.max_turns}`;
+                if (data.is_ready_for_planning) {
+                    turnBadge.className = 'badge bg-success text-white border';
+                    turnBadge.textContent = 'Plan Ready';
+                }
+            }
+
+            // Show assumptions if loop breaker activated
+            if (data.assumptions_made && data.assumptions_made.length > 0) {
+                const banner = document.getElementById('assumptionsBanner');
+                const list = document.getElementById('assumptionsList');
+                if (banner && list) {
+                    list.innerHTML = '';
+                    data.assumptions_made.forEach(a => {
+                        const li = document.createElement('li');
+                        li.textContent = a;
+                        list.appendChild(li);
+                    });
+                    banner.classList.remove('d-none');
+                }
+            }
+
+            if (data.is_ready_for_planning) {
+                appendDialogueBubble('agent', data.tts_response || 'All parameters confirmed. Launching venue planner!');
+                renderQuickReplies([]);
+                if (autopilotVoice && data.tts_response) {
+                    autopilotVoice.speakAssistantVoice(data.tts_response);
+                }
+
+                // Auto-fill resolved fields
+                if (data.entities && data.entities.target_date) {
+                    document.getElementById('agentDate').value = data.entities.target_date;
+                }
+                if (data.entities && data.entities.budget_limit) {
+                    document.getElementById('agentBudget').value = data.entities.budget_limit;
+                }
+
+                // Automatically proceed to autonomous tool execution
+                setTimeout(() => {
+                    executeAutopilotPlan(data.entities);
+                }, 1200);
+
+            } else {
+                // Another counter-question turn
+                appendDialogueBubble('agent', data.current_question || data.tts_response);
+                renderQuickReplies(data.quick_replies);
+                if (autopilotVoice && data.tts_response) {
+                    autopilotVoice.speakAssistantVoice(data.tts_response);
+                }
+            }
+
+        } catch (err) {
+            if (btnSend) btnSend.disabled = false;
+            console.error('Dialogue reply error:', err);
+            alert('Failed to deliver reply: ' + err);
+        }
+    }
+
+    async function executeAutopilotPlan(entities) {
         const btn = document.getElementById('btnRunAgent');
         const container = document.getElementById('timelineContainer');
         const statusContainer = document.getElementById('statusBadgeContainer');
         const summaryCard = document.getElementById('summaryCard');
 
-        if (!budgetInput.value || !Number.isFinite(budget) || budget <= 0) {
-            budgetInput.reportValidity();
-            return;
-        }
+        const prompt = entities.raw_prompt || document.getElementById('agentPrompt').value;
+        const finalDate = entities.target_date || document.getElementById('agentDate').value || '2026-11-28';
+        const finalBudget = entities.budget_limit || Number(document.getElementById('agentBudget').value) || 50000;
 
         btn.disabled = true;
-        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Understanding Brief...`;
-        statusContainer.innerHTML = `<span class="badge bg-info text-dark"><span class="spinner-grow spinner-grow-sm me-1"></span> Analyzing Intent</span>`;
-        container.innerHTML = '';
-        summaryCard.style.display = 'none';
-        const clarBox = document.getElementById('clarificationBox');
-        if (clarBox) clarBox.classList.add('d-none');
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Agent Running...`;
+        statusContainer.innerHTML = `<span class="badge bg-warning text-dark"><span class="spinner-grow spinner-grow-sm me-1"></span> Executing Tools</span>`;
 
         try {
-            // Step A: Parse intent and check completeness (Pillar 1)
-            const parseResp = await fetch('/api/autopilot/parse-intent', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: prompt, voice_mode: true })
-            });
-
-            const intentData = await parseResp.json();
-
-            if (!parseResp.ok || !intentData.is_safe) {
-                btn.disabled = false;
-                btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
-                statusContainer.innerHTML = `<span class="badge bg-danger">Safety Blocked</span>`;
-                alert(intentData.error || 'Request was blocked by safety policy.');
-                if (autopilotVoice) autopilotVoice.speakAssistantVoice('This command was blocked by safety policy.');
-                return;
-            }
-
-            // If critical info is missing, show counter-questions and ask user!
-            if (!intentData.is_ready_for_planning) {
-                btn.disabled = false;
-                btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
-                statusContainer.innerHTML = `<span class="badge bg-warning text-dark">Clarification Needed</span>`;
-                
-                if (clarBox) {
-                    const listEl = document.getElementById('clarificationList');
-                    listEl.innerHTML = '';
-                    (intentData.counter_questions || []).forEach(q => {
-                        const li = document.createElement('li');
-                        li.className = 'fw-semibold text-dark';
-                        li.textContent = q;
-                        listEl.appendChild(li);
-                    });
-                    clarBox.classList.remove('d-none');
-                }
-
-                if (autopilotVoice && intentData.tts_response) {
-                    autopilotVoice.speakAssistantVoice(intentData.tts_response);
-                }
-                return;
-            }
-
-            // If intent resolved a specific target_date or budget, auto-fill them
-            let finalDate = targetDate;
-            if (intentData.entities && intentData.entities.target_date) {
-                finalDate = intentData.entities.target_date;
-                document.getElementById('agentDate').value = finalDate;
-            }
-            let finalBudget = budget;
-            if (intentData.entities && intentData.entities.budget_limit) {
-                finalBudget = intentData.entities.budget_limit;
-                document.getElementById('agentBudget').value = finalBudget;
-            }
-
-            // Step B: Proceed to Autonomous Tool Calling Execution
-            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Agent Running...`;
-            statusContainer.innerHTML = `<span class="badge bg-warning text-dark"><span class="spinner-grow spinner-grow-sm me-1"></span> Executing Tools</span>`;
-
             const response = await fetch('/api/autopilot/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -343,6 +549,7 @@
             fallbackReasonRow.hidden = !result.fallback_reason;
             document.getElementById('fallbackReason').textContent = result.fallback_reason || '';
 
+            container.innerHTML = '';
             if (result.timeline && result.timeline.length > 0) {
                 result.timeline.forEach((step, idx) => {
                     const isSuccess = step.status === 'committed' || step.status === 'completed';
@@ -386,13 +593,92 @@
                 `;
                 container.appendChild(errDiv);
             }
-
         } catch (err) {
             btn.disabled = false;
             btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
             statusContainer.innerHTML = `<span class="badge bg-danger">System Error</span>`;
             alert('Failed to execute autopilot run: ' + err);
         }
+    }
+
+    document.getElementById('btnRunAgent').addEventListener('click', async () => {
+        const prompt = document.getElementById('agentPrompt').value;
+        const targetDate = document.getElementById('agentDate').value || '2026-11-28';
+        const budgetInput = document.getElementById('agentBudget');
+        const budget = Number(budgetInput.value);
+        const btn = document.getElementById('btnRunAgent');
+        const container = document.getElementById('timelineContainer');
+        const statusContainer = document.getElementById('statusBadgeContainer');
+        const summaryCard = document.getElementById('summaryCard');
+        const diagBox = document.getElementById('agentDialogueBox');
+        const thread = document.getElementById('dialogueThread');
+
+        if (!budgetInput.value || !Number.isFinite(budget) || budget <= 0) {
+            budgetInput.reportValidity();
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Understanding Brief...`;
+        statusContainer.innerHTML = `<span class="badge bg-info text-dark"><span class="spinner-grow spinner-grow-sm me-1"></span> Analyzing Intent</span>`;
+        container.innerHTML = '';
+        summaryCard.style.display = 'none';
+        if (thread) thread.innerHTML = '';
+        const banner = document.getElementById('assumptionsBanner');
+        if (banner) banner.classList.add('d-none');
+
+        try {
+            // Step A: Start interactive dialogue session (Pillar 2)
+            const startResp = await fetch('/api/autopilot/session/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: prompt, voice_mode: true })
+            });
+
+            const startData = await startResp.json();
+
+            if (!startResp.ok || !startData.is_safe) {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
+                statusContainer.innerHTML = `<span class="badge bg-danger">Safety Blocked</span>`;
+                alert(startData.error || 'Request was blocked by safety policy.');
+                if (autopilotVoice) autopilotVoice.speakAssistantVoice('This command was blocked by safety policy.');
+                return;
+            }
+
+            activeDialogueSessionId = startData.session_id;
+
+            // If critical details are missing, enter interactive dialogue mode!
+            if (!startData.is_ready_for_planning) {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
+                statusContainer.innerHTML = `<span class="badge bg-warning text-dark">Clarification Needed</span>`;
+
+                if (diagBox) {
+                    diagBox.classList.remove('d-none');
+                    const turnBadge = document.getElementById('dialogueTurnBadge');
+                    if (turnBadge) turnBadge.textContent = `Turn ${startData.turn_count} of ${startData.max_turns}`;
+                    appendDialogueBubble('agent', startData.current_question || 'Kripya event ki details clarify karein.');
+                    renderQuickReplies(startData.quick_replies);
+                }
+
+                if (autopilotVoice && startData.tts_response) {
+                    autopilotVoice.speakAssistantVoice(startData.tts_response);
+                }
+                return;
+            }
+
+            // All details ready from prompt! Proceed directly to execution.
+            if (diagBox) diagBox.classList.add('d-none');
+            executeAutopilotPlan(startData.entities);
+
+        } catch (err) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
+            statusContainer.innerHTML = `<span class="badge bg-danger">System Error</span>`;
+            alert('Failed to start session: ' + err);
+        }
     });
+
 </script>
 {% endblock %}
