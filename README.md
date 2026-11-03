@@ -120,7 +120,12 @@ The Autopilot engine operates in two coordinated modes with automatic fallback:
    * **STRICT LOOP CIRCUIT BREAKER (`MAX_ASK_USER = 2`):** Prevents infinite clarifying loops or repetitive agent questioning. If parameters remain ambiguous after 2 turns, the agent automatically terminates questioning, fills sensible Galgotias campus defaults (upcoming Friday 10:00 AM, 100 headcount, standard logistics package), logs assumptions in the activity timeline, and commits directly to venue booking.
    * **Interactive Dialogue Card & Quick-Reply Chips (`autopilot.html`):** Renders interactive chat bubbles with turn badges (*"Turn 1 of 2"*), 1-click quick-reply chips (*"This Friday 10 AM"*, *"Tomorrow 5 PM"*, *"100 Students"*), inline microphone for spoken replies, and a 1-click campus defaults skip button.
 
-5. **Kavach Transaction Sandboxing (`kavach.py`):**
+5. **Organiser Memory & Persistent Preference Store (Pillar 3 - Memory Engine):**
+   * **Persistent Habit Retention (`memory_store.py` & `memory_engine.py`):** Retains preferred venues, standard logistics packages, preferred days/time slots, and rolling turnout metrics in SQLite `agent_memories`.
+   * **Intake & Dialogue Enrichment:** Incomplete or ambiguous prompts automatically recall the organiser's typical batch size and favourite gear, eliminating redundant counter-questions and personalizing quick-reply suggestion chips.
+   * **Privacy & User Control:** Strict per-organiser isolation with `GET /api/autopilot/memory` and `POST /reset` endpoints, alongside an interactive memory badge and inspection modal on `autopilot.html`.
+
+6. **Kavach Transaction Sandboxing (`kavach.py`):**
    * Uses SQLite savepoints (`SAVEPOINT sp_...`) to isolate all changes during a planning run.
    * Enforces 6 campus invariants: No room overlaps, capacity compliance, speaker simultaneity, stock availability, budget compliance, and notification recipient limits.
    * Staged outbox notices are held until successful commit (`status = 'held' -> 'sent'`). If an invariant fails, state is atomically rolled back to the savepoint and logged in `audit_log`.

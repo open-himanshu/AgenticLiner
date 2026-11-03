@@ -250,3 +250,12 @@ The following high-priority gaps identified in the independent evaluation were r
    - **Interactive UI Thread:** Replaced static clarification box on `frontend/templates/autopilot.html` with an interactive dialogue card (`#agentDialogueBox`), turn counter badge, inline voice microphone for spoken replies, 1-click quick-reply chips, and fast-path campus defaults skip.
    - **Verification:** Verified with 7 dedicated unit & integration tests (`tests/test_dialogue_engine.py`), bringing the full test suite to 198 passed tests (100% pass rate).
 
+8. **Pillar 3: Organiser Memory & Persistent Preference Store:**
+   - **Delivered:** Created `agent_memories` SQLite table and implemented `backend/core/planner/memory_store.py` and `backend/core/planner/memory_engine.py` for cross-session preference retention across Galgotias campus organisers.
+   - **Dynamic Habit Learning:** The engine monitors every committed planning run and computes rolling turnout averages (`typical_headcount`), venue frequencies (`favourite_venues`), preferred time slots (`preferred_start_time`, `preferred_end_time`), and standard equipment packages (`favourite_equipment`).
+   - **Intake & Dialogue Enrichment:** Incomplete or ambiguous prompts automatically recall the organiser's typical batch size and favourite gear, eliminating redundant counter-questions and personalizing quick-reply suggestion chips.
+   - **Privacy & API Controls:** Provides strict multi-tenant isolation so organisers cannot access each other's memories. Exposes `GET /api/autopilot/memory`, `POST /api/autopilot/memory/note`, and `POST /api/autopilot/memory/reset`.
+   - **Interactive UI:** Added live memory indicator badge (`#memoryBadgeContainer`) and memory inspection modal (`#memoryModal`) on `frontend/templates/autopilot.html`.
+   - **Verification:** Verified with 6 dedicated unit & integration tests (`tests/test_memory_engine.py`), bringing the full test suite to 204 passed tests (100% pass rate).
+
+

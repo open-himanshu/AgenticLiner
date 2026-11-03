@@ -64,6 +64,17 @@
             <div class="card card-custom p-4 bg-white mb-4">
                 <h5 class="fw-bold mb-3"><i class="bi bi-chat-left-dots text-primary me-2"></i>Organiser Request</h5>
                 
+                                <!-- Organiser Persistent Memory Indicator Badge (Pillar 3) -->
+                <div id="memoryBadgeContainer" class="d-flex align-items-center justify-content-between p-2 rounded mb-2 border bg-light small" style="font-size: 0.75rem;">
+                    <div class="d-flex align-items-center gap-1 text-truncate">
+                        <i class="bi bi-cpu-fill text-primary" id="memoryIcon"></i>
+                        <span id="memoryBadgeText" class="text-secondary fw-semibold">Loading agent memory...</span>
+                    </div>
+                    <button type="button" class="btn btn-link btn-sm text-decoration-none text-muted p-0 ms-2" id="btnManageMemory" title="Inspect or reset saved memory profile">
+                        <i class="bi bi-gear-fill"></i>
+                    </button>
+                </div>
+
                 <!-- Live Speech Banner (#voiceStatusBanner) -->
                 <div id="voiceStatusBanner" class="alert alert-info py-2 px-3 small d-flex align-items-center justify-content-between mb-2 shadow-sm d-none" style="border-radius: 8px;">
                     <div class="d-flex align-items-center gap-2">
@@ -275,6 +286,29 @@
         </div>
     </div>
 </div>
+<!-- Memory Inspection Modal (Pillar 3) -->
+<div class="modal fade" id="memoryModal" tabindex="-1" aria-labelledby="memoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h6 class="modal-title fw-bold" id="memoryModalLabel">
+                    <i class="bi bi-cpu-fill text-primary me-2"></i>Organiser Persistent Memory Profile
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body small" id="memoryModalBody">
+                <!-- Dynamically filled -->
+            </div>
+            <div class="modal-footer bg-light py-2 d-flex justify-content-between">
+                <button type="button" class="btn btn-sm btn-outline-danger" id="btnClearMemoryBtn">
+                    <i class="bi bi-trash3 me-1"></i> Reset Memory
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}
@@ -284,6 +318,27 @@
     let autopilotVoice = null;
     let dialogueVoice = null;
     let activeDialogueSessionId = null;
+
+    async function loadMemoryBadge() {
+        try {
+            const resp = await fetch('/api/autopilot/memory');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const badgeEl = document.getElementById('memoryBadgeText');
+            if (!badgeEl) return;
+            if (data.badge && data.badge.has_memory) {
+                badgeEl.innerHTML = `<span class="badge bg-primary-subtle text-primary border me-1">Memory Active</span> ${data.badge.badge_text}`;
+                badgeEl.title = data.badge.summary || '';
+            } else {
+                badgeEl.innerHTML = `<span class="badge bg-light text-muted border me-1">Adaptive Learning</span> Agent remembers past event habits`;
+            }
+            window.currentMemoryProfile = data.profile;
+            window.currentMemoryBadge = data.badge;
+        } catch (err) {
+            console.warn('Memory badge load error:', err);
+        }
+    }
+
 
     document.addEventListener('DOMContentLoaded', () => {
         // Main prompt voice engine
@@ -312,6 +367,50 @@
         });
 
         // Wire Stop Button
+                loadMemoryBadge();
+
+        const btnManageMemory = document.getElementById('btnManageMemory');
+        if (btnManageMemory) {
+            btnManageMemory.addEventListener('click', () => {
+                const modalBody = document.getElementById('memoryModalBody');
+                const p = window.currentMemoryProfile || {};
+                if (modalBody) {
+                    const venues = (p.favourite_venues || []).map(v => `${v.venue} (${v.count}x)`).join(', ') || 'None recorded yet';
+                    const gear = (p.favourite_equipment || []).join(', ') || 'None recorded yet';
+                    const notes = (p.memory_notes || []).map(n => `<li>${n}</li>`).join('') || '<li>No explicit custom notes.</li>';
+                    modalBody.innerHTML = `
+                        <div class="mb-2"><strong>Total Events Learned:</strong> ${p.total_events_planned || 0}</div>
+                        <div class="mb-2"><strong>Typical Turnout:</strong> ${p.typical_headcount || 100} students</div>
+                        <div class="mb-2"><strong>Top Venues:</strong> ${venues}</div>
+                        <div class="mb-2"><strong>Standard Logistics:</strong> ${gear}</div>
+                        <div class="mb-2"><strong>Preferred Slot:</strong> ${p.preferred_start_time || '10:00:00'} - ${p.preferred_end_time || '13:00:00'} (${(p.preferred_days || []).join(', ')})</div>
+                        <div><strong>Memory Facts:</strong> <ul class="mb-0 ps-3 mt-1">${notes}</ul></div>
+                    `;
+                }
+                const modal = new bootstrap.Modal(document.getElementById('memoryModal'));
+                modal.show();
+            });
+        }
+
+        const btnClearMemory = document.getElementById('btnClearMemoryBtn');
+        if (btnClearMemory) {
+            btnClearMemory.addEventListener('click', async () => {
+                if (!confirm('Are you sure you want to reset your saved organiser memory profile?')) return;
+                try {
+                    const resp = await fetch('/api/autopilot/memory/reset', { method: 'POST' });
+                    if (resp.ok) {
+                        alert('Memory profile reset.');
+                        const modalEl = document.getElementById('memoryModal');
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                        loadMemoryBadge();
+                    }
+                } catch (e) {
+                    alert('Failed to reset memory: ' + e);
+                }
+            });
+        }
+
         const stopBtn = document.getElementById('btnStopVoice');
         if (stopBtn) {
             stopBtn.addEventListener('click', () => {
@@ -579,6 +678,7 @@
                 document.getElementById('summaryTitle').innerText = result.event_name;
                 document.getElementById('summaryVenue').innerText = result.venue;
                 summaryCard.style.display = 'block';
+                loadMemoryBadge();
                 if (autopilotVoice) {
                     autopilotVoice.speakAssistantVoice("Event successfully booked in " + (result.venue || "designated campus hall") + ". Notices staged to Outbox.");
                 }

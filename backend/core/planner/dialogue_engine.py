@@ -34,6 +34,12 @@ from backend.core.planner.natural_intake import (
     validate_prompt_safety,
 )
 
+from backend.core.planner.memory_engine import (
+    enrich_entities_with_organiser_memory,
+    extract_explicit_memory_facts,
+)
+from backend.core.planner.memory_store import get_organiser_memory
+
 logger = logging.getLogger("agenticliner.dialogue_engine")
 
 # Hard circuit-breaker turn limit to protect user experience
@@ -100,10 +106,19 @@ def get_or_create_session(
 
         # Extract initial entities
         initial_entities = extract_event_entities_llm(prompt=prompt, user_context=user_context)
+
+        # Pillar 3: Extract explicit facts and enrich with organiser persistent memory
+        extract_explicit_memory_facts(user_id=user_id, prompt=prompt)
+        initial_entities, memory_assumptions = enrich_entities_with_organiser_memory(
+            entities=initial_entities,
+            user_id=user_id
+        )
+
         new_session = AutopilotDialogueSession(
             session_id=session_id or str(uuid.uuid4()),
             user_id=user_id,
-            accumulated_entities=initial_entities
+            accumulated_entities=initial_entities,
+            assumptions_made=memory_assumptions
         )
         new_session.turns.append(
             DialogueTurn(speaker="user", message=prompt, turn_index=0)
@@ -382,14 +397,20 @@ def _formulate_counter_question(
     # Next prioritize headcount/scale
     if "headcount" in missing or "scale" in missing:
         question = "Lagbhag kitne participants / students aane ka anumaan hai?"
-        quick_replies = [
+        profile = get_organiser_memory(session.user_id)
+        quick_replies = []
+        if profile.total_events_planned > 0 and profile.typical_headcount:
+            quick_replies.append(f"{profile.typical_headcount} Students (Your Usual)")
+        quick_replies.extend([
             "40 Students (Small Workshop)",
             "100 Students (Medium Hall)",
             "250+ Students (Auditorium)",
             "100 Students (Default)"
-        ]
+        ])
+        seen = set()
+        dedup = [x for x in quick_replies if not (x in seen or seen.add(x))][:4]
         tts = "Lagbhag kitne students participate karenge taaki sahi venue allot kiya ja sake?"
-        return question, quick_replies, tts
+        return question, dedup, tts
 
     # General event format clarification
     question = "Event ka format kya rahega aur kya special audio/visual logistics chahiye?"

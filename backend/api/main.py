@@ -37,6 +37,15 @@ from backend.core.planner.dialogue_engine import (
     MAX_ASK_USER,
     AutopilotDialogueSession,
 )
+from backend.core.planner.memory_engine import (
+    record_committed_event,
+    get_memory_badge_summary,
+)
+from backend.core.planner.memory_store import (
+    get_organiser_memory,
+    reset_organiser_memory,
+    add_memory_note,
+)
 from backend.modules.module1_coplan.task_board import get_event_task_board
 from backend.modules.module1_coplan.brief_parser import parse_event_brief, adaptive_intake
 from backend.modules.module2_scheduling.attendee_manager import AttendeeManager
@@ -163,6 +172,9 @@ class DialogueReplyRequest(BaseModel):
 
 class DialogueResetRequest(BaseModel):
     session_id: str
+
+class MemoryNoteRequest(BaseModel):
+    note: str
 
 class AutopilotRequest(BaseModel):
     prompt: str
@@ -871,6 +883,55 @@ async def reset_dialogue_session_api(
     return JSONResponse(content={"success": did_reset, "session_id": req.session_id})
 
 
+@app.get("/api/autopilot/memory")
+async def get_autopilot_memory_api(
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
+    """Pillar 3: Returns persistent memory profile and memory badge summary for logged-in organiser."""
+    user_id = user.get("email", "organiser@galgotias.edu")
+    profile = get_organiser_memory(user_id)
+    badge = get_memory_badge_summary(user_id)
+    return JSONResponse(
+        content={
+            "success": True,
+            "profile": profile.model_dump(),
+            "badge": badge
+        }
+    )
+
+
+@app.post("/api/autopilot/memory/note")
+async def add_autopilot_memory_note_api(
+    req: MemoryNoteRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
+    """Pillar 3: Adds a manual preference note to organiser memory."""
+    user_id = user.get("email", "organiser@galgotias.edu")
+    success = add_memory_note(user_id, req.note)
+    profile = get_organiser_memory(user_id)
+    return JSONResponse(
+        content={
+            "success": success,
+            "profile": profile.model_dump()
+        }
+    )
+
+
+@app.post("/api/autopilot/memory/reset")
+async def reset_autopilot_memory_api(
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
+    """Pillar 3: Resets / erases organiser memory profile."""
+    user_id = user.get("email", "organiser@galgotias.edu")
+    did_reset = reset_organiser_memory(user_id)
+    return JSONResponse(
+        content={
+            "success": did_reset,
+            "message": "Organiser memory profile erased successfully."
+        }
+    )
+
+
 @app.post("/api/autopilot/run")
 @app.post("/agent/run", dependencies=[Depends(require_role(["organiser", "supervisor"]))])
 async def run_autopilot_api(
@@ -885,6 +946,22 @@ async def run_autopilot_api(
         end_time=req.end_time,
         budget=req.budget,
     )
+    if res.get("success"):
+        try:
+            user_id = user.get("email", "organiser@galgotias.edu")
+            record_committed_event(
+                user_id=user_id,
+                event_name=res.get("event_name", "Campus Event"),
+                venue_name=res.get("venue"),
+                headcount=res.get("headcount") or 100,
+                equipment_items=res.get("items_allocated") or [],
+                target_date=req.date,
+                start_time=req.start_time,
+                end_time=req.end_time,
+                department=user.get("department", "School of AI")
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to record committed event into memory: {exc}")
     return JSONResponse(content=res)
 
 @app.post("/api/copilot/parse")
