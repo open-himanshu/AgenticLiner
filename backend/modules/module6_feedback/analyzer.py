@@ -49,7 +49,7 @@ NEGATIVE_WORDS = {
     "bad", "terrible", "poor", "issue", "problem", "broken", "delay", "delayed", "late", "crowded", "suffocating",
     "inaudible", "cold", "hot", "waste", "disappointed", "low", "worst", "mess", "slow", "fail", "failed", "shortage",
     "blurry", "unclear", "noisy", "glitch", "confusing", "horrible", "difficult", "pathetic", "disaster", "cramped",
-    "rushed", "bekaar", "bakwas", "kharab", "pareshan", "ghatiya", "kachra", "boring", "faltu", "ganda"
+    "rushed", "bekaar", "bekar", "bakwas", "bakwaas", "kharab", "kharaab", "pareshan", "ghatiya", "kachra", "boring", "faltu", "ganda", "melted", "choking", "sweating", "suffocated"
 }
 
 SPECIAL_PHRASES = {
@@ -61,6 +61,13 @@ SPECIAL_PHRASES = {
     "no issue": 0.5,
     "without any issue": 1.0,
     "without any delay": 1.0,
+    "stopped working": -1.5,
+    "not working": -1.5,
+    "didnt work": -1.5,
+    "didn't work": -1.5,
+    "doesnt work": -1.5,
+    "doesn't work": -1.5,
+    "oh brilliant": -1.0,
 }
 
 class FeedbackAnalyzer:
