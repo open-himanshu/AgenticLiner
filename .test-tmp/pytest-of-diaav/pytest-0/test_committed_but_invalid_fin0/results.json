@@ -1,0 +1,161 @@
+{
+  "date": "2026-11-04",
+  "provider": "scripted",
+  "model": "benchmark-planner",
+  "total_prompts": 1,
+  "setups": {
+    "setup_a": {
+      "setup_name": "Setup A (Direct planned actions)",
+      "wrong_final_states": 1,
+      "errors_caught": 0,
+      "errors_missed": 1,
+      "valid_requests_wrongly_blocked": 0,
+      "retries": 0,
+      "latency_seconds": 0.007879,
+      "average_latency_seconds": 0.007879,
+      "cases": [
+        {
+          "prompt_id": "capacity-data",
+          "expected_state": "committed",
+          "actual_state": "violated",
+          "latency_seconds": 0.007878700000219396,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 1,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [
+                {
+                  "booking_id": "booking_bcbbbd08371a4922be7562310592a8cc",
+                  "event_id": "benchmark_9159fd4d65fd4f6395b987b52a342e88",
+                  "expected_participants": 100,
+                  "room_name": "Seminar Hall 2",
+                  "capacity": 90
+                }
+              ],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        }
+      ]
+    },
+    "setup_b": {
+      "setup_name": "Setup B (SQLite constraints only)",
+      "wrong_final_states": 1,
+      "errors_caught": 0,
+      "errors_missed": 1,
+      "valid_requests_wrongly_blocked": 0,
+      "retries": 0,
+      "latency_seconds": 0.012297,
+      "average_latency_seconds": 0.012297,
+      "cases": [
+        {
+          "prompt_id": "capacity-data",
+          "expected_state": "committed",
+          "actual_state": "violated",
+          "latency_seconds": 0.012297100000068895,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 1,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [
+                {
+                  "booking_id": "booking_bd7c2e7ca17b45c280977c873ef6f611",
+                  "event_id": "benchmark_9159fd4d65fd4f6395b987b52a342e88",
+                  "expected_participants": 100,
+                  "room_name": "Seminar Hall 2",
+                  "capacity": 90
+                }
+              ],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        }
+      ]
+    },
+    "setup_c": {
+      "setup_name": "Setup C (Kavach agent pipeline)",
+      "wrong_final_states": 1,
+      "errors_caught": 0,
+      "errors_missed": 0,
+      "valid_requests_wrongly_blocked": 1,
+      "retries": 0,
+      "latency_seconds": 0.021213,
+      "average_latency_seconds": 0.021213,
+      "cases": [
+        {
+          "prompt_id": "capacity-data",
+          "expected_state": "committed",
+          "actual_state": "blocked",
+          "latency_seconds": 0.021213199999692733,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 1,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "The default provider is a deterministic scripted planner, not a language model; set --real-provider to use the configured provider.",
+    "Setup A disables SQLite foreign-key and CHECK enforcement, but SQLite cannot disable UNIQUE or PRIMARY KEY constraints at runtime.",
+    "Setup A and Setup B execute the same deterministic extracted action plan; parsing ambiguity can differ from human intent.",
+    "The prompt fixture's expected_result labels are treated as the evaluation oracle and may disagree with database facts, including venue capacity.",
+    "Weekday-only phrases are not resolved to calendar dates; absent dates use tomorrow, absent times use a fixed workday interval, and unmentioned resource quantities default to one available unit.",
+    "The scripted planner does not estimate requisition costs, so budget behavior is not covered by its offline calls.",
+    "Retry counts include retries exposed by the pipeline timeline or result; provider-internal HTTP retries are not exposed by the current agent response.",
+    "Latency includes local pipeline execution and excludes database creation, seeding, and independent auditing.",
+    "The independent checker reports data-level violations in this database snapshot; it does not prove that every policy is represented in the application schema."
+  ]
+}

@@ -1,0 +1,235 @@
+{
+  "date": "2026-11-04",
+  "provider": "scripted",
+  "model": "benchmark-planner",
+  "total_prompts": 2,
+  "setups": {
+    "setup_a": {
+      "setup_name": "Setup A (Direct planned actions)",
+      "wrong_final_states": 1,
+      "errors_caught": 0,
+      "errors_missed": 1,
+      "valid_requests_wrongly_blocked": 0,
+      "retries": 0,
+      "latency_seconds": 0.01821,
+      "average_latency_seconds": 0.009105,
+      "cases": [
+        {
+          "prompt_id": "complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "latency_seconds": 0.010346799999751966,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 6,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": "ambiguous",
+          "expected_state": "clarified",
+          "actual_state": "committed",
+          "latency_seconds": 0.007863699998779339,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        }
+      ]
+    },
+    "setup_b": {
+      "setup_name": "Setup B (SQLite constraints only)",
+      "wrong_final_states": 1,
+      "errors_caught": 0,
+      "errors_missed": 1,
+      "valid_requests_wrongly_blocked": 0,
+      "retries": 0,
+      "latency_seconds": 0.023211,
+      "average_latency_seconds": 0.011605,
+      "cases": [
+        {
+          "prompt_id": "complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "latency_seconds": 0.013076000001092325,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 6,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": "ambiguous",
+          "expected_state": "clarified",
+          "actual_state": "committed",
+          "latency_seconds": 0.010134500000276603,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        }
+      ]
+    },
+    "setup_c": {
+      "setup_name": "Setup C (Kavach agent pipeline)",
+      "wrong_final_states": 0,
+      "errors_caught": 1,
+      "errors_missed": 0,
+      "valid_requests_wrongly_blocked": 0,
+      "retries": 0,
+      "latency_seconds": 0.02105,
+      "average_latency_seconds": 0.010525,
+      "cases": [
+        {
+          "prompt_id": "complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "latency_seconds": 0.020768299998962902,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 6,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": "ambiguous",
+          "expected_state": "clarified",
+          "actual_state": "clarified",
+          "latency_seconds": 0.00028199999906064477,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "The default provider is a deterministic scripted planner, not a language model; set --real-provider to use the configured provider.",
+    "Setup A disables SQLite foreign-key and CHECK enforcement, but SQLite cannot disable UNIQUE or PRIMARY KEY constraints at runtime.",
+    "Setup A and Setup B execute the same deterministic extracted action plan; parsing ambiguity can differ from human intent.",
+    "The prompt fixture's expected_result labels are treated as the evaluation oracle and may disagree with database facts, including venue capacity.",
+    "Weekday-only phrases are not resolved to calendar dates; absent dates use tomorrow, absent times use a fixed workday interval, and unmentioned resource quantities default to one available unit.",
+    "The scripted planner does not estimate requisition costs, so budget behavior is not covered by its offline calls.",
+    "Retry counts include retries exposed by the pipeline timeline or result; provider-internal HTTP retries are not exposed by the current agent response.",
+    "Latency includes local pipeline execution and excludes database creation, seeding, and independent auditing.",
+    "The independent checker reports data-level violations in this database snapshot; it does not prove that every policy is represented in the application schema."
+  ]
+}
