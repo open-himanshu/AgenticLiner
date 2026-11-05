@@ -24,6 +24,7 @@ data/*.db
 .pytest_cache/
 .coverage
 htmlcov/
+.test-tmp/
 
 # Logs & OS Files
 *.log
