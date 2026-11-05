@@ -8,7 +8,7 @@ from fastapi import APIRouter, Request, Form, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 import os
 import logging
 import json
@@ -38,6 +38,20 @@ from backend.api.dependencies import get_session_user
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Authentication"])
+
+def set_user_session(request: Request, user: Dict[str, Any], **extra_claims) -> Dict[str, Any]:
+    """Establishes authenticated user session payload in signed session cookie."""
+    session_payload = {
+        "id": user["id"] if "id" in user else "",
+        "username": user["username"],
+        "email": user["email"],
+        "role": user["role"],
+        "full_name": user["full_name"],
+        "department": user.get("department") or "School of AI"
+    }
+    session_payload.update(extra_claims)
+    request.session["user"] = session_payload
+    return session_payload
 
 class FirebaseAuthConfigurationError(RuntimeError):
     pass
@@ -181,7 +195,7 @@ async def login_submit(
         raise HTTPException(status_code=401, detail=error_msg or "Invalid credentials.")
 
     # Set session cookie
-    request.session["user"] = user
+    set_user_session(request, user)
 
     target_url = ROLE_DASHBOARDS.get(user["role"], "/")
 

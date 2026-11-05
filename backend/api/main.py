@@ -118,7 +118,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 TEMPLATES_DIR = BASE_DIR / "frontend" / "templates"
 STATIC_DIR = BASE_DIR / "frontend" / "static"
 
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+from backend.dev.test_console import test_mode_context_processor
+
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR), context_processors=[test_mode_context_processor])
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # Session Middleware Configuration
@@ -144,6 +146,12 @@ app.include_router(event_router)
 
 # Include Student Pass & QR Scanning Router
 app.include_router(pass_router)
+
+# include Test Console Router (mounted only when TEST_CONSOLE == "1")
+if os.getenv("TEST_CONSOLE") == "1":
+    print("TEST CONSOLE ENABLED: localhost only, never use for demo or submission")
+    from backend.dev.test_console import router as dev_router
+    app.include_router(dev_router)
 
 # Custom Exception Handlers for Strict RBAC & Unauthenticated Redirects
 @app.exception_handler(HTTPException)
@@ -1389,18 +1397,19 @@ async def get_outbox(
     notices = fetch_all("SELECT * FROM outbox ORDER BY created_at DESC LIMIT 25")
     return {"outbox": notices}
 
+@app.get("/verify", response_class=HTMLResponse)
 @app.get("/verify/{cert_id}", response_class=HTMLResponse)
-async def verify_certificate(cert_id: str, request: Request):
+async def verify_certificate(request: Request, cert_id: Optional[str] = None):
     """Online Verification Endpoint for certificates."""
-    cert_info = verify_certificate_by_id(cert_id)
+    cert_info = verify_certificate_by_id(cert_id) if cert_id else None
     return templates.TemplateResponse(
         request=request,
         name="verify_certificate.html",
         context={
-            "cert_id": cert_id,
+            "cert_id": cert_id or "",
             "cert": cert_info
         },
-        status_code=200 if cert_info else 404
+        status_code=200 if (cert_info or not cert_id) else 404
     )
 
 

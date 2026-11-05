@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgenticLiner - Test Console</title>
+    <!-- Bootstrap 5 CSS via CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f1f5f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .card-dev {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+        }
+        .btn-role {
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="py-4">
+    <div class="container" style="max-width: 900px;">
+        <!-- Header Banner -->
+        <div class="card card-dev mb-4 border-danger">
+            <div class="card-body p-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge bg-danger text-white px-2 py-1 fw-bold">LOCAL ONLY</span>
+                        <h3 class="mb-0 text-white fw-bold">🛠️ AgenticLiner Test Console</h3>
+                    </div>
+                    <p class="text-white-50 small mb-0">
+                        Persona switching &amp; verification harness. Never use for production, demo, or submission.
+                    </p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <form method="POST" action="/dev/logout" class="d-inline m-0">
+                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-box-arrow-right me-1"></i> Logout
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Persona Status & Role Switcher -->
+        <div class="card card-dev mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 pb-3 border-bottom border-secondary">
+                    <div>
+                        <div class="text-white-50 small text-uppercase fw-semibold">Current Active Role</div>
+                        <div class="fs-4 fw-bold text-white d-flex align-items-center gap-2">
+                            {% if current_role and current_role != 'none' %}
+                                <span class="badge bg-success text-uppercase">{{ current_role }}</span>
+                                {% if session_user %}
+                                    <span class="fs-6 text-white-50 fw-normal">({{ session_user.email }})</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-secondary">none</span>
+                                <span class="fs-6 text-white-50 fw-normal">(no active user session)</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if current_role and current_role != 'none' %}
+                    <form method="POST" action="/dev/exit" class="d-inline m-0">
+                        <button type="submit" class="btn btn-outline-warning btn-sm">
+                            <i class="bi bi-x-circle me-1"></i> Clear User Session (/dev/exit)
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label text-white-50 small fw-semibold text-uppercase">Switch Persona (Establish Real Session)</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <form method="POST" action="/dev/switch" class="d-inline m-0">
+                            <input type="hidden" name="role" value="organiser">
+                            <button type="submit" class="btn btn-role {% if current_role == 'organiser' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                                <i class="bi bi-person-gear me-1"></i> Organiser
+                            </button>
+                        </form>
+                        <form method="POST" action="/dev/switch" class="d-inline m-0">
+                            <input type="hidden" name="role" value="supervisor">
+                            <button type="submit" class="btn btn-role {% if current_role == 'supervisor' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                                <i class="bi bi-shield-check me-1"></i> Supervisor
+                            </button>
+                        </form>
+                        <form method="POST" action="/dev/switch" class="d-inline m-0">
+                            <input type="hidden" name="role" value="data_manager">
+                            <button type="submit" class="btn btn-role {% if current_role == 'data_manager' %}btn-warning text-dark{% else %}btn-outline-warning{% endif %}">
+                                <i class="bi bi-database me-1"></i> Data Manager
+                            </button>
+                        </form>
+                        <form method="POST" action="/dev/switch" class="d-inline m-0">
+                            <input type="hidden" name="role" value="participant">
+                            <button type="submit" class="btn btn-role {% if current_role == 'participant' %}btn-info text-dark{% else %}btn-outline-info{% endif %}">
+                                <i class="bi bi-person me-1"></i> Participant
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Links Grouped by Role -->
+        <h5 class="text-white fw-bold mb-3">📍 Application Navigation by Role</h5>
+        <div class="row g-3">
+            <!-- Organiser -->
+            <div class="col-md-6">
+                <div class="card card-dev h-100">
+                    <div class="card-header bg-dark border-secondary d-flex align-items-center justify-content-between">
+                        <span class="fw-bold text-primary"><i class="bi bi-speedometer2 me-1"></i> Organiser Pages</span>
+                        <span class="badge bg-primary text-uppercase">Organiser</span>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <a href="/organiser" class="list-group-item list-group-item-action bg-transparent text-white border-secondary d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-grid-1x2 me-2 text-primary"></i>Dashboard</span>
+                            <span class="badge bg-secondary small">/organiser</span>
+                        </a>
+                        <a href="/autopilot" class="list-group-item list-group-item-action bg-transparent text-white border-secondary d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-cpu me-2 text-warning"></i>Autopilot AI</span>
+                            <span class="badge bg-secondary small">/autopilot</span>
+                        </a>
+                        <a href="/organiser/planner" class="list-group-item list-group-item-action bg-transparent text-white border-secondary d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-shop me-2 text-info"></i>Planner &amp; Cart</span>
+                            <span class="badge bg-secondary small">/organiser/planner</span>
+                        </a>
+                        <a href="/schedule" class="list-group-item list-group-item-action bg-transparent text-white border-secondary d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-calendar3 me-2 text-success"></i>Schedule &amp; Timetable</span>
+                            <span class="badge bg-secondary small">/schedule</span>
+                        </a>
+                        <a href="/attendees" class="list-group-item list-group-item-action bg-transparent text-white border-secondary d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-people me-2 text-primary"></i>Attendees Manager</span>
+                            <span class="badge bg-secondary small">/attendees</span>
+                        </a>
+                        <a href="/outbox" class="list-group-item list-group-item-action bg-transparent text-white border-secondary d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-inbox me-2 text-warning"></i>Outbox &amp; Notices</span>
+                            <span class="badge bg-secondary small">/outbox</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supervisor -->
+            <div class="col-md-6">
+                <div class="card card-dev h-100">
+                    <div class="card-header bg-dark border-secondary d-flex align-items-center justify-content-between">
+                        <span class="fw-bold text-danger"><i class="bi bi-shield-check me-1"></i> Supervisor Pages</span>
+                        <span class="badge bg-danger text-uppercase">Supervisor</span>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <a href="/supervisor" class="list-group-item list-group-item-action bg-transparent text-white border-secondary d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-shield-lock me-2 text-danger"></i>Supervisor Dashboard</span>
+                            <span class="badge bg-secondary small">/supervisor</span>
+                        </a>
+                        <a href="/supervisor/audit-log" class="list-group-item list-group-item-action bg-transparent text-white border-secondary d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-journal-text me-2 text-info"></i>Audit Log</span>
+                            <span class="badge bg-secondary small">/supervisor/audit-log</span>
+                        </a>
+                        <a href="/analytics" class="list-group-item list-group-item-action bg-transparent text-white border-secondary d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-graph-up me-2 text-success"></i>Executive Analytics</span>
+                            <span class="badge bg-secondary small">/analytics</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Manager -->
+            <div class="col-md-6">
+                <div class="card card-dev h-100">
+                    <div class="card-header bg-dark border-secondary d-flex align-items-center justify-content-between">
+                        <span class="fw-bold text-warning"><i class="bi bi-database me-1"></i> Data Manager Pages</span>
+                        <span class="badge bg-warning text-dark text-uppercase">Data Manager</span>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <a href="/data-manager" class="list-group-item list-group-item-action bg-transparent text-white border-secondary d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-file-earmark-spreadsheet me-2 text-warning"></i>Data Manager &amp; CSV</span>
+                            <span class="badge bg-secondary small">/data-manager</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Participant & Public -->
+            <div class="col-md-6">
+                <div class="card card-dev h-100">
+                    <div class="card-header bg-dark border-secondary d-flex align-items-center justify-content-between">
+                        <span class="fw-bold text-info"><i class="bi bi-person me-1"></i> Participant &amp; Public Pages</span>
+                        <span class="badge bg-info text-dark text-uppercase">Participant</span>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <a href="/participant" class="list-group-item list-group-item-action bg-transparent text-white border-secondary d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-person-badge me-2 text-info"></i>My Agenda &amp; Passes</span>
+                            <span class="badge bg-secondary small">/participant</span>
+                        </a>
+                        <a href="/register" class="list-group-item list-group-item-action bg-transparent text-white border-secondary d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-pencil-square me-2 text-success"></i>Student Registration</span>
+                            <span class="badge bg-secondary small">/register</span>
+                        </a>
+                        <a href="/verify" class="list-group-item list-group-item-action bg-transparent text-white border-secondary d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-patch-check me-2 text-primary"></i>Credential Verification</span>
+                            <span class="badge bg-secondary small">/verify</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

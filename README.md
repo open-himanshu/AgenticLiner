@@ -263,3 +263,10 @@ python -m pytest tests/test_autopilot_api.py -q       # Autopilot API endpoint i
 python -m pytest tests/test_auth.py -q                # Authentication, sessions & RBAC tests
 python -m pytest tests/safety/test_kavach.py -q       # Kavach invariant transaction tests
 ```
+
+### Test console (dev only)
+The test console (`/dev`) is an internal developer harness for verifying role switching and permission boundaries across all 4 personas.
+To enable it locally, launch the server with `TEST_CONSOLE=1` set in your environment (`$env:TEST_CONSOLE="1"` or export in terminal).
+Access is strictly restricted to localhost loopback connections (`127.0.0.1`, `::1`) and automatically yields a 404 if accessed over public tunnels.
+It is disabled by default; when `TEST_CONSOLE` is unset or `0`, `/dev` routes are not mounted and cannot be reached.
+Important: `TEST_CONSOLE` must remain unset or `0` for live demos, final evaluations, and submission.
