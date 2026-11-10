@@ -155,6 +155,107 @@ async def dev_ping() -> dict[str, str]:
     return {"status": "ok", "mode": "test_console"}
 
 
+def render_dev_login_html(error: Optional[str] = None, username: str = "") -> str:
+    """Renders styled Bootstrap 5 login page for dev test console."""
+    error_html = ""
+    if error:
+        error_html = f"""
+        <div class="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+            <div><strong>Error:</strong> {error}</div>
+        </div>
+        """
+
+    safe_username = username.replace('"', '&quot;')
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgenticLiner - Test Console Login</title>
+    <!-- Bootstrap 5 CSS via CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body {{
+            background-color: #0f172a;
+            color: #f1f5f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }}
+        .card-dev {{
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+        }}
+        .form-control {{
+            background-color: #0f172a;
+            border-color: #334155;
+            color: #f8fafc;
+        }}
+        .form-control:focus {{
+            background-color: #0f172a;
+            border-color: #dc3545;
+            color: #fff;
+            box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+        }}
+    </style>
+</head>
+<body class="p-3">
+    <div style="max-width: 440px; width: 100%;">
+        <div class="card card-dev">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <span class="badge bg-danger text-white px-2 py-1 fw-bold mb-2">DEV / TEST MODE</span>
+                    <h3 class="fw-bold text-white mb-1">&#128736;&#65039; Test Console Login</h3>
+                    <p class="text-white-50 small mb-0">Local development &amp; persona testing only.</p>
+                </div>
+
+                {error_html}
+
+                <div class="alert alert-dark border-secondary py-2 px-3 small text-white-50 mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <span class="fw-semibold text-white">Default Credentials:</span>
+                        <button type="button" class="btn btn-sm btn-outline-info py-0 px-2 small" onclick="autoFill()" style="font-size: 0.75rem;">
+                            Auto-fill
+                        </button>
+                    </div>
+                    <div>User: <code class="text-info">admin</code> | Pass: <code class="text-info">admin</code></div>
+                </div>
+
+                <form method="POST" action="/dev/login">
+                    <div class="mb-3">
+                        <label for="username" class="form-label small text-white-50">Username or Email</label>
+                        <input type="text" id="username" name="username" class="form-control" placeholder="admin" value="{safe_username}" required autofocus />
+                    </div>
+                    <div class="mb-4">
+                        <label for="password" class="form-label small text-white-50">Password</label>
+                        <input type="password" id="password" name="password" class="form-control" placeholder="admin" required />
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100 py-2 fw-semibold mb-3">
+                        Sign In to Console
+                    </button>
+                    <div class="text-center">
+                        <a href="/" class="text-white-50 small text-decoration-none">&larr; Return to App</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+        function autoFill() {{
+            document.getElementById('username').value = 'admin';
+            document.getElementById('password').value = 'admin';
+        }}
+    </script>
+</body>
+</html>"""
+
+
 @router.get("/login", response_class=HTMLResponse)
 async def dev_login_page(request: Request):
     """Renders test console login form."""
@@ -162,24 +263,7 @@ async def dev_login_page(request: Request):
     if _verify_cookie_payload(cookie_val):
         return RedirectResponse(url="/dev", status_code=status.HTTP_302_FOUND)
 
-    html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Test Console Login</title>
-</head>
-<body>
-    <h2>Test Console Login</h2>
-    <form method="POST" action="/dev/login">
-        <label for="username">Username</label>
-        <input type="text" id="username" name="username" placeholder="admin" required autofocus />
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" placeholder="admin" required />
-        <button type="submit">Sign In</button>
-    </form>
-</body>
-</html>"""
-    return HTMLResponse(content=html, status_code=200)
+    return HTMLResponse(content=render_dev_login_html(), status_code=200)
 
 
 @router.post("/login")
@@ -190,14 +274,29 @@ async def dev_login(request: Request):
 
     username, password = await _extract_credentials(request)
 
-    expected_user = os.getenv("TEST_ADMIN_USER", "admin")
-    expected_pass = os.getenv("TEST_ADMIN_PASSWORD", "admin")
+    expected_user = (os.getenv("TEST_ADMIN_USER") or "admin").strip()
+    expected_pass = (os.getenv("TEST_ADMIN_PASSWORD") or "admin").strip()
 
-    valid_user = secrets.compare_digest(username, expected_user)
-    valid_pass = secrets.compare_digest(password, expected_pass)
+    clean_user = username.strip()
+    clean_pass = password.strip()
+
+    valid_user = secrets.compare_digest(clean_user, expected_user) or secrets.compare_digest(clean_user.lower(), expected_user.lower())
+    if not valid_user and expected_user == "admin" and secrets.compare_digest(clean_user.lower(), "admin@galgotias.edu"):
+        valid_user = True
+
+    valid_pass = secrets.compare_digest(clean_pass, expected_pass)
+
+    accept = request.headers.get("accept", "")
+    content_type = request.headers.get("content-type", "")
+    is_html_request = "text/html" in accept
 
     if not (valid_user and valid_pass):
         _record_failed_attempt(client_ip)
+        if is_html_request:
+            return HTMLResponse(
+                content=render_dev_login_html(error="Invalid test admin credentials", username=clean_user),
+                status_code=status.HTTP_401_UNAUTHORIZED
+            )
         return PlainTextResponse("Invalid test admin credentials", status_code=status.HTTP_401_UNAUTHORIZED)
 
     # Success: reset rate limiting for this client

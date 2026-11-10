@@ -31,7 +31,7 @@ from backend.core.planner.tools import (
 
 MAX_STEPS = 8
 MAX_ASK_USER = 2
-DEFAULT_BUDGET = 25000
+DEFAULT_BUDGET = 100000.0
 RECIPIENT_CAP = 500
 
 # Patterns that indicate destructive intent — blocked before the LLM even runs.

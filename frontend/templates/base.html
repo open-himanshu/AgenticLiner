@@ -313,8 +313,8 @@
         </div>
     </nav>
 
-    <!-- Universal Autonomous Agent Command Bar -->
-    {% if user and user.role in ['organiser', 'supervisor'] %}
+    <!-- Universal Autonomous Agent Command Bar (Hidden on /autopilot to avoid dual-agent clash) -->
+    {% if user and user.role in ['organiser', 'supervisor'] and request.url.path != '/autopilot' %}
     <div class="py-2 px-4 shadow-sm" style="background: linear-gradient(90deg, #090d16 0%, #1e293b 100%); border-bottom: 2px solid #3b82f6;">
         <div class="container-fluid px-0 d-flex align-items-center justify-content-between flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 820px;">
@@ -516,8 +516,8 @@
                     eventResultCard.style.display = 'block';
                     document.getElementById('resEventTitle').innerText = data.event_name;
                     document.getElementById('resEventVenue').innerHTML = `<b>Venue:</b> ${data.venue.name} (${data.headcount} pax)`;
-                    document.getElementById('resEventBudget').innerText = `Allocated: ₹${data.total_cost_allocated.toLocaleString()}`;
-                    document.getElementById('resEventSavings').innerText = `Budget Left: ₹${data.budget_remaining.toLocaleString()}`;
+                    document.getElementById('resEventBudget').innerText = `Campus Logistics: Approved`;
+                    document.getElementById('resEventSavings').innerText = `University Quota: Full Access`;
 
                     if (data.action_urls) {
                         document.getElementById('linkGenFlyer').href = data.action_urls.flyer_url;

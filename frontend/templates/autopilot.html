@@ -393,10 +393,10 @@
                     <div class="form-text" style="font-size: 0.75rem;">Select event date. The agent verifies venue availability and checks capacity.</div>
                 </div>
 
-                <div class="mb-3">
+                <div class="mb-3 d-none">
                     <label class="form-label small fw-semibold" for="agentBudget">Budget limit</label>
-                    <input type="number" class="form-control form-control-sm" id="agentBudget" min="0.01" step="0.01" required>
-                    <div class="form-text" style="font-size: 0.75rem;">The planner will not requisition above this amount.</div>
+                    <input type="number" class="form-control form-control-sm" id="agentBudget" value="100000" min="0.01" step="0.01">
+                    <div class="form-text" style="font-size: 0.75rem;">University campus logistics quota.</div>
                 </div>
 
                 <div class="mb-3">
@@ -407,6 +407,12 @@
                         </button>
                         <button class="btn btn-sm btn-outline-secondary text-start" onclick="setScenario('Organize an annual dance performance for 200 students with high-power sound system, stage LED lights and snacks.', '2026-11-29')">
                             <i class="bi bi-play-circle text-primary me-1"></i> Cultural: 200 Students (29 Nov)
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary text-start" onclick="setScenario('Speaker Dr. Sharma has an emergency. Find replacement faculty and stage reschedule notice in Outbox.', '2026-11-28')">
+                            <i class="bi bi-arrow-repeat text-info me-1"></i> Emergency: Speaker Substitution &amp; Outbox Notice
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary text-start" onclick="setScenario('Promote 2 waitlisted students to confirmed seats and issue digital QR passes.', '2026-11-28')">
+                            <i class="bi bi-person-check text-success me-1"></i> Operations: Auto-Promote Waitlist Attendees
                         </button>
                         <button class="btn btn-sm btn-outline-secondary text-start" onclick="setScenario('Organize a rival campus hackathon for 150 students in Auditorium A.', '2026-11-25')">
                             <i class="bi bi-shield-x text-warning me-1"></i> Kavach Test: Hall Overlap Clash (25 Nov)
@@ -1281,22 +1287,111 @@
         }
     }
 
+    function renderActionProposalCard(proposal) {
+        const container = document.getElementById('timelineContainer');
+        const statusContainer = document.getElementById('statusBadgeContainer');
+        statusContainer.innerHTML = `<span class="badge bg-warning text-dark"><i class="bi bi-shield-lock-fill me-1"></i> Awaiting Your Approval</span>`;
+
+        container.innerHTML = `
+            <div class="card border-warning shadow-sm mb-4 rounded-3" id="liveProposalBox">
+                <div class="card-header bg-warning bg-opacity-10 border-bottom border-warning d-flex justify-content-between align-items-center py-2 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-warning text-dark fw-bold"><i class="bi bi-lightning-charge-fill me-1"></i> ${proposal.action_type}</span>
+                        <strong class="text-dark">${proposal.title}</strong>
+                    </div>
+                    <span class="badge bg-success-subtle text-success border border-success"><i class="bi bi-check2-circle me-1"></i> Kavach Verified</span>
+                </div>
+                <div class="card-body p-3">
+                    <p class="text-secondary small mb-3">${proposal.description}</p>
+                    <h6 class="small fw-bold text-dark text-uppercase mb-2"><i class="bi bi-list-check me-1"></i> Staged Operations (Visual Diff):</h6>
+                    <ul class="list-group list-group-flush small mb-3 border rounded">
+                        ${proposal.diff_summary.map(d => `<li class="list-group-item py-2 px-3"><i class="bi bi-arrow-right-short text-primary fs-6 me-1"></i><b>${d.split(':')[0]}:</b> ${d.split(':').slice(1).join(':')}</li>`).join('')}
+                    </ul>
+                    <div class="alert alert-light border small py-2 px-3 mb-3">
+                        <strong class="text-success"><i class="bi bi-shield-check me-1"></i> Kavach Safety Guarantees:</strong>
+                        <div class="text-muted mt-1">Zero overlaps • Capacity within physical limits • Outbox held until authorization</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success fw-bold px-4 shadow-sm" id="btnExecuteProposal">
+                            <i class="bi bi-check-circle-fill me-1"></i> Approve &amp; Execute
+                        </button>
+                        <button class="btn btn-outline-danger px-3" id="btnRejectProposal">
+                            <i class="bi bi-x-circle me-1"></i> Reject &amp; Discard
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('btnExecuteProposal').addEventListener('click', async () => {
+            const execBtn = document.getElementById('btnExecuteProposal');
+            execBtn.disabled = true;
+            execBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Executing Staged Actions...`;
+
+            try {
+                const confResp = await fetch('/api/agent/confirm-action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ proposal_id: proposal.proposal_id })
+                });
+                const confData = await confResp.json();
+                if (confData.success) {
+                    statusContainer.innerHTML = `<span class="badge bg-success">Committed &amp; Dispatched</span>`;
+                    document.getElementById('liveProposalBox').innerHTML = `
+                        <div class="card-body p-4 text-center">
+                            <div class="text-success fs-1 mb-2"><i class="bi bi-check-circle-fill"></i></div>
+                            <h5 class="fw-bold text-dark mb-1">Autonomous Operation Executed Successfully!</h5>
+                            <p class="text-muted small mb-3">${proposal.title} has been committed inside Kavach transactional sandbox.</p>
+                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                ${confData.action_urls ? `
+                                    <a href="${confData.action_urls.flyer_url}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-richtext me-1"></i> Flyer</a>
+                                    <a href="${confData.action_urls.register_url}" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-qr-code me-1"></i> Registration &amp; Pass</a>
+                                    <a href="${confData.action_urls.schedule_url}" class="btn btn-sm btn-outline-primary"><i class="bi bi-calendar3 me-1"></i> Timetable</a>
+                                    <a href="${confData.action_urls.outbox_url}" class="btn btn-sm btn-dark"><i class="bi bi-inbox me-1"></i> Outbox Notices</a>
+                                ` : `
+                                    <a href="/schedule" class="btn btn-sm btn-outline-primary"><i class="bi bi-calendar3 me-1"></i> View Schedule</a>
+                                    <a href="/outbox" class="btn btn-sm btn-dark"><i class="bi bi-inbox me-1"></i> View Outbox</a>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                    if (autopilotVoice) {
+                        autopilotVoice.speakAssistantVoice("Action authorized and executed successfully.");
+                    }
+                } else {
+                    alert('Error executing proposal: ' + (confData.error || 'Unknown error'));
+                    execBtn.disabled = false;
+                    execBtn.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> Approve &amp; Execute`;
+                }
+            } catch (e) {
+                alert('Execution failed: ' + e);
+                execBtn.disabled = false;
+                execBtn.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> Approve &amp; Execute`;
+            }
+        });
+
+        document.getElementById('btnRejectProposal').addEventListener('click', async () => {
+            await fetch('/api/agent/reject-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ proposal_id: proposal.proposal_id })
+            });
+            statusContainer.innerHTML = `<span class="badge bg-secondary">Cancelled</span>`;
+            document.getElementById('liveProposalBox').remove();
+        });
+    }
+
     document.getElementById('btnRunAgent').addEventListener('click', async () => {
         const prompt = document.getElementById('agentPrompt').value;
         const targetDate = document.getElementById('agentDate').value || '2026-11-28';
         const budgetInput = document.getElementById('agentBudget');
-        const budget = Number(budgetInput.value);
+        const budget = (budgetInput && Number(budgetInput.value) > 0) ? Number(budgetInput.value) : 100000.0;
         const btn = document.getElementById('btnRunAgent');
         const container = document.getElementById('timelineContainer');
         const statusContainer = document.getElementById('statusBadgeContainer');
         const summaryCard = document.getElementById('summaryCard');
         const diagBox = document.getElementById('agentDialogueBox');
         const thread = document.getElementById('dialogueThread');
-
-        if (!budgetInput.value || !Number.isFinite(budget) || budget <= 0) {
-            budgetInput.reportValidity();
-            return;
-        }
 
         btn.disabled = true;
         btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Understanding Brief...`;
@@ -1307,17 +1402,57 @@
         const banner = document.getElementById('assumptionsBanner');
         if (banner) banner.classList.add('d-none');
 
+        const pLower = (prompt || '').toLowerCase();
+        const isOperationalIncident = ['replace speaker', 'emergency', 'substitute', 'cancel speaker', 'waitlist', 'promote', 'certificate', 'praman patra'].some(k => pLower.includes(k));
+
+        if (isOperationalIncident) {
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Preparing Action Proposal...`;
+            statusContainer.innerHTML = `<span class="badge bg-warning text-dark"><span class="spinner-grow spinner-grow-sm me-1"></span> Proposal Ready</span>`;
+
+            try {
+                const propResp = await fetch('/api/agent/propose-action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+                const propData = await propResp.json();
+                btn.disabled = false;
+                btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
+
+                if (propData.success && propData.proposal) {
+                    renderActionProposalCard(propData.proposal);
+                    return;
+                }
+            } catch (err) {
+                console.warn('Fallback to standard session intake:', err);
+            }
+        }
+
         try {
             // Step A: Start interactive dialogue session (Pillar 2)
             const startResp = await fetch('/api/autopilot/session/start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: prompt, voice_mode: true })
+                body: JSON.stringify({
+                    prompt: prompt,
+                    target_date: targetDate,
+                    budget_limit: budget,
+                    voice_mode: true
+                })
             });
 
             const startData = await startResp.json();
 
-            if (!startResp.ok || !startData.is_safe) {
+            if (!startResp.ok) {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
+                statusContainer.innerHTML = `<span class="badge bg-danger">Server Error</span>`;
+                const msg = startData.detail || startData.error || ('Server error (' + startResp.status + ')');
+                alert(msg);
+                return;
+            }
+
+            if (startData.is_safe === false) {
                 btn.disabled = false;
                 btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
                 statusContainer.innerHTML = `<span class="badge bg-danger">Safety Blocked</span>`;

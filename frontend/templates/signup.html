@@ -243,7 +243,7 @@
                 {% if demo_login_enabled %}
                 <!-- Account List -->
                 <div class="list-group list-group-flush mb-3">
-                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="signupWithGoogleAccount('casey@example.invalid', 'Casey Example')">
+                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="signupWithGoogleAccount('casey@example.invalid', 'Casey Example', 'organiser')">
                         <div class="google-avatar bg-primary">C</div>
                         <div class="flex-grow-1 overflow-hidden">
                             <div class="fw-semibold text-truncate">Casey Example</div>
@@ -252,7 +252,7 @@
                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">Organiser</span>
                     </div>
 
-                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="signupWithGoogleAccount('dean.office@galgotias.edu', 'University Dean (Admin)')">
+                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="signupWithGoogleAccount('dean.office@galgotias.edu', 'University Dean (Admin)', 'supervisor')">
                         <div class="google-avatar bg-danger">D</div>
                         <div class="flex-grow-1 overflow-hidden">
                             <div class="fw-semibold text-truncate">Dean Office</div>
@@ -261,7 +261,7 @@
                         <span class="badge bg-danger-subtle text-danger border border-danger-subtle small">Supervisor</span>
                     </div>
 
-                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="signupWithGoogleAccount('datamanager@galgotias.edu', 'Logistics Data Manager')">
+                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="signupWithGoogleAccount('datamanager@galgotias.edu', 'Logistics Data Manager', 'data_manager')">
                         <div class="google-avatar bg-warning text-dark">M</div>
                         <div class="flex-grow-1 overflow-hidden">
                             <div class="fw-semibold text-truncate">Campus Data Manager</div>
@@ -270,7 +270,7 @@
                         <span class="badge bg-warning-subtle text-warning border border-warning-subtle small">Data Manager</span>
                     </div>
 
-                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="signupWithGoogleAccount('student@galgotias.edu', 'Campus Student')">
+                    <div class="google-account-item d-flex align-items-center gap-3 border-bottom py-2" onclick="signupWithGoogleAccount('student@galgotias.edu', 'Campus Student', 'participant')">
                         <div class="google-avatar bg-success">G</div>
                         <div class="flex-grow-1 overflow-hidden">
                             <div class="fw-semibold text-truncate">Campus Student</div>
@@ -375,9 +375,11 @@ function openGoogleSignupModal() {
     modal.show();
 }
 
-async function signupWithGoogleAccount(email, name) {
-    const role = document.getElementById('role').value;
-    const department = document.getElementById('department').value;
+async function signupWithGoogleAccount(email, name, defaultRole) {
+    const roleEl = document.getElementById('role');
+    const role = defaultRole || (roleEl ? roleEl.value : 'participant');
+    const deptEl = document.getElementById('department');
+    const department = deptEl ? deptEl.value : 'School of AI';
     const notice = document.getElementById('googleSignupLoadingNotice');
     if (notice) notice.classList.remove('d-none');
 

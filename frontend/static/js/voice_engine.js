@@ -40,7 +40,7 @@ class WebSpeechVoiceEngine {
 
         try {
             this.recognition = new SpeechRecognition();
-            this.recognition.continuous = false;
+            this.recognition.continuous = true;
             this.recognition.interimResults = true;
             this.recognition.lang = this.lang;
             this.recognition.maxAlternatives = 1;
@@ -58,12 +58,20 @@ class WebSpeechVoiceEngine {
     bindEvents() {
         const micBtn = document.querySelector(this.btnSelector);
         if (micBtn) {
-            micBtn.addEventListener('click', () => this.toggleSpeechRecognition());
+            micBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleSpeechRecognition();
+            });
         }
 
         const ttsToggle = document.querySelector(this.ttsToggleSelector);
         if (ttsToggle) {
-            ttsToggle.addEventListener('click', () => this.toggleTTS());
+            ttsToggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleTTS();
+            });
         }
 
         if (!this.recognition) return;
@@ -92,8 +100,17 @@ class WebSpeechVoiceEngine {
 
     startSpeechRecognition() {
         try {
+            if (window.speechSynthesis && window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+            if (window._activeVoiceEngine && window._activeVoiceEngine !== this) {
+                window._activeVoiceEngine.stopSpeechRecognition();
+            }
+            window._activeVoiceEngine = this;
+
             const inputEl = document.querySelector(this.inputSelector);
             this.baseTextBeforeSpeech = inputEl ? inputEl.value.trim() : '';
+            this.shouldStayListening = true;
             this.recognition.start();
         } catch (err) {
             console.warn('[VoiceEngine] Start error or already started:', err);
@@ -101,11 +118,19 @@ class WebSpeechVoiceEngine {
     }
 
     stopSpeechRecognition() {
+        this.shouldStayListening = false;
+        this.isListening = false;
         try {
+            if (window._activeVoiceEngine === this) {
+                window._activeVoiceEngine = null;
+            }
             this.recognition.stop();
         } catch (err) {
             console.warn('[VoiceEngine] Stop error:', err);
         }
+        this.setButtonState('idle');
+        this.showBanner(false);
+        this.updateBadge('Ready', 'bg-light text-secondary border');
     }
 
     /**
@@ -119,6 +144,7 @@ class WebSpeechVoiceEngine {
         }
 
         this.isListening = true;
+        this.shouldStayListening = true;
         this.setButtonState('listening');
         if (window.voiceOrb) window.voiceOrb.setState('listening');
         this.showBanner(true, 'Listening... Bolna shuru karein (Aap English ya Hindi me bol sakte hain)...');
@@ -161,7 +187,17 @@ class WebSpeechVoiceEngine {
      * Handler when microphone recording ends
      */
     onSpeechEnd() {
+        if (this.shouldStayListening && this.isListening) {
+            try {
+                this.recognition.start();
+                return;
+            } catch (err) {
+                console.log('[VoiceEngine] Keepalive restart notice:', err);
+            }
+        }
+
         this.isListening = false;
+        this.shouldStayListening = false;
         this.setButtonState('idle');
         if (window.voiceOrb && window.voiceOrb.state !== 'speaking' && window.voiceOrb.state !== 'confirmed') {
             window.voiceOrb.setState('idle');
@@ -181,21 +217,37 @@ class WebSpeechVoiceEngine {
      */
     onSpeechError(event) {
         console.warn('[VoiceEngine] Error occurred:', event.error);
+
+        if (event.error === 'no-speech') {
+            // User briefly paused; keep mic active
+            return;
+        }
+
         this.isListening = false;
+        this.shouldStayListening = false;
 
         if (event.error === 'not-allowed') {
             this.setButtonState('denied');
             this.updateBadge('Permission Denied', 'bg-warning text-dark border');
             this.showBanner(true, 'Microphone permission blocked. Please allow mic in your browser address bar.');
             setTimeout(() => this.showBanner(false), 6000);
-        } else if (event.error === 'no-speech') {
+        } else if (event.error === 'network') {
             this.setButtonState('idle');
-            this.showBanner(false);
-            this.updateBadge('Idle', 'bg-light text-secondary border');
+            this.updateBadge('Network Error', 'bg-danger text-white border');
+            this.showBanner(true, 'Speech recognition network service unavailable. You can type directly into the box.');
+            setTimeout(() => {
+                this.showBanner(false);
+                this.updateBadge('Ready', 'bg-light text-secondary border');
+            }, 6000);
+        } else if (event.error === 'audio-capture') {
+            this.setButtonState('denied');
+            this.updateBadge('No Mic Detected', 'bg-warning text-dark border');
+            this.showBanner(true, 'No microphone found on system. Please connect a microphone or type your brief.');
+            setTimeout(() => this.showBanner(false), 5000);
         } else {
             this.setButtonState('idle');
             this.showBanner(false);
-            this.updateBadge('Idle', 'bg-light text-secondary border');
+            this.updateBadge('Ready', 'bg-light text-secondary border');
         }
     }
 

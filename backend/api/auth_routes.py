@@ -34,6 +34,7 @@ from backend.services.auth_service import (
 import urllib.parse
 from backend.services.email_service import send_email_otp, is_smtp_configured
 from backend.api.dependencies import get_session_user
+from backend.core.database.connection import execute_query
 
 logger = logging.getLogger(__name__)
 
@@ -503,6 +504,7 @@ async def google_auth_callback(request: Request):
 
     credential = data.get("credential") or data.get("id_token")
     is_demo = data.get("demo_google") is True
+    demo_role = None
 
     if is_demo:
         if not is_demo_login_enabled(request):
@@ -513,6 +515,9 @@ async def google_auth_callback(request: Request):
         google_email = data.get("email")
         google_name = data.get("name")
         department = data.get("department", "School of AI")
+        candidate_role = data.get("role")
+        if candidate_role in {"organiser", "supervisor", "data_manager", "participant"}:
+            demo_role = candidate_role
     else:
         if not isinstance(credential, str) or not credential.strip():
             raise HTTPException(status_code=401, detail="A Firebase ID token is required.")
@@ -548,8 +553,16 @@ async def google_auth_callback(request: Request):
         department=department
     )
 
+    if is_demo and demo_role:
+        if user.get("role") != demo_role:
+            execute_query(
+                "UPDATE users SET role = ? WHERE email = ?",
+                (demo_role, google_email.strip().lower())
+            )
+            user["role"] = demo_role
+
     # Establish session cookie
-    request.session["user"] = user
+    set_user_session(request, user)
     target_url = ROLE_DASHBOARDS.get(user["role"], "/")
 
     return JSONResponse(content={

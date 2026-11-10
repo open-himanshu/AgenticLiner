@@ -492,5 +492,29 @@ def execute_universal_command(command: str, user_role: str = "organiser") -> Dic
             "data": cert
         }
 
+    # 5. Speaker Emergency Replacement command
+    if any(w in c_lower for w in ['replace speaker', 'substitute', 'cancel speaker', 'speaker change', 'bimar']):
+        from backend.services.agent_proposal_service import propose_action, execute_action_proposal
+        prop = propose_action(command, user={'role': user_role})
+        res = execute_action_proposal(prop['proposal_id'], actor=user_role)
+        return {
+            'success': True,
+            'action': 'SPEAKER_SUBSTITUTED',
+            'message': f"Emergency Handled: Replaced unavailable speaker with {prop['staged_payload']['new_speaker_name']} for session '{prop['staged_payload']['session_title']}'. Reschedule announcement staged in Outbox.",
+            'data': res
+        }
+
+    # 6. Waitlist Promotion command
+    if any(w in c_lower for w in ['waitlist', 'promote']):
+        from backend.services.agent_proposal_service import propose_action, execute_action_proposal
+        prop = propose_action(command, user={'role': user_role})
+        res = execute_action_proposal(prop['proposal_id'], actor=user_role)
+        return {
+            'success': True,
+            'action': 'WAITLIST_PROMOTED',
+            'message': f"Waitlist Promotion: Successfully confirmed {res.get('promoted_count', 1)} attendee(s) and staged digital QR gate passes in Outbox.",
+            'data': res
+        }
+
     # Default fallback: Treat as full event auto-genesis
     return execute_autonomous_event_genesis(command)

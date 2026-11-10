@@ -70,6 +70,25 @@ def test_dev_login_correct_password_sets_cookie():
     assert cookie_val and len(cookie_val) > 10
 
 
+def test_dev_login_admin_email_also_accepted():
+    """Admin email 'admin@galgotias.edu' is also accepted as username for convenience."""
+    app = _load_app()
+    client = TestClient(app, client=("127.0.0.1", 50000))
+    res = client.post("/dev/login", data={"username": "admin@galgotias.edu", "password": "admin"}, follow_redirects=False)
+    assert res.status_code in (200, 302, 303)
+    assert "test_console" in client.cookies
+
+
+def test_dev_login_html_error_rendering():
+    """Wrong credentials from browser renders login page with 401 status and error alert."""
+    app = _load_app()
+    client = TestClient(app, client=("127.0.0.1", 50000))
+    res = client.post("/dev/login", data={"username": "admin", "password": "wrongpassword"}, headers={"accept": "text/html"})
+    assert res.status_code == 401
+    assert "Invalid test admin credentials" in res.text
+    assert "form" in res.text.lower()
+
+
 def test_dev_placeholder_without_cookie_redirects_to_login():
     """GET /dev without test_console cookie redirects to /dev/login."""
     app = _load_app()

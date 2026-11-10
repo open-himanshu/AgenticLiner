@@ -94,7 +94,9 @@ def get_or_create_session(
     prompt: str,
     user_id: str = "organiser",
     user_context: Optional[Dict[str, Any]] = None,
-    session_id: Optional[str] = None
+    session_id: Optional[str] = None,
+    target_date: Optional[str] = None,
+    budget_limit: Optional[float] = None
 ) -> Tuple[AutopilotDialogueSession, bool]:
     """
     Initializes a new dialogue session or retrieves an existing active session.
@@ -103,10 +105,28 @@ def get_or_create_session(
     with _session_lock:
         _cleanup_expired_sessions()
         if session_id and session_id in _active_sessions:
-            return _active_sessions[session_id], False
+            existing = _active_sessions[session_id]
+            if target_date and not existing.accumulated_entities.target_date:
+                existing.accumulated_entities.target_date = target_date
+                if "target_date" in existing.accumulated_entities.missing_critical_fields:
+                    existing.accumulated_entities.missing_critical_fields.remove("target_date")
+            if budget_limit is not None and existing.accumulated_entities.budget_limit is None:
+                existing.accumulated_entities.budget_limit = budget_limit
+            return existing, False
 
         # Extract initial entities
         initial_entities = extract_event_entities_llm(prompt=prompt, user_context=user_context)
+
+        # Apply explicitly passed target_date and budget_limit from UI fields
+        if target_date:
+            initial_entities.target_date = target_date
+            initial_entities.date_original_phrase = target_date
+            if "target_date" in initial_entities.missing_critical_fields:
+                initial_entities.missing_critical_fields.remove("target_date")
+        if budget_limit is not None and budget_limit > 0:
+            initial_entities.budget_limit = budget_limit
+
+        initial_entities.is_ready_for_planning = len(initial_entities.missing_critical_fields) == 0
 
         # Pillar 3: Extract explicit facts and enrich with organiser persistent memory
         extract_explicit_memory_facts(user_id=user_id, prompt=prompt)

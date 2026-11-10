@@ -95,6 +95,14 @@ from backend.services.agentic_genesis_service import (
     execute_autonomous_event_genesis,
     execute_universal_command
 )
+from backend.services.agent_proposal_service import (
+    propose_action,
+    execute_action_proposal,
+    reject_action_proposal,
+    rollback_action_proposal,
+    get_pending_proposals,
+    init_proposals_table
+)
 from backend.api.dependencies import require_role, get_session_user
 from backend.core.safety.kavach import KavachEngine
 
@@ -189,6 +197,8 @@ class DialogueStartRequest(BaseModel):
     prompt: str
     session_id: Optional[str] = None
     voice_mode: bool = False
+    target_date: Optional[str] = None
+    budget_limit: Optional[float] = None
 
 class DialogueReplyRequest(BaseModel):
     session_id: str
@@ -220,7 +230,7 @@ class AutopilotRequest(BaseModel):
     date: str = "2026-11-25"
     start_time: str = "09:00:00"
     end_time: str = "17:00:00"
-    budget: float = Field(gt=0)
+    budget: Optional[float] = Field(default=100000.0, gt=0)
 
 class StudentRegistrationRequest(BaseModel):
     event_id: str = "ev_001"
@@ -264,6 +274,15 @@ class AgentGenesisRequest(BaseModel):
 
 class UniversalCommandRequest(BaseModel):
     command: str
+
+class ProposeActionRequest(BaseModel):
+    prompt: str
+
+class ConfirmActionRequest(BaseModel):
+    proposal_id: str
+
+class RejectActionRequest(BaseModel):
+    proposal_id: str
 
 # --- HTML Page Routes with Strict RBAC (Server-rendered Jinja2 UI) ---
 
@@ -386,7 +405,7 @@ async def organiser_dashboard(
 @app.get("/organiser/planner", response_class=HTMLResponse)
 async def organiser_planner(
     request: Request,
-    user: Dict[str, Any] = Depends(require_role(["organiser"]))
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor", "data_manager"]))
 ):
     """Organiser Event Planning Copilot & Logistics Inventory Cart"""
     catalog = fetch_all("SELECT * FROM resources")
@@ -404,6 +423,26 @@ async def organiser_planner(
             "tasks": tasks
         }
     )
+
+@app.post("/api/admin/reseed-campus-data")
+async def reseed_campus_data_endpoint(
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["supervisor", "data_manager", "organiser"]))
+):
+    """Restores full standard campus datasets (venues, inventory, speakers, historical records)."""
+    from backend.core.database.init_db import seed_campus_data
+    seed_campus_data(force_reseed=True)
+    counts = {
+        "rooms": (fetch_one("SELECT count(*) as c FROM rooms") or {}).get("c", 0),
+        "resources": (fetch_one("SELECT count(*) as c FROM resources") or {}).get("c", 0),
+        "speakers": (fetch_one("SELECT count(*) as c FROM speakers") or {}).get("c", 0),
+        "historical_events": (fetch_one("SELECT count(*) as c FROM historical_events") or {}).get("c", 0),
+    }
+    return JSONResponse({
+        "status": "ok",
+        "message": "Campus datasets successfully restored and verified.",
+        "counts": counts
+    })
 
 @app.get("/data-manager", response_class=HTMLResponse)
 async def data_manager_dashboard(
@@ -762,6 +801,44 @@ async def api_universal_command(
     res = execute_universal_command(command=req.command)
     return JSONResponse(content=res)
 
+@app.post("/api/agent/propose-action")
+async def api_agent_propose_action(
+    req: ProposeActionRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor", "data_manager"]))
+):
+    """Proposes an autonomous action with Kavach invariants and visual diffs without committing state."""
+    proposal = propose_action(prompt=req.prompt, user=user)
+    return JSONResponse(content={"success": True, "proposal": proposal})
+
+@app.post("/api/agent/confirm-action")
+async def api_agent_confirm_action(
+    req: ConfirmActionRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor", "data_manager"]))
+):
+    """Executes a previously approved ActionProposal inside a transaction."""
+    try:
+        res = execute_action_proposal(proposal_id=req.proposal_id, actor=user.get("role", "organiser"))
+        return JSONResponse(content=res)
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"success": False, "error": str(e)})
+
+@app.post("/api/agent/reject-action")
+async def api_agent_reject_action(
+    req: RejectActionRequest,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor", "data_manager"]))
+):
+    """Rejects a staged proposal."""
+    res = reject_action_proposal(proposal_id=req.proposal_id, actor=user.get("role", "organiser"))
+    return JSONResponse(content=res)
+
+@app.get("/api/agent/pending-proposals")
+async def api_agent_pending_proposals(
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor", "data_manager"]))
+):
+    """Returns list of pending action proposals awaiting user review."""
+    props = get_pending_proposals(user_id=user.get("id"))
+    return JSONResponse(content={"success": True, "proposals": props})
+
 @app.post("/api/autopilot/parse-intent")
 async def parse_autopilot_intent(
     req: ParseIntentRequest,
@@ -835,12 +912,15 @@ async def start_dialogue_session(
         prompt=req.prompt,
         user_id=user.get("email", "organiser"),
         user_context=user_context,
-        session_id=req.session_id
+        session_id=req.session_id,
+        target_date=req.target_date,
+        budget_limit=req.budget_limit,
     )
 
     return JSONResponse(
         content={
             "success": True,
+            "is_safe": True,
             "session_id": session.session_id,
             "status": session.status,
             "turn_count": session.turn_count,

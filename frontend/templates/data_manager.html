@@ -18,6 +18,9 @@
                     </p>
                 </div>
                 <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-success fw-semibold" onclick="reseedCampusData()">
+                        <i class="bi bi-arrow-repeat me-1"></i> Restore Campus Datasets
+                    </button>
                     <a href="/organiser/planner" class="btn btn-outline-primary fw-semibold">
                         <i class="bi bi-cart3 me-1"></i> View in Event Planner
                     </a>
@@ -621,5 +624,26 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 });
+
+async function reseedCampusData() {
+    if (!confirm('Restore full standard campus datasets (venues, equipment, speakers, and historical events)?')) {
+        return;
+    }
+    try {
+        const res = await fetch('/api/admin/reseed-campus-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'ok') {
+            alert('Campus datasets restored successfully!\\nVenues: ' + data.counts.rooms + '\\nEquipment: ' + data.counts.resources + '\\nMentors: ' + data.counts.speakers + '\\nPast Events: ' + data.counts.historical_events);
+            window.location.reload();
+        } else {
+            alert('Failed to restore datasets: ' + (data.detail || 'Unknown error'));
+        }
+    } catch (err) {
+        alert('Network error restoring campus datasets: ' + err);
+    }
+}
 </script>
 {% endblock %}
