@@ -23,7 +23,7 @@ All planner actions accept a numeric `budget`; each requisition includes a non-n
 ### 2.1 Autopilot Agent Execution
 - **Endpoint:** `POST /api/autopilot/run`
 - **RBAC Role:** `organiser`, `supervisor`
-- **Description:** Runs autonomous event planning through multi-turn tool calling with live timeline tracing and fallback guarantees.
+- **Description:** Runs autonomous event planning through multi-turn tool calling with live timeline tracing and deterministic fallback.
 - **Request Body:**
   ```json
   {
