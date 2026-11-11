@@ -104,12 +104,12 @@ The Autopilot engine operates in two coordinated modes with automatic fallback:
      - `ask_user`: Clarifies missing facts (strictly capped at 2 questions).
      - `requisition`: Executes atomic room and resource allocation through Kavach.
    * **In-Code Hard Limits:** Max 8 conversation steps, hard budget caps, recipient limits, and instant blocking of destructive instructions (`cancel all`, `purge`, `delete all`).
-   * **Multi-Provider Switcher (`call_llm.py`):** Select provider via `PROVIDER=gemini|groq|ollama` with dynamic models from `GEMINI_MODEL`, `GROQ_MODEL`, or `OLLAMA_MODEL`. Features automatic exponential backoff on HTTP 429/503.
+   * **Multi-Provider Switcher (`call_llm.py`):** Leave `PROVIDER` unset/empty for offline mode (default), or set `PROVIDER=gemini|groq|ollama` with models from `GEMINI_MODEL`, `GROQ_MODEL`, or `OLLAMA_MODEL`. Unreplaced template placeholders (e.g., `your_gemini_api_key_here`) are treated as unset keys before making outbound requests. Features automatic exponential backoff on HTTP 429/503.
 
-2. **Fixed Pipeline Fallback (`agent.py`):**
-   * If the configured LLM provider is unavailable or rate-limited, the system seamlessly falls back to the deterministic pipeline (`mode: fixed_fallback`), providing deterministic offline execution during evaluations if the external LLM provider is unavailable or rate-limited.
+2. **Offline Deterministic Pipeline (`agent.py`, `AutopilotAgent`):**
+   * When `PROVIDER` is unset or empty (the default offline configuration), the API routes Autopilot requests to `AutopilotAgent` (`mode: fixed`). When an enabled external LLM provider is unavailable or rate-limited, it falls back automatically (`mode: fixed_fallback`). There is no standalone CLI entry point for the fixed pipeline.
 
-3. **Voice & Natural Language Intake (Pillar 1 - Web Speech STT/TTS & Entity Engine):**
+3. **Voice & Natural Language Intake (Pillar 1 - Web Speech STT/TTS & Entity Engine):** *(Browser Web Speech STT/TTS is not verified offline)*
    * **Hands-Free Speech-to-Text (STT):** Organisers can click the interactive 🎙️ mic button or speak in English, Hindi, or Hinglish (e.g., *"Kal shaam ko 4 baje 80 bacho ke liye robotics workshop book kardo"*). Interim speech results stream live into the prompt box.
    * **Relative Datetime & Entity Engine (`natural_intake.py`):** Translates colloquial expressions (*"tomorrow"*, *"this Friday evening"*, *"parso"*, *"18:00:00"*) to exact ISO timestamps and categorizes event types using combined regex patterns and relative datetime heuristic parsing.
    * **Proactive Clarifying Counter-Questions:** Missing critical fields (dates, scale) trigger conversational counter-questions before attempting venue lock.
@@ -117,13 +117,13 @@ The Autopilot engine operates in two coordinated modes with automatic fallback:
 
 4. **Conversational Multi-Turn Dialogue & Loop Circuit Breaker (Pillar 2 - Dialogue Engine):**
    * **Stateful Dialogue Sessions (`dialogue_engine.py`):** Multi-turn clarification loop tracking accumulated entities, questions asked, and dialogue history via `/api/autopilot/session/start` and `/reply`.
-   * **STRICT LOOP CIRCUIT BREAKER (`MAX_ASK_USER = 2`):** Prevents infinite clarifying loops or repetitive agent questioning. If parameters remain ambiguous after 2 turns, the agent automatically terminates questioning, fills sensible Galgotias campus defaults (upcoming Friday 10:00 AM, 100 headcount, standard logistics package), logs assumptions in the activity timeline, and commits directly to venue booking.
+   * **STRICT LOOP CIRCUIT BREAKER (`MAX_ASK_USER = 2`):** Prevents infinite clarifying loops or repetitive agent questioning. If parameters remain ambiguous after 2 turns, the agent stops questioning, fills campus defaults (`assumptions_made`), transitions the session to `ready_to_plan`, and opens the Pre-Commit Confirmation Card (`#preCommitConfirmationCard` via `POST /api/autopilot/draft`) for user approval before `POST /api/autopilot/confirm`.
    * **Interactive Dialogue Card & Quick-Reply Chips (`autopilot.html`):** Renders interactive chat bubbles with turn badges (*"Turn 1 of 2"*), 1-click quick-reply chips (*"This Friday 10 AM"*, *"Tomorrow 5 PM"*, *"100 Students"*), inline microphone for spoken replies, and a 1-click campus defaults skip button.
 
 5. **Organiser Memory & Persistent Preference Store (Pillar 3 - Memory Engine):**
    * **Persistent Habit Retention (`memory_store.py` & `memory_engine.py`):** Retains preferred venues, standard logistics packages, preferred days/time slots, and rolling turnout metrics in SQLite `agent_memories`.
    * **Intake & Dialogue Enrichment:** Incomplete or ambiguous prompts automatically recall the organiser's typical batch size and favourite gear, eliminating redundant counter-questions and personalizing quick-reply suggestion chips.
-   * **Privacy & User Control:** Strict per-organiser isolation with `GET /api/autopilot/memory` and `POST /reset` endpoints, alongside an interactive memory badge and inspection modal on `autopilot.html`.
+   * **Privacy & User Control:** Strict per-organiser isolation with `GET /api/autopilot/memory`, `POST /api/autopilot/memory/note`, and `POST /api/autopilot/memory/reset` endpoints, alongside an interactive memory badge and inspection modal on `autopilot.html`.
 
 6. **Netflix / Flipkart-Style Historical Recommendation Engine (Pillar 4 - Recommendation Engine):**
    * **Netflix Past Blueprint Matching (`recommendation_engine.py`):** Mines `historical_events` for past successful campus events matching format and scale, computing multidimensional vector distance, match percentage badges (80%–98%), and student satisfaction ratings (4.5★–4.9★).
@@ -132,25 +132,25 @@ The Autopilot engine operates in two coordinated modes with automatic fallback:
    * **Conversational Dialogue & Natural Speech Integration:** Proactively surfaces bundles during clarification questions and detects natural language or voice requests (*"Please add the hackathon power bundle"*), merging resources into the brief.
    * **Interactive Autopilot UI (`autopilot.html`):** Renders `#recommendationSection` with Netflix blueprint match banners, match % badges, 1-click bundle cards (`[ + Add Bundle to Event ]`), and individual accessory carousels.
 
-7. **Pre-Commit Interactive Confirmation Card & OpenAI ChatGPT Voice Review (Pillar 5):**
+7. **Pre-Commit Interactive Confirmation Card & Voice Review (Pillar 5):** *(Browser voice synthesis and barge-in are not verified offline)*
    * **Semantic Full-Duplex Barge-In (`voice_engine.js`):** When the user speaks, active agent speech synthesis immediately aborts (`speechSynthesis.cancel()`), allowing natural, unhindered conversational interruptions.
    * **Fast-Path Micro-Intent Recognition (`fast_intent.py`):** Sub-10ms deterministic regex & phonetic classifier recognizing English, Hindi, and Hinglish affirmations (*"haan"*, *"ha"*, *"kar do"*, *"lock karo"*, *"yes"*, *"confirm"*), cancellations, and parameter deltas without high-latency LLM roundtrips.
    * **Speculative Background Draft Engine (`confirmation_engine.py`):** Pre-computes venue availability, equipment costs, and Dean approvals in memory before commit (0 database mutations until explicit confirmation).
    * **ChatGPT-Style Interactive Voice Orb & Card UI (`autopilot.html`):** Renders fluid animated neon sphere with 5 reactive physical states (`idle`, `listening`, `thinking`, `speaking`, `confirmed`) alongside itemized logistics tables and Dean sign-off warnings.
 
-8. **Autonomous Multi-Stakeholder Notification & Real SMTP Broadcast (Pillar 6):**
-   * **Tripartite Audience Dispatch (`notification_engine.py`):** Autonomously generates customized contextual notifications for all three campus constituencies upon event commit:
+8. **Autonomous Multi-Stakeholder Notification & Outbox Dispatch (Pillar 6):**
+   * **Tripartite Audience Dispatch (`notification_engine.py`):** Generates customized contextual notifications for all three campus constituencies in the step immediately following a confirmed booking:
      - **University Dean / Supervisor (`admin@galgotias.edu`):** Executive briefing on venue, scale, and budget with approval call-to-action (`[Action Required: Dean Approval]`).
      - **Event Manager / Organiser (`organiser@galgotias.edu`):** Itemized booking receipt, equipment pickup checklist, and direct timetable link (`/schedule`).
      - **Registered Students / Attendees:** Campus event invitation with dynamic Digital QR Gate Pass verification links (`/participant?event_id=...`).
-   * **Transactional Outbox & Audit Trail:** Persists all dispatches into SQLite `outbox` table (`status='sent'`) with permanent audit history in `audit_log` under action `STAKEHOLDER_BROADCAST`.
-   * **Production SMTP Bridge (`email_service.py`):** Supports real email transmission using Google App Passwords / campus mail servers when configured.
-   * **Live UI Outbox Feed (`autopilot.html`):** Renders `#summaryStakeholdersBox` showing real-time dispatch timestamps, recipient emails, and delivery status badges alongside spoken audio confirmation.
+   * **Direct Outbox Recording & Audit Trail:** After booking commit, `notification_engine.py` inserts stakeholder notices directly into SQLite `outbox` with `status='sent'` and logs `STAKEHOLDER_BROADCAST` in `audit_log`. If a requisition rolls back, the notification step is skipped and 0 notice rows are inserted.
+   * **Production SMTP Bridge (`email_service.py`):** Supports email transmission via Google App Passwords / campus SMTP servers when configured *(not verified offline)*.
+   * **Live UI Outbox Feed (`autopilot.html`):** Renders `#summaryStakeholdersBox` showing dispatch timestamps, recipient emails, and delivery status badges alongside spoken audio confirmation.
 
 9. **Kavach Transaction Sandboxing (`kavach.py`):**
-   * Uses SQLite savepoints (`SAVEPOINT sp_...`) to isolate all changes during a planning run.
-   * Enforces 6 campus invariants: No room overlaps, capacity compliance, speaker simultaneity, stock availability, budget compliance, and notification recipient limits.
-   * Staged outbox notices are held until successful commit (`status = 'held' -> 'sent'`). If an invariant fails, state is atomically rolled back to the savepoint and logged in `audit_log`.
+   * Uses SQLite savepoints (`SAVEPOINT sp_...`) to isolate all changes during a planning or confirmation run.
+   * Enforces runtime campus invariants on bookings: valid time windows (`end > start`), no room overlaps, room capacity compliance, equipment stock availability, budget compliance, notification recipient limits, and agent blast-radius caps. *(A `verify_speaker_clash` helper exists in `kavach.py`, but runtime booking routes do not invoke it.)*
+   * Within `tool_requisition_campus_resources`, a confirmation row is inserted with `status='held'` inside the savepoint so any invariant failure rolls back all state (leaving 0 notification rows) and logs the rejection in `audit_log`.
 
 ---
 
@@ -173,63 +173,84 @@ All operational routes enforce server-side session checks via signed cookies. Th
 - Python 3.10, 3.11, 3.12, or 3.13
 - Git
 
-### 2. Environment Setup (Windows PowerShell)
+### 2. Clone & Environment Setup
+
+**Windows (PowerShell):**
 ```powershell
 # 1. Clone repository and navigate to root
-cd c:\PROJECTS\AgenticLiner
+git clone https://github.com/open-himanshu/AgenticLiner.git
+cd AgenticLiner
 
 # 2. Create and activate a clean virtual environment
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
-# 3. Install all required dependencies
-pip install -r requirements.txt
+# 3. Install all required dependencies (python -m pip avoids Windows launcher blocks)
+python -m pip install -r requirements.txt
 
-# 4. Create your local environment configuration
+# 4. Copy the environment template (configured for offline mode by default)
 copy .env.example .env
 ```
 
-### 3. Configure `.env`
-Edit your `.env` file to set your preferred provider credentials and test passwords:
+**macOS / Linux (`bash` / `zsh`):**
+```bash
+# 1. Clone repository and navigate to root
+git clone https://github.com/open-himanshu/AgenticLiner.git
+cd AgenticLiner
+
+# 2. Create and activate a clean virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 3. Install all required dependencies
+python -m pip install -r requirements.txt
+
+# 4. Copy the environment template (configured for offline mode by default)
+cp .env.example .env
+```
+
+### 3. Configure `.env` (Offline Mode Is Default)
+A fresh copy of `.env.example` runs in **offline mode** out of the box (`PROVIDER=` empty and no API keys required): Autopilot uses the deterministic fixed pipeline (`mode: fixed`) and Participant Q&A uses `rules_fallback` with 0 outbound network calls. Only fill in provider credentials if you want to enable live cloud/local LLM calls:
 ```ini
-# Role passwords for initial seeding (set custom secure values or leave unset for random generated tokens)
+# Role passwords for initial seeding (leave empty for random generated tokens or use defaults)
 SUPERVISOR_PASSWORD=your_secure_supervisor_password
 ORGANISER_PASSWORD=your_secure_organiser_password
 DATA_MANAGER_PASSWORD=your_secure_datamgr_password
 PARTICIPANT_PASSWORD=your_secure_student_password
 
-# Provider selection: gemini, groq, or ollama
-PROVIDER=gemini
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-flash
+# Leave PROVIDER empty for offline mode, or set: gemini | groq | ollama
+PROVIDER=
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.1-flash-lite
 
-# Groq (alternative provider)
-GROQ_API_KEY=your_groq_api_key_here
+# Groq (optional alternative cloud provider)
+GROQ_API_KEY=
 GROQ_MODEL=llama-3.3-70b-versatile
 
-# Ollama (local offline provider)
+# Ollama (optional local offline provider)
 OLLAMA_MODEL=qwen3.5:9b
 OLLAMA_HOST=http://localhost:11434
 ```
 
 ### 4. Initialize Database & Seed Accounts
-```powershell
-# Initialize SQLite tables & seed initial campus data (rooms, resources, speakers)
-python -m backend.core.database.init_db
+
+> **Important:** Running `init_db` without `--seed-demo` creates empty tables in a clean zero-state (where Autopilot will stop at `find_free_venues` because no venues exist). Pass `--seed-demo` to load the demo campus venues, equipment, historical events, and speakers.
+
+**Windows (PowerShell) & macOS / Linux (inside activated `.venv`):**
+```bash
+# Initialize SQLite tables & load demo campus venues, resources, and speakers
+python -m backend.core.database.init_db --seed-demo
 
 # Seed role accounts with hashed passwords
 python backend/services/seed_users.py
 ```
 
 ### 5. Start the Web Server
-Easiest command (recommended):
-```powershell
-python run.py
-```
-Or directly via uvicorn:
-```powershell
+**Windows (PowerShell) & macOS / Linux:**
+```bash
 python -m uvicorn backend.api.main:app --host 127.0.0.1 --port 8000 --reload
 ```
+*(Or run `python run.py`, which launches the same uvicorn server on `127.0.0.1:8000`.)*  
 Open **[http://127.0.0.1:8000](http://127.0.0.1:8000)** in your browser.
 
 ---
@@ -239,10 +260,10 @@ Open **[http://127.0.0.1:8000](http://127.0.0.1:8000)** in your browser.
 - **Templates:** Stored in `frontend/templates/`. Uses Jinja2 inheritance with `base.html`.
 - **Styling:** Bootstrap 5.3 + Bootstrap Icons (`bi-*`).
 - **Autopilot UI (`frontend/templates/autopilot.html`):**
-  - Includes a dynamic budget input box (`#agentBudget`).
-  - An `#executionMetadata` card displays execution details:
-    - **Mode:** `agent` or `fixed_fallback`
-    - **Provider & Model:** e.g., `gemini` / `gemini-2.5-flash`
+  - `#agentBudget` exists in the form inside a hidden container (`d-none`) and defaults to `100000` for university logistics mode.
+  - `#executionMetadata` displays execution details after a run:
+    - **Mode:** `agent`, `fixed`, or `fixed_fallback`
+    - **Provider & Model:** e.g., `gemini` / `gemini-3.1-flash-lite` (when an LLM provider is enabled)
     - **Tokens Used:** Total, prompt, and completion token metrics
     - **Fallback Reason:** Explains why fallback occurred if the provider failed
 - **Adding / Modifying Screens:** Keep templates responsive, use Bootstrap utility classes, and ensure form submissions include proper role authentication or CSRF tokens where applicable.
@@ -251,11 +272,11 @@ Open **[http://127.0.0.1:8000](http://127.0.0.1:8000)** in your browser.
 
 ## 🧪 Testing & Quality Assurance
 
-All tests run completely offline without making external network or LLM API calls (using deterministic fake callers and isolated temporary SQLite databases):
+All tests run offline without making external network or LLM API calls (using deterministic mocked callers and isolated temporary SQLite databases):
 
-```powershell
-# Run the entire test suite (224 tests, 100% pass rate, offline SQLite isolation)
-python -m pytest tests/ -q
+```bash
+# Run the entire test suite (305 tests, offline SQLite isolation)
+python -m pytest -q
 
 # Run specific functional test suites
 python -m pytest tests/test_agent_mode.py -q          # Autopilot Agent tool loop & fallback tests
@@ -264,9 +285,4 @@ python -m pytest tests/test_auth.py -q                # Authentication, sessions
 python -m pytest tests/safety/test_kavach.py -q       # Kavach invariant transaction tests
 ```
 
-### Test console (dev only)
-The test console (`/dev`) is an internal developer harness for verifying role switching and permission boundaries across all 4 personas.
-To enable it locally, launch the server with `TEST_CONSOLE=1` set in your environment (`$env:TEST_CONSOLE="1"` or export in terminal).
-Access is strictly restricted to localhost loopback connections (`127.0.0.1`, `::1`) and automatically yields a 404 if accessed over public tunnels.
-It is disabled by default; when `TEST_CONSOLE` is unset or `0`, `/dev` routes are not mounted and cannot be reached.
-Important: `TEST_CONSOLE` must remain unset or `0` for live demos, final evaluations, and submission.
+**Test console (dev only):** Set `TEST_CONSOLE=1` on localhost and sign in at `/dev/login` with default dev credentials `admin` / `admin` (`TEST_ADMIN_USER` / `TEST_ADMIN_PASSWORD`) to switch roles at `/dev`; keep `TEST_CONSOLE` unset or `0` outside local dev.

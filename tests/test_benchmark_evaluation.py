@@ -93,7 +93,7 @@ def test_evaluation_uses_a_fresh_seeded_database_per_setup_and_prompt(
 
 def test_independent_checker_reads_the_scenario_database_and_detects_orphans(tmp_path):
     database_path = tmp_path / "scenario.sqlite3"
-    run_evaluation.create_scenario_database(database_path)
+    run_evaluation.create_scenario_database(database_path, setup="setup_a")
     with sqlite3.connect(database_path) as connection:
         connection.execute(
             """
@@ -185,9 +185,10 @@ def test_setup_c_catches_capacity_violation_and_direct_setups_persist_it(tmp_pat
     assert setups["setup_a"]["cases"][0]["audit"]["violations"][
         "capacity_overruns_count"
     ] > 0
+    assert setups["setup_b"]["cases"][0]["actual_state"] == "error"
     assert setups["setup_b"]["cases"][0]["audit"]["violations"][
         "capacity_overruns_count"
-    ] > 0
+    ] == 0
     assert setups["setup_c"]["cases"][0]["actual_state"] == "blocked"
     assert setups["setup_c"]["cases"][0]["audit"]["violations"][
         "capacity_overruns_count"
