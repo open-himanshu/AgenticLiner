@@ -36,6 +36,33 @@ class ProviderError(Exception):
 # Helpers
 # ---------------------------------------------------------------------------
 
+_PLACEHOLDER_VALUES = {
+    "changeme",
+    "change_me",
+    "replace_me",
+    "placeholder",
+    "none",
+    "null",
+    "unset",
+}
+
+
+def _is_placeholder(value: str) -> bool:
+    """Return True if an API key value is an unreplaced template placeholder."""
+    lower = value.strip().lower()
+    if not lower:
+        return True
+    if lower in _PLACEHOLDER_VALUES:
+        return True
+    if (lower.startswith("your_") or lower.startswith("your-")) and (
+        lower.endswith("_here") or lower.endswith("-here")
+    ):
+        return True
+    if lower.startswith("<") and lower.endswith(">"):
+        return True
+    return False
+
+
 def _clean_env(name: str, fallback: str = "") -> str:
     """Read, strip quotes/BOM, and return an env var."""
     value = os.getenv(name, fallback).strip()
@@ -102,13 +129,13 @@ def get_provider_config() -> Dict[str, str]:
     if provider == "gemini":
         api_key = _clean_env("GEMINI_API_KEY")
         model = _clean_env("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
-        if not api_key:
+        if _is_placeholder(api_key):
             raise ProviderError("GEMINI_API_KEY must be set in environment.")
         return {"provider": "gemini", "model": model, "api_key": api_key}
     elif provider == "groq":
         api_key = _clean_env("GROQ_API_KEY")
         model = _clean_env("GROQ_MODEL")
-        if not api_key or not model:
+        if _is_placeholder(api_key) or not model:
             raise ProviderError("GROQ_API_KEY and GROQ_MODEL must be set.")
         return {"provider": "groq", "model": model, "api_key": api_key}
     elif provider == "ollama":
