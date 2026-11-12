@@ -7,13 +7,13 @@
     <!-- Header -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="p-4 bg-white rounded-3 border d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="p-4 bg-white rounded-3 border d-flex justify-content-between align-items-center flex-wrap gap-3 shadow-sm">
                 <div>
                     <div class="d-flex align-items-center gap-2 mb-1">
                         <h2 class="fw-bold mb-0">🏛️ University Supervisor Dashboard</h2>
                         <span class="badge bg-danger">Dean & Admin Authority</span>
                     </div>
-                    <p class="text-muted mb-0">Oversee campus-wide events, review pending booking requisitions, manage master inventory quotas, and inspect audit logs.</p>
+                    <p class="text-muted mb-0">Oversee all campus-wide events, inspect detailed requisitions, audit venue & equipment allocations, and govern event approvals.</p>
                 </div>
                 <div class="d-flex gap-2 align-items-center flex-wrap">
                     <a href="/analytics" class="btn btn-outline-primary fw-semibold">
@@ -22,7 +22,7 @@
                     <a href="/supervisor/audit-log" class="btn btn-outline-dark fw-semibold">
                         <i class="bi bi-journal-text me-1"></i> Audit Trail
                     </a>
-                    <!-- Phase 3: Admin Reset Action Button -->
+                    <!-- Admin Reset Action Button -->
                     <button type="button" class="btn btn-outline-danger fw-semibold" data-bs-toggle="modal" data-bs-target="#resetDataModal">
                         <i class="bi bi-trash3 me-1"></i> Reset All Data
                     </button>
@@ -31,14 +31,14 @@
         </div>
     </div>
 
-    <!-- Alert Banner for Reset Success -->
+    <!-- Alert Banners -->
     {% if request.query_params.get('reset_success') %}
     <div class="alert alert-warning border border-warning-subtle shadow-sm alert-dismissible fade show p-3 mb-4 rounded-3" role="alert">
         <div class="d-flex align-items-center gap-2">
             <i class="bi bi-exclamation-triangle-fill text-danger fs-4"></i>
             <div>
                 <strong class="text-dark">Admin Zero-State Reset Executed:</strong>
-                <span class="text-muted small">All operational records (events, rooms, equipment, bookings, attendees) have been purged. The system is in clean starting state.</span>
+                <span class="text-muted small">All operational records have been purged. The system is in clean starting state.</span>
             </div>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -51,7 +51,7 @@
             <i class="bi bi-check-circle-fill text-success fs-4"></i>
             <div>
                 <strong class="text-dark">Dean Approval Granted:</strong>
-                <span class="text-muted small">Event approved, bookings locked, and held outbox notices have been released.</span>
+                <span class="text-muted small">Event approved, venue & equipment confirmed, and held outbox notices released.</span>
             </div>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -64,7 +64,33 @@
             <i class="bi bi-x-circle-fill text-danger fs-4"></i>
             <div>
                 <strong class="text-dark">Event Request Rejected:</strong>
-                <span class="text-muted small">Staged bookings have been cancelled and notification delivered to the club organiser.</span>
+                <span class="text-muted small">Staged bookings cancelled and notification delivered to the club organiser.</span>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    {% if request.query_params.get('cancelled') %}
+    <div class="alert alert-warning border border-warning-subtle shadow-sm alert-dismissible fade show p-3 mb-4 rounded-3" role="alert">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-dash-circle-fill text-warning fs-4"></i>
+            <div>
+                <strong class="text-dark">Event Unbooked / Cancelled:</strong>
+                <span class="text-muted small">Allocated venue and campus inventory have been released back to general availability.</span>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    {% if request.query_params.get('deleted') %}
+    <div class="alert alert-danger border border-danger-subtle shadow-sm alert-dismissible fade show p-3 mb-4 rounded-3" role="alert">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-trash-fill text-danger fs-4"></i>
+            <div>
+                <strong class="text-dark">Event Purged:</strong>
+                <span class="text-muted small">The event and all linked bookings, sessions, and records have been deleted permanently.</span>
             </div>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -74,21 +100,21 @@
     <!-- Metrics Cards (Real DB Counts) -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card card-custom p-3 bg-white border-start border-4 border-warning">
+            <div class="card card-custom p-3 bg-white border-start border-4 border-warning shadow-sm">
                 <span class="text-muted small">Pending Event Approvals</span>
                 <h3 class="fw-bold text-dark mb-0" id="statPendingEvents">{{ pending_count or 0 }}</h3>
                 <span class="text-muted small">Awaiting Dean Sign-off</span>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card card-custom p-3 bg-white border-start border-4 border-success">
+            <div class="card card-custom p-3 bg-white border-start border-4 border-success shadow-sm">
                 <span class="text-muted small">Approved / Active Events</span>
                 <h3 class="fw-bold text-dark mb-0" id="statActiveEvents">{{ active_count or 0 }}</h3>
-                <span class="text-muted small">Allocated campus halls</span>
+                <span class="text-muted small">Approved & Auto-approved fests</span>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card card-custom p-3 bg-white border-start border-4 border-primary">
+            <div class="card card-custom p-3 bg-white border-start border-4 border-primary shadow-sm">
                 <span class="text-muted small">Campus Venues Available</span>
                 <h3 class="fw-bold text-dark mb-0">{{ rooms_count or 0 }}</h3>
                 {% if rooms_count == 0 %}
@@ -99,7 +125,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card card-custom p-3 bg-white border-start border-4 border-info">
+            <div class="card card-custom p-3 bg-white border-start border-4 border-info shadow-sm">
                 <span class="text-muted small">Inventory Resource Catalog</span>
                 <h3 class="fw-bold text-dark mb-0">{{ resources_count or 0 }}</h3>
                 {% if resources_count == 0 %}
@@ -127,40 +153,303 @@
     </div>
     {% endif %}
 
-    <!-- Audit Log View (When toggled via /supervisor/audit-log) -->
-    {% if show_audit %}
-    <div class="card card-custom p-4 bg-white mb-4">
+    <!-- Filter & Live Search Toolbar -->
+    <div class="card card-custom p-3 bg-white mb-4 border shadow-sm">
+        <form method="GET" action="/supervisor" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" id="supervisorSearchInput" class="form-control" placeholder="Search by name, ID, venue, or dept..." value="{{ search_query }}">
+                    {% if search_query %}
+                    <a href="/supervisor?filter={{ current_filter }}" class="btn btn-outline-secondary" title="Clear search"><i class="bi bi-x-lg"></i></a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="btn-group btn-group-sm" role="group">
+                    <a href="/supervisor?filter=all{% if search_query %}&search={{ search_query }}{% endif %}" class="btn {% if current_filter == 'all' %}btn-primary fw-bold{% else %}btn-outline-secondary{% endif %}">
+                        All Events ({{ total_events_count }})
+                    </a>
+                    <a href="/supervisor?filter=pending{% if search_query %}&search={{ search_query }}{% endif %}" class="btn {% if current_filter == 'pending' %}btn-warning text-dark fw-bold{% else %}btn-outline-warning text-dark{% endif %}">
+                        Pending ({{ pending_count }})
+                    </a>
+                    <a href="/supervisor?filter=approved{% if search_query %}&search={{ search_query }}{% endif %}" class="btn {% if current_filter == 'approved' %}btn-success fw-bold{% else %}btn-outline-success{% endif %}">
+                        Active & Approved ({{ active_count }})
+                    </a>
+                    <a href="/supervisor?filter=cancelled{% if search_query %}&search={{ search_query }}{% endif %}" class="btn {% if current_filter == 'cancelled' %}btn-secondary fw-bold{% else %}btn-outline-secondary{% endif %}">
+                        Cancelled ({{ cancelled_count }})
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-2 text-md-end">
+                <button type="submit" class="btn btn-sm btn-primary fw-semibold px-3">
+                    <i class="bi bi-funnel me-1"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Urgent Action Queue: Pending Dean Sign-offs -->
+    {% if pending_events %}
+    <div class="card card-custom p-4 bg-white mb-4 border-start border-4 border-warning shadow-sm">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-bold mb-0"><i class="bi bi-journal-text text-dark me-2"></i>Campus Immutable Audit Trail</h5>
-            <a href="/supervisor" class="btn btn-sm btn-outline-secondary">Back to Dashboard</a>
+            <div>
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Urgent: Pending Dean Approval Requests
+                </h5>
+                <p class="text-muted small mb-0">These campus events are awaiting your executive sign-off before venues and equipment can be locked.</p>
+            </div>
+            <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-bold">{{ pending_events|length }} Pending Action</span>
         </div>
-        {% if audit_logs %}
         <div class="table-responsive">
-            <table class="table table-hover align-middle small mb-0">
-                <thead class="table-light">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small">
                     <tr>
-                        <th>Timestamp</th>
-                        <th>Actor</th>
-                        <th>Action</th>
-                        <th>Details</th>
-                        <th>Result</th>
+                        <th>Event ID & Title</th>
+                        <th>Organizer</th>
+                        <th>Timing & Slot</th>
+                        <th>Requested Venue</th>
+                        <th>Headcount</th>
+                        <th>Requisitions</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for log in audit_logs %}
+                    {% for pev in pending_events %}
                     <tr>
-                        <td class="text-muted font-monospace">{{ log.timestamp }}</td>
-                        <td><span class="badge bg-light text-dark border">{{ log.actor }}</span></td>
-                        <td><strong class="text-primary">{{ log.action }}</strong></td>
-                        <td class="text-secondary small text-truncate" style="max-width: 260px;">{{ log.details_json or '-' }}</td>
                         <td>
-                            {% if log.result == 'SUCCESS' %}
-                            <span class="badge bg-success-subtle text-success border border-success">SUCCESS</span>
-                            {% elif log.result == 'BLOCKED' %}
-                            <span class="badge bg-danger-subtle text-danger border border-danger">BLOCKED</span>
+                            <span class="badge bg-light text-secondary font-monospace border mb-1">{{ pev.id }}</span>
+                            <div class="fw-bold text-dark">{{ pev.name }}</div>
+                            <div class="small text-muted text-truncate" style="max-width: 280px;">{{ pev.brief }}</div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark">{{ pev.organizer_department }}</div>
+                            <div class="small text-muted">{{ pev.creator_email or 'organiser@galgotias.edu' }}</div>
+                        </td>
+                        <td>
+                            <div class="small fw-semibold text-dark">{{ pev.start_time or 'TBD' }}</div>
+                            <div class="small text-muted">to {{ pev.end_time or 'TBD' }}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ pev.venue_name or 'Main Audi A' }}</span>
+                            {% if pev.venue_location %}<div class="small text-muted" style="font-size: 0.75rem;">{{ pev.venue_location }}</div>{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-primary-subtle text-primary fw-bold">{{ pev.expected_participants }} students</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-info-subtle text-info border border-info-subtle">{{ pev.req_count or 0 }} items</span>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1 align-items-center">
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#inspectModal{{ pev.id }}" title="Inspect Full Event Details">
+                                    <i class="bi bi-eye"></i> Inspect
+                                </button>
+                                <form method="POST" action="/api/events/{{ pev.id }}/approve" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-success fw-bold" title="Approve event and confirm bookings">
+                                        <i class="bi bi-check-lg me-1"></i>Approve
+                                    </button>
+                                </form>
+                                <button type="button" class="btn btn-sm btn-outline-danger fw-semibold" data-bs-toggle="modal" data-bs-target="#rejectModal{{ pev.id }}" title="Reject Request">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+
+                            <!-- Reject Reason Modal -->
+                            <div class="modal fade" id="rejectModal{{ pev.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <form method="POST" action="/api/events/{{ pev.id }}/reject">
+                                            <div class="modal-header bg-danger text-white">
+                                                <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-octagon me-2"></i>Reject Event Request</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p class="small text-muted">Please provide a reason for rejecting <b>{{ pev.name }}</b>. The organiser will receive this explanation.</p>
+                                                <div class="mb-3">
+                                                    <label class="form-label small fw-semibold">Reason for Rejection</label>
+                                                    <textarea class="form-control" name="reason" rows="3" required placeholder="e.g. Venue reserved for University Convocation or exceeds campus policy."></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-danger btn-sm fw-bold">Confirm Rejection</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card card-custom p-4 bg-white mb-4 border shadow-sm">
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-inbox fs-1 text-secondary d-block mb-2"></i>
+            <p class="mb-1 fw-semibold">No pending approval requests.</p>
+            <p class="small text-muted mb-0">When student clubs submit event plans, Dean approval requisitions will appear here.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main All Events Directory Table -->
+    <div class="card card-custom p-4 bg-white mb-4 shadow-sm">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-calendar-event text-primary me-2"></i>Campus Events Directory (Complete Supervisor Oversight)
+                </h5>
+                <span class="text-muted small">Viewing complete event records, bookings, schedules, and live attendance across Galgotias University.</span>
+            </div>
+            <span class="badge bg-primary rounded-pill px-3 py-2">{{ all_events|length }} Events Displayed</span>
+        </div>
+
+        {% if all_events %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="supervisorEventsTable">
+                <thead class="table-light small">
+                    <tr>
+                        <th>Event ID & Title</th>
+                        <th>Category</th>
+                        <th>Timing & Slot</th>
+                        <th>Allocated Venue</th>
+                        <th>Host Organizer</th>
+                        <th>Attendance</th>
+                        <th>Status</th>
+                        <th>Actions & Inspection</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ev in all_events %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-light text-secondary font-monospace border mb-1">{{ ev.id }}</span>
+                            <div class="fw-bold text-dark">{{ ev.name }}</div>
+                            <div class="small text-muted text-truncate" style="max-width: 250px;">{{ ev.brief }}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border text-uppercase">{{ ev.event_type }}</span>
+                        </td>
+                        <td>
+                            {% if ev.start_time %}
+                            <div class="small fw-semibold text-dark">{{ ev.start_time[:16] }}</div>
+                            {% if ev.end_time %}<div class="small text-muted">to {{ ev.end_time[:16] }}</div>{% endif %}
                             {% else %}
-                            <span class="badge bg-light text-dark border">{{ log.result or '-' }}</span>
+                            <span class="text-muted small">Flexible slot</span>
                             {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ ev.venue_name or 'Main Ground' }}</span>
+                            {% if ev.venue_capacity %}
+                            <div class="small text-muted" style="font-size: 0.75rem;">Capacity: {{ ev.venue_capacity }} seats</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark">{{ ev.organizer_department }}</div>
+                            <div class="small text-muted" style="font-size: 0.75rem;">{{ ev.creator_email or 'organiser@galgotias.edu' }}</div>
+                        </td>
+                        <td>
+                            <div>
+                                <span class="fw-bold text-dark">{{ ev.confirmed_count or 0 }}</span>
+                                <span class="text-muted small">/ {{ ev.expected_participants }}</span>
+                            </div>
+                            {% if ev.waitlisted_count and ev.waitlisted_count > 0 %}
+                            <span class="badge bg-warning-subtle text-warning-emphasis" style="font-size: 0.7rem;">+{{ ev.waitlisted_count }} waitlisted</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if ev.approval_status == 'approved' and ev.status != 'cancelled' %}
+                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Approved</span>
+                            {% elif ev.approval_status == 'auto_approved' and ev.status != 'cancelled' %}
+                            <span class="badge bg-info text-dark"><i class="bi bi-robot me-1"></i>Auto-Approved</span>
+                            {% elif ev.approval_status == 'pending_dean_approval' and ev.status != 'cancelled' %}
+                            <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Pending Dean</span>
+                            {% elif ev.approval_status == 'rejected' %}
+                            <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Rejected</span>
+                            {% elif ev.approval_status == 'cancelled' or ev.status == 'cancelled' %}
+                            <span class="badge bg-secondary"><i class="bi bi-dash-circle me-1"></i>Cancelled</span>
+                            {% else %}
+                            <span class="badge bg-light text-dark border">{{ ev.approval_status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1 align-items-center">
+                                <!-- Detailed Inspection Modal Trigger -->
+                                <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#inspectModal{{ ev.id }}" title="Inspect Complete Event Information">
+                                    <i class="bi bi-info-circle me-1"></i>Details
+                                </button>
+
+                                {% if ev.approval_status == 'pending_dean_approval' and ev.status != 'cancelled' %}
+                                <form method="POST" action="/api/events/{{ ev.id }}/approve" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-success fw-bold" title="Approve event">
+                                        <i class="bi bi-check-lg"></i>
+                                    </button>
+                                </form>
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ ev.id }}" title="Reject event">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                                {% endif %}
+
+                                {% if ev.status != 'cancelled' %}
+                                <button type="button" class="btn btn-sm btn-outline-warning text-dark" data-bs-toggle="modal" data-bs-target="#cancelModal{{ ev.id }}" title="Cancel / Unbook Event">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                                {% endif %}
+
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ ev.id }}" title="Delete Event Record">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+
+                            <!-- Cancel Modal -->
+                            <div class="modal fade" id="cancelModal{{ ev.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content border-0 shadow">
+                                        <form method="POST" action="/api/events/{{ ev.id }}/cancel">
+                                            <div class="modal-header bg-warning bg-opacity-25 border-bottom">
+                                                <h6 class="modal-title fw-bold text-dark"><i class="bi bi-exclamation-triangle me-2"></i>Cancel Event (Supervisor Authority)</h6>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body py-3">
+                                                <p class="mb-2">Are you sure you want to cancel <strong>{{ ev.name }}</strong>?</p>
+                                                <p class="small text-muted mb-3">The allocated venue and campus inventory will be freed immediately for other club reservations.</p>
+                                                <label class="form-label small fw-semibold text-secondary">Reason for Cancellation:</label>
+                                                <input type="text" name="reason" class="form-control form-control-sm" placeholder="e.g. Schedule conflict or administrative order">
+                                            </div>
+                                            <div class="modal-footer bg-light border-top py-2">
+                                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                <button type="submit" class="btn btn-sm btn-warning text-dark fw-bold">Confirm Cancellation</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Delete Modal -->
+                            <div class="modal fade" id="deleteModal{{ ev.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content border-0 shadow">
+                                        <form method="POST" action="/api/events/{{ ev.id }}/delete">
+                                            <div class="modal-header bg-danger text-white">
+                                                <h6 class="modal-title fw-bold"><i class="bi bi-trash me-2"></i>Permanently Delete Event</h6>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body py-3">
+                                                <p class="mb-2">Permanently purge <strong>{{ ev.name }}</strong> (ID: <code>{{ ev.id }}</code>)?</p>
+                                                <p class="small text-muted mb-0">This permanently removes the event and its associated bookings, schedule sessions, and registrations.</p>
+                                            </div>
+                                            <div class="modal-footer bg-light border-top py-2">
+                                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-sm btn-danger fw-bold">Purge Record</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -169,155 +458,235 @@
         </div>
         {% else %}
         <div class="text-center py-5 text-muted">
-            <i class="bi bi-journal-check fs-1 text-secondary d-block mb-2"></i>
-            <p class="mb-0">No audit trail entries recorded yet.</p>
+            <i class="bi bi-calendar-x fs-1 text-secondary d-block mb-2"></i>
+            <h6 class="fw-semibold">No campus events match your filter criteria.</h6>
+            <p class="small text-muted mb-3">Try adjusting your search query or reset filter to view all campus events.</p>
+            <a href="/supervisor" class="btn btn-sm btn-outline-primary">Reset Filter</a>
         </div>
         {% endif %}
     </div>
-    {% endif %}
 
-    <!-- Supervisor Section -->
-    <div class="row g-4">
-        <div class="col-lg-8">
-            <div class="card card-custom p-4 bg-white mb-4">
-                <h5 class="fw-bold mb-3"><i class="bi bi-clock-history text-primary me-2"></i>Event Approval Requests</h5>
-                {% if pending_events %}
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Event Title</th>
-                                <th>Organiser</th>
-                                <th>Expected Students</th>
-                                <th>Requested Venue</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for ev in pending_events %}
-                            <tr>
-                                <td>
-                                    <div class="fw-bold text-dark">{{ ev.name }}</div>
-                                    <div class="small text-muted">{{ ev.brief | truncate(50) }}</div>
-                                </td>
-                                <td>{{ ev.organizer_department }}</td>
-                                <td><span class="badge bg-primary-subtle text-primary">{{ ev.expected_participants }} students</span></td>
-                                <td><span class="badge bg-light text-dark border">{{ ev.venue_name or 'TBD' }}</span></td>
-                                <td>
-                                    <form method="POST" action="/api/events/{{ ev.id }}/approve" class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-success me-1 fw-semibold" title="Approve event and confirm bookings">
-                                            <i class="bi bi-check-lg me-1"></i>Approve
-                                        </button>
-                                    </form>
-                                    <button type="button" class="btn btn-sm btn-outline-danger fw-semibold" data-bs-toggle="modal" data-bs-target="#rejectModal{{ loop.index }}">
-                                        <i class="bi bi-x-lg me-1"></i>Reject
-                                    </button>
-
-                                    <!-- Modal for Rejection Reason -->
-                                    <div class="modal fade" id="rejectModal{{ loop.index }}" tabindex="-1" aria-hidden="true">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <form method="POST" action="/api/events/{{ ev.id }}/reject">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title fw-bold text-danger"><i class="bi bi-exclamation-octagon me-2"></i>Reject Event Request</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <p class="small text-muted">Please provide a reason for rejecting <b>{{ ev.name }}</b>. The organiser will receive this explanation.</p>
-                                                        <div class="mb-3">
-                                                            <label class="form-label small fw-semibold">Reason for Rejection</label>
-                                                            <textarea class="form-control" name="reason" rows="3" required placeholder="e.g. Schedule clash with University Convocation, or venue unavailable."></textarea>
-                                                        </div>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                                                        <button type="submit" class="btn btn-danger btn-sm fw-bold">Confirm Rejection</button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <div class="text-center py-5 text-muted">
-                    <i class="bi bi-inbox fs-1 text-secondary d-block mb-2"></i>
-                    <p class="mb-1 fw-semibold">No pending approval requests.</p>
-                    <p class="small text-muted mb-0">When student clubs submit event plans, Dean approval requisitions will appear here.</p>
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Active Approved Events Table -->
-            <div class="card card-custom p-4 bg-white mb-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-bold mb-0"><i class="bi bi-check2-all text-success me-2"></i>Approved Campus Events</h5>
-                    <span class="badge bg-success-subtle text-success">{{ approved_events|length }} Approved</span>
-                </div>
-                {% if approved_events %}
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Event Title</th>
-                                <th>Host Department</th>
-                                <th>Allocated Venue</th>
-                                <th>Expected Students</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for aev in approved_events %}
-                            <tr>
-                                <td class="fw-bold">{{ aev.name }}</td>
-                                <td>{{ aev.organizer_department }}</td>
-                                <td><span class="badge bg-light text-dark border">{{ aev.venue_name or 'Campus Ground' }}</span></td>
-                                <td>{{ aev.expected_participants }} students</td>
-                                <td><span class="badge bg-success">Confirmed</span></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <div class="text-center py-4 text-muted">
-                    <p class="small text-muted mb-0">No approved events yet. Pending requests will move here once approved.</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="card card-custom p-4 bg-white mb-4">
-                <h5 class="fw-bold mb-3"><i class="bi bi-shield-check text-success me-2"></i>Kavach Invariant Policy</h5>
+    <!-- Supervisor Governance & Safety Widget -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card card-custom p-4 bg-white h-100 shadow-sm">
+                <h5 class="fw-bold mb-3"><i class="bi bi-shield-check text-success me-2"></i>Active Campus Governance Invariants</h5>
                 <ul class="list-group list-group-flush small">
                     <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-                        <span>Double-Booking Auto-Block</span>
-                        <span class="badge bg-success">ACTIVE</span>
+                        <div>
+                            <strong class="text-dark">Venue Collision Prevention</strong>
+                            <div class="text-muted" style="font-size: 0.75rem;">Guarantees no two events book overlapping slots in the same hall.</div>
+                        </div>
+                        <span class="badge bg-success">ENFORCED</span>
                     </li>
                     <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-                        <span>Capacity Strict Checking</span>
-                        <span class="badge bg-success">ACTIVE</span>
+                        <div>
+                            <strong class="text-dark">Room Capacity Strict Limits</strong>
+                            <div class="text-muted" style="font-size: 0.75rem;">Blocks registrations from exceeding physical hall fire safety capacities.</div>
+                        </div>
+                        <span class="badge bg-success">ENFORCED</span>
                     </li>
                     <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-                        <span>Dean Sign-off for Main Audi A</span>
-                        <span class="badge bg-warning text-dark">REQUIRED</span>
+                        <div>
+                            <strong class="text-dark">Dean Sign-off Escalation Rule</strong>
+                            <div class="text-muted" style="font-size: 0.75rem;">Mandatory Dean approval for Main Audi A or bookings > 150 students.</div>
+                        </div>
+                        <span class="badge bg-warning text-dark">ACTIVE</span>
                     </li>
                     <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-                        <span>Outbox Notification Hold</span>
-                        <span class="badge bg-success">ACTIVE</span>
+                        <div>
+                            <strong class="text-dark">Outbox Notification Hold</strong>
+                            <div class="text-muted" style="font-size: 0.75rem;">Holds external notices until Dean approval or atomic transaction commit.</div>
+                        </div>
+                        <span class="badge bg-success">ENFORCED</span>
                     </li>
                 </ul>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card card-custom p-4 bg-white h-100 shadow-sm">
+                <h5 class="fw-bold mb-3"><i class="bi bi-speedometer2 text-primary me-2"></i>Supervisor Management Shortcuts</h5>
+                <div class="row g-2">
+                    <div class="col-sm-6">
+                        <a href="/schedule" class="card text-decoration-none p-3 border bg-light h-100 text-dark">
+                            <div class="fw-bold"><i class="bi bi-calendar3 text-success me-1"></i> Timetable Solver</div>
+                            <div class="text-muted small" style="font-size: 0.75rem;">Inspect global CP-SAT timetable and speaker scheduling.</div>
+                        </a>
+                    </div>
+                    <div class="col-sm-6">
+                        <a href="/data-manager" class="card text-decoration-none p-3 border bg-light h-100 text-dark">
+                            <div class="fw-bold"><i class="bi bi-database-gear text-info me-1"></i> Master Data Hub</div>
+                            <div class="text-muted small" style="font-size: 0.75rem;">Import or export venues, resources, students, and events CSV.</div>
+                        </a>
+                    </div>
+                    <div class="col-sm-6">
+                        <a href="/attendees" class="card text-decoration-none p-3 border bg-light h-100 text-dark">
+                            <div class="fw-bold"><i class="bi bi-qr-code-scan text-primary me-1"></i> Gate Verification</div>
+                            <div class="text-muted small" style="font-size: 0.75rem;">Verify attendee student passes and download rosters.</div>
+                        </a>
+                    </div>
+                    <div class="col-sm-6">
+                        <a href="/analytics" class="card text-decoration-none p-3 border bg-light h-100 text-dark">
+                            <div class="fw-bold"><i class="bi bi-pie-chart text-danger me-1"></i> Sentiment Analytics</div>
+                            <div class="text-muted small" style="font-size: 0.75rem;">Real feedback sentiment analysis and PDF reports.</div>
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- PHASE 3: ADMIN RESET CONFIRMATION MODAL -->
+<!-- ========================================================================= -->
+<!-- EVENT INSPECTION MODALS (ONE FOR EACH EVENT IN DIRECTORY)                   -->
+<!-- ========================================================================= -->
+{% for ev in all_events %}
+<div class="modal fade" id="inspectModal{{ ev.id }}" tabindex="-1" aria-labelledby="inspectModalLabel{{ ev.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <div>
+                    <span class="badge bg-light text-primary font-monospace mb-1">{{ ev.id }}</span>
+                    <h5 class="modal-title fw-bold mb-0" id="inspectModalLabel{{ ev.id }}">{{ ev.name }}</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Status Badges Bar -->
+                <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                    <span class="badge bg-secondary text-uppercase">{{ ev.event_type }}</span>
+                    {% if ev.approval_status == 'approved' and ev.status != 'cancelled' %}
+                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Approved by Dean</span>
+                    {% elif ev.approval_status == 'auto_approved' and ev.status != 'cancelled' %}
+                    <span class="badge bg-info text-dark"><i class="bi bi-robot me-1"></i>Auto-Approved by System</span>
+                    {% elif ev.approval_status == 'pending_dean_approval' and ev.status != 'cancelled' %}
+                    <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Pending Dean Sign-off</span>
+                    {% elif ev.approval_status == 'rejected' %}
+                    <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Rejected</span>
+                    {% elif ev.approval_status == 'cancelled' or ev.status == 'cancelled' %}
+                    <span class="badge bg-secondary"><i class="bi bi-dash-circle me-1"></i>Cancelled</span>
+                    {% endif %}
+                    <span class="badge bg-light text-dark border">Operational Status: {{ ev.status }}</span>
+                    <span class="badge bg-light text-secondary border ms-auto"><i class="bi bi-calendar3 me-1"></i>Submitted: {{ ev.created_at[:16] }}</span>
+                </div>
+
+                <!-- Event Brief Description -->
+                <div class="bg-light p-3 rounded-3 border mb-3">
+                    <div class="small fw-bold text-secondary text-uppercase mb-1">Event Brief & Description</div>
+                    <p class="mb-0 text-dark">{{ ev.brief or 'No detailed description provided.' }}</p>
+                </div>
+
+                <!-- Key Specifications 2x2 Grid -->
+                <div class="row g-3 mb-3">
+                    <!-- Venue & Infrastructure -->
+                    <div class="col-md-6">
+                        <div class="card h-100 border p-3 bg-white">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="bi bi-geo-alt-fill text-danger fs-5"></i>
+                                <strong class="text-dark">Venue & Location</strong>
+                            </div>
+                            <div class="small">
+                                <div class="fw-bold text-dark">{{ ev.venue_name or 'Main Campus Ground' }}</div>
+                                <div class="text-muted">{{ ev.venue_location or 'Block C, Campus Ground Floor' }}</div>
+                                {% if ev.venue_capacity %}
+                                <div class="text-secondary mt-1"><i class="bi bi-people me-1"></i>Seating Capacity: <b>{{ ev.venue_capacity }}</b> seats</div>
+                                {% endif %}
+                                <div class="text-secondary mt-1">
+                                    <i class="bi bi-clock me-1"></i><b>Slot:</b> {{ ev.start_time or 'TBD' }} to {{ ev.end_time or 'TBD' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Host & Governance -->
+                    <div class="col-md-6">
+                        <div class="card h-100 border p-3 bg-white">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="bi bi-building text-primary fs-5"></i>
+                                <strong class="text-dark">Host Organization</strong>
+                            </div>
+                            <div class="small">
+                                <div class="fw-bold text-dark">{{ ev.organizer_department }}</div>
+                                <div class="text-muted"><i class="bi bi-envelope me-1"></i>{{ ev.creator_email or 'organiser@galgotias.edu' }}</div>
+                                <div class="text-secondary mt-1"><i class="bi bi-currency-rupee me-1"></i>Recorded Budget: <b>₹{{ ev.budget or 0 }}</b></div>
+                                <div class="text-secondary mt-1"><i class="bi bi-shield-check me-1"></i>Kavach Verified: <b>Yes</b></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attendance & Requisitions Summary -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <div class="card h-100 border p-3 bg-white">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-people-fill text-info fs-5"></i>
+                                    <strong class="text-dark">Attendance Roster</strong>
+                                </div>
+                                <a href="/attendees" class="btn btn-sm btn-link p-0 text-decoration-none">Manage</a>
+                            </div>
+                            <div class="small">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Confirmed Registrations:</span>
+                                    <strong class="text-dark">{{ ev.confirmed_count or 0 }} students</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Expected Headcount:</span>
+                                    <span class="text-muted">{{ ev.expected_participants }} students</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Waitlisted Queue:</span>
+                                    <span class="text-warning fw-semibold">{{ ev.waitlisted_count or 0 }} students</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card h-100 border p-3 bg-white">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-boxes text-warning fs-5"></i>
+                                    <strong class="text-dark">Campus Requisitions</strong>
+                                </div>
+                                <span class="badge bg-light text-dark border">{{ ev.req_count or 0 }} Items</span>
+                            </div>
+                            <div class="small text-muted">
+                                {% if ev.req_count and ev.req_count > 0 %}
+                                Equipment, acoustics, and catering bundles have been allocated through Kavach inventory locks.
+                                {% else %}
+                                No auxiliary campus equipment requisitioned; using venue built-in amenities.
+                                {% endif %}
+                                <div class="mt-2">
+                                    <a href="/flyer/{{ ev.id }}" target="_blank" class="btn btn-sm btn-outline-secondary me-1">
+                                        <i class="bi bi-file-earmark-richtext me-1"></i>View Flyer
+                                    </a>
+                                    <a href="/schedule" class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-calendar3 me-1"></i>Schedule Timetable
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+                {% if ev.approval_status == 'pending_dean_approval' and ev.status != 'cancelled' %}
+                <form method="POST" action="/api/events/{{ ev.id }}/approve" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-success fw-bold">
+                        <i class="bi bi-check-lg me-1"></i>Approve Event
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Master Data Reset Confirmation Modal -->
 <div class="modal fade" id="resetDataModal" tabindex="-1" aria-labelledby="resetDataModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">

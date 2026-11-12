@@ -53,6 +53,19 @@
 - **Fix Applied:** Added read-only room/venue/event listing handlers (`VENUES_LISTED` / `EVENTS_LISTED`) when read verbs are used without creation intent.
 - **Verification:** Live `POST /api/agent/universal-command` (`"Show all available rooms"`) returned `VENUES_LISTED` with `events: 7 -> 7` (0 events created); `tests/test_audit_bugfixes.py::test_universal_command_read_only_room_query_creates_no_event` passes.
 
+### BUG-08 [HIGH] — Supervisor Dashboard Omitted Auto-Approved Events & Lacked Meaningful Event Details
+- **Files:** `backend/api/main.py:1086-1120`, `backend/services/event_workflow_service.py:650-730`, `frontend/templates/supervisor.html`
+- **Root Cause:**
+  1. The supervisor dashboard endpoint strictly filtered active events with `WHERE e.approval_status = 'approved'`. Events created through Autopilot and Assistant workflows receive `approval_status = 'auto_approved'`, causing the dashboard to show `0` active events and completely empty event listings despite active campus events in SQLite.
+  2. The table only displayed 4 shallow columns with no capability to view or inspect event details, agendas, booked venues, requisitions/equipment, or attendees.
+  3. `get_event_with_details` had column naming discrepancies with SQLite schema (`res.total_stock` -> `res.stock`, `sp.expertise` -> `sp.department`/`sp.topics`, `st.year_of_study` -> `st.year`), which caused `500 Internal Server Error` on event detail queries.
+- **Fix Applied:**
+  1. Updated the supervisor query to include both `'approved'` and `'auto_approved'` under active events, and added dynamic status filtering (`all`, `pending`, `approved`, `cancelled`) and search.
+  2. Implemented a comprehensive Campus Events Directory table displaying Event ID, Title & Brief, Category, Slot Timing, Allocated Venue & Capacity, Organizer Dept & Email, Confirmed / Expected Attendance, Status Badges, and Action buttons.
+  3. Built an interactive Event Inspection Modal (`#inspectModal{{ ev.id }}`) that provides supervisors with complete visibility into logistics, budget, equipment requisitions, session agenda with speakers, attendee rosters, and authority actions.
+  4. Fixed schema column mappings in `get_event_with_details` and created `tests/test_supervisor_dashboard_events.py` (3 passed).
+- **Verification:** `tests/test_supervisor_dashboard_events.py` passed (3/3), verifying that auto-approved events appear, search/filter works, and complete event information is returned.
+
 ---
 
 ## Part 2: Open Issues & Documented Limitations

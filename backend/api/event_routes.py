@@ -15,7 +15,9 @@ from backend.services.event_workflow_service import (
     create_event_request,
     approve_event_by_supervisor,
     reject_event_by_supervisor,
-    get_event_with_details
+    cancel_event,
+    delete_event,
+    get_event_with_details,
 )
 from backend.core.safety.kavach import InvariantViolation
 
@@ -157,6 +159,76 @@ async def reject_event_endpoint(
         return JSONResponse(content=res)
     except Exception as e:
         logger.error(f"Error rejecting event: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/{event_id}/cancel")
+async def cancel_event_endpoint(
+    event_id: str,
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
+    """
+    Organiser / Supervisor Event Cancellation: unbooks venue, restores equipment stock,
+    cancels pending outbox notices and confirmed registrations.
+    """
+    reason = "Cancelled by host"
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+            reason = body.get("reason", reason)
+        except Exception:
+            pass
+    elif "form" in content_type:
+        try:
+            form = await request.form()
+            reason = form.get("reason", reason)
+        except Exception:
+            pass
+
+    try:
+        res = cancel_event(
+            event_id=event_id,
+            actor_email=user.get("email", "organiser@galgotias.edu"),
+            reason=reason,
+        )
+        accept = request.headers.get("accept", "")
+        if "text/html" in accept or "application/x-www-form-urlencoded" in content_type:
+            redirect_url = "/supervisor?cancelled=1" if user.get("role") == "supervisor" else "/organiser?cancelled=1"
+            return RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
+        return JSONResponse(content=res)
+    except InvariantViolation as iv:
+        return JSONResponse(status_code=400, content={"success": False, "error": str(iv)})
+    except Exception as e:
+        logger.error(f"Error cancelling event {event_id}: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/{event_id}/delete")
+@router.delete("/{event_id}")
+async def delete_event_endpoint(
+    event_id: str,
+    request: Request,
+    user: Dict[str, Any] = Depends(require_role(["organiser", "supervisor"]))
+):
+    """
+    Organiser / Supervisor Event Deletion: permanently purges an accidental booking
+    and all associated bookings, sessions, outbox notices, and records.
+    """
+    try:
+        res = delete_event(
+            event_id=event_id,
+            actor_email=user.get("email", "organiser@galgotias.edu"),
+        )
+        content_type = request.headers.get("content-type", "")
+        accept = request.headers.get("accept", "")
+        if "text/html" in accept or "application/x-www-form-urlencoded" in content_type:
+            redirect_url = "/supervisor?deleted=1" if user.get("role") == "supervisor" else "/organiser?deleted=1"
+            return RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
+        return JSONResponse(content=res)
+    except InvariantViolation as iv:
+        return JSONResponse(status_code=400, content={"success": False, "error": str(iv)})
+    except Exception as e:
+        logger.error(f"Error deleting event {event_id}: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/{event_id}")

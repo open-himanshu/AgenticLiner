@@ -52,6 +52,8 @@ def fixed_today_2026_11_11(monkeypatch):
     monkeypatch.setattr(agent_mode, "CalendarDate", _FixedDate)
     if hasattr(planner_agent, "CalendarDate"):
         monkeypatch.setattr(planner_agent, "CalendarDate", _FixedDate)
+    from backend.core.safety import kavach
+    monkeypatch.setattr(kavach, "date", _FixedDate)
     return CalendarDate(2026, 11, 11)
 
 

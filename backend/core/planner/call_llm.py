@@ -23,9 +23,10 @@ from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv(usecwd=True))
 
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 DEFAULT_OLLAMA_MODEL = "qwen3.5:9b" 
 MAX_RATE_LIMIT_RETRIES = 6
+DEFAULT_GEMINI_TIMEOUT_MS = 90_000
 
 
 class ProviderError(Exception):
@@ -159,10 +160,17 @@ def _call_gemini(
     from google import genai
     from google.genai import errors, types
 
+    import httpx
+    raw_timeout = _clean_env("GEMINI_TIMEOUT_MS", str(DEFAULT_GEMINI_TIMEOUT_MS))
+    try:
+        timeout_ms = max(5_000, int(raw_timeout))
+    except (TypeError, ValueError):
+        timeout_ms = DEFAULT_GEMINI_TIMEOUT_MS
+
     client = genai.Client(
         api_key=api_key,
         http_options=types.HttpOptions(
-            timeout=20_000,
+            timeout=timeout_ms,
             retry_options=types.HttpRetryOptions(attempts=1),
         ),
     )
@@ -194,26 +202,36 @@ def _call_gemini(
                 model=model, contents=contents, config=config,
             )
             break
-        except errors.APIError as error:
-            code = getattr(error, "code", None)
-            status_code = getattr(error, "status_code", None)
-            error_body = _safe_error(getattr(error, "message", "API error"), api_key)
-            http_status = status_code or code
-            status_str = str(getattr(error, "status", "")).upper()
-            temporary = (
-                code in (429, 503)
-                or status_code in (429, 503)
-                or "UNAVAILABLE" in status_str
-                or "RESOURCE_EXHAUSTED" in status_str
-            )
+        except (errors.APIError, httpx.TimeoutException, httpx.NetworkError, TimeoutError, OSError) as error:
+            if isinstance(error, errors.APIError):
+                code = getattr(error, "code", None)
+                status_code = getattr(error, "status_code", None)
+                error_body = _safe_error(getattr(error, "message", "API error"), api_key)
+                http_status = status_code or code
+                status_str = str(getattr(error, "status", "")).upper()
+                temporary = (
+                    code in (429, 500, 502, 503, 504)
+                    or status_code in (429, 500, 502, 503, 504)
+                    or "UNAVAILABLE" in status_str
+                    or "RESOURCE_EXHAUSTED" in status_str
+                    or "DEADLINE_EXCEEDED" in status_str
+                    or "GATEWAY_TIMEOUT" in status_str
+                    or "DEADLINE EXPIRED" in error_body.upper()
+                )
+                headers = getattr(getattr(error, "response", None), "headers", None)
+            else:
+                http_status = 504
+                error_body = _safe_error(str(error) or "Request timed out", api_key)
+                status_str = "DEADLINE_EXCEEDED"
+                temporary = True
+                headers = None
+
             if not temporary or attempt == MAX_RATE_LIMIT_RETRIES:
                 raise ProviderError(
                     f"Gemini request failed (HTTP {http_status}): {error_body}"
                 ) from None
-            delay = _retry_delay(
-                getattr(getattr(error, "response", None), "headers", None),
-                error_body,
-            )
+            delay = _retry_delay(headers, error_body)
+            delay = max(delay, float(attempt + 1))
             time.sleep(delay)
 
     # Parse response

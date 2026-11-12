@@ -72,6 +72,10 @@ from backend.modules.module5_comm_agent.agent import CommunicationAgent
 from backend.modules.module6_feedback.analyzer import FeedbackAnalyzer
 from backend.modules.module7_analytics.generator import EventAnalyticsEngine
 from backend.services.admin_service import reset_all_operational_data
+from backend.services.event_workflow_service import (
+    get_all_events_for_supervisor,
+    get_event_with_details,
+)
 from backend.api.auth_routes import router as auth_router, ROLE_DASHBOARDS
 from backend.api.inventory_routes import router as inventory_router
 from backend.api.event_routes import router as event_router
@@ -298,29 +302,26 @@ async def root_gateway(request: Request):
 @app.get("/supervisor", response_class=HTMLResponse)
 async def supervisor_dashboard(
     request: Request,
+    filter: Optional[str] = "all",
+    search: Optional[str] = None,
+    view_event: Optional[str] = None,
     user: Dict[str, Any] = Depends(require_role(["supervisor"]))
 ):
     """Supervisor Dashboard: University Admin & Dean Authority"""
     pending_count = fetch_one("SELECT count(*) as count FROM events WHERE approval_status = 'pending_dean_approval'")["count"]
-    active_count = fetch_one("SELECT count(*) as count FROM events WHERE approval_status = 'approved'")["count"]
+    active_count = fetch_one("SELECT count(*) as count FROM events WHERE approval_status IN ('approved', 'auto_approved') AND status != 'cancelled'")["count"]
+    cancelled_count = fetch_one("SELECT count(*) as count FROM events WHERE approval_status = 'cancelled' OR status = 'cancelled'")["count"]
+    total_events_count = fetch_one("SELECT count(*) as count FROM events")["count"]
     rooms_count = fetch_one("SELECT count(*) as count FROM rooms")["count"]
     resources_count = fetch_one("SELECT count(*) as count FROM resources")["count"]
     
-    pending_events = fetch_all("""
-        SELECT e.*, 
-               (SELECT r.name FROM bookings b JOIN rooms r ON b.room_id = r.id WHERE b.event_id = e.id LIMIT 1) as venue_name,
-               (SELECT count(*) FROM bookings b WHERE b.event_id = e.id AND b.resource_id IS NOT NULL) as req_count
-        FROM events e 
-        WHERE e.approval_status = 'pending_dean_approval' 
-        ORDER BY e.created_at DESC LIMIT 10
-    """)
-    approved_events = fetch_all("""
-        SELECT e.*, 
-               (SELECT r.name FROM bookings b JOIN rooms r ON b.room_id = r.id WHERE b.event_id = e.id LIMIT 1) as venue_name
-        FROM events e 
-        WHERE e.approval_status = 'approved' 
-        ORDER BY e.created_at DESC LIMIT 10
-    """)
+    pending_events = get_all_events_for_supervisor(status_filter="pending")
+    approved_events = get_all_events_for_supervisor(status_filter="approved")
+    all_events = get_all_events_for_supervisor(status_filter=filter if filter != "all" else None, search=search)
+
+    event_detail_modal = None
+    if view_event:
+        event_detail_modal = get_event_with_details(view_event)
 
     return templates.TemplateResponse(
         request=request,
@@ -329,10 +330,16 @@ async def supervisor_dashboard(
             "user": user,
             "pending_count": pending_count,
             "active_count": active_count,
+            "cancelled_count": cancelled_count,
+            "total_events_count": total_events_count,
             "rooms_count": rooms_count,
             "resources_count": resources_count,
             "pending_events": pending_events,
-            "approved_events": approved_events
+            "approved_events": approved_events,
+            "all_events": all_events,
+            "current_filter": filter or "all",
+            "search_query": search or "",
+            "event_detail_modal": event_detail_modal,
         }
     )
 

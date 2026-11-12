@@ -9,7 +9,8 @@
 |---|---|---|---|
 | **Baseline (Pre-Fix)** | `python -m pytest -q` | **325 passed, 1 warning** (`349.54s`) | Existing unit, API, security, benchmark, and E2E integration tests |
 | **Regression Additions** | `python -m pytest tests/test_audit_bugfixes.py -q` | **6 passed, 1 warning** (`18.94s`) | 6 new tests in `tests/test_audit_bugfixes.py` covering fixed bugs |
-| **Final Full Suite (Post-Fix)** | `python -m pytest -q` | **331 passed, 1 warning** (`160.02s`) | All existing tests + 6 new regression tests after final edit |
+| **Supervisor Dashboard Suite** | `python -m pytest tests/test_supervisor_dashboard_events.py -q` | **3 passed** (`17.23s`) | Event directory, complete metadata API, search & status filtering |
+| **Final Full Suite (Post-Fix)** | `python -m pytest -q` | **340 passed, 1 warning** | Full regression and feature suite across all 7 core modules |
 
 **Warning:** `StarletteDeprecationWarning: Using httpx with starlette.testclient is deprecated; install httpx2 instead.`
 

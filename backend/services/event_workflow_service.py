@@ -482,21 +482,310 @@ def reject_event_by_supervisor(event_id: str, supervisor_email: str = "admin@gal
         event_id, supervisor_email, "reject_event_by_supervisor", reject_event
     )
 
+
+def cancel_event(
+    event_id: str,
+    actor_email: str = "organiser@galgotias.edu",
+    reason: str = "",
+) -> Dict[str, Any]:
+    """
+    Cancels/unbooks an event, releasing its venue, returning equipment stock,
+    and cancelling pending outbox notices.
+    """
+    def do_cancel(conn):
+        event = conn.execute("SELECT * FROM events WHERE id = ?", (event_id,)).fetchone()
+        if not event:
+            raise InvariantViolation("event_not_found", event_id, f"Event {event_id} not found.")
+
+        # Restore allocated resource stock if event had confirmed allocations
+        allocations = conn.execute(
+            """SELECT resource_id, quantity FROM bookings
+               WHERE event_id = ? AND resource_id IS NOT NULL AND status = 'confirmed'""",
+            (event_id,),
+        ).fetchall()
+        for alloc in allocations:
+            conn.execute(
+                "UPDATE resources SET allocated_stock = MAX(0, allocated_stock - ?) WHERE id = ?",
+                (alloc["quantity"], alloc["resource_id"]),
+            )
+
+        # Update event and booking statuses to cancelled
+        conn.execute(
+            """UPDATE events
+               SET approval_status = 'cancelled', status = 'cancelled', updated_at = CURRENT_TIMESTAMP
+               WHERE id = ?""",
+            (event_id,),
+        )
+        conn.execute(
+            "UPDATE bookings SET status = 'cancelled' WHERE event_id = ?",
+            (event_id,),
+        )
+        conn.execute(
+            """UPDATE outbox SET status = 'cancelled', error_message = ?
+               WHERE event_id = ? AND status = 'held'""",
+            (f"Event cancelled by {actor_email}: {reason or 'Organiser cancellation'}", event_id),
+        )
+        conn.execute(
+            "UPDATE registrations SET status = 'cancelled' WHERE event_id = ? AND status = 'confirmed'",
+            (event_id,),
+        )
+
+        kavach.log_audit(
+            conn,
+            actor=actor_email,
+            action="EVENT_CANCELLED",
+            result="CANCELLED",
+            event_id=event_id,
+            details={"reason": reason or "Cancelled by user", "event_name": event["name"]},
+        )
+        return {
+            "success": True,
+            "event_id": event_id,
+            "message": f"Event '{event['name']}' has been unbooked/cancelled. Venue and resources are released.",
+        }
+
+    with get_connection() as conn:
+        result = kavach.execute_with_kavach(
+            conn,
+            event_id,
+            actor_email,
+            "cancel_event",
+            do_cancel,
+            release_staged_notices=False,
+        )
+    if result["status"] == "committed":
+        return result["details"]
+    violation = result.get("violation")
+    if violation:
+        raise InvariantViolation(
+            violation["rule"],
+            violation["item"],
+            violation["detail"],
+            violation.get("suggestion"),
+        )
+    raise RuntimeError(result.get("error", "Cancel event failed."))
+
+
+def delete_event(
+    event_id: str,
+    actor_email: str = "organiser@galgotias.edu",
+) -> Dict[str, Any]:
+    """
+    Completely deletes an event and all dependent rows (bookings, sessions, registrations, notices).
+    Used when an organiser or supervisor booked an event by mistake and wants to purge it completely.
+    """
+    def do_delete(conn):
+        event = conn.execute("SELECT * FROM events WHERE id = ?", (event_id,)).fetchone()
+        if not event:
+            raise InvariantViolation("event_not_found", event_id, f"Event {event_id} not found.")
+
+        # Restore allocated resource stock if event had confirmed allocations
+        allocations = conn.execute(
+            """SELECT resource_id, quantity FROM bookings
+               WHERE event_id = ? AND resource_id IS NOT NULL AND status = 'confirmed'""",
+            (event_id,),
+        ).fetchall()
+        for alloc in allocations:
+            conn.execute(
+                "UPDATE resources SET allocated_stock = MAX(0, allocated_stock - ?) WHERE id = ?",
+                (alloc["quantity"], alloc["resource_id"]),
+            )
+
+        # Explicitly delete child rows across all dependent tables
+        conn.execute("PRAGMA foreign_keys = ON;")
+        conn.execute("DELETE FROM attendance WHERE session_id IN (SELECT id FROM sessions WHERE event_id = ?)", (event_id,))
+        conn.execute("DELETE FROM certificates WHERE event_id = ?", (event_id,))
+        conn.execute("DELETE FROM feedback WHERE event_id = ?", (event_id,))
+        conn.execute("DELETE FROM registrations WHERE event_id = ?", (event_id,))
+        conn.execute("DELETE FROM outbox WHERE event_id = ?", (event_id,))
+        conn.execute("DELETE FROM sessions WHERE event_id = ?", (event_id,))
+        conn.execute("DELETE FROM bookings WHERE event_id = ?", (event_id,))
+        conn.execute("DELETE FROM human_review_queue WHERE event_id = ?", (event_id,))
+        conn.execute("DELETE FROM events WHERE id = ?", (event_id,))
+
+        kavach.log_audit(
+            conn,
+            actor=actor_email,
+            action="EVENT_DELETED",
+            result="DELETED",
+            event_id=event_id,
+            details={"event_name": event["name"]},
+        )
+        return {
+            "success": True,
+            "event_id": event_id,
+            "message": f"Event '{event['name']}' has been deleted completely.",
+        }
+
+    with get_connection() as conn:
+        result = kavach.execute_with_kavach(
+            conn,
+            event_id,
+            actor_email,
+            "delete_event",
+            do_delete,
+            release_staged_notices=False,
+        )
+    if result["status"] == "committed":
+        return result["details"]
+    violation = result.get("violation")
+    if violation:
+        raise InvariantViolation(
+            violation["rule"],
+            violation["item"],
+            violation["detail"],
+            violation.get("suggestion"),
+        )
+    raise RuntimeError(result.get("error", "Delete event failed."))
+
+
 def get_event_with_details(event_id: str) -> Optional[Dict[str, Any]]:
-    """Retrieves an event with its bookings, venue, requisitions, registrant count, and outbox logs."""
+    """Retrieves an event with full linked relations: venue, requisitions, schedule sessions, speakers, attendees, and audit logs."""
     event = fetch_one("SELECT * FROM events WHERE id = ?", (event_id,))
     if not event:
         return None
+    event_dict = dict(event)
 
-    bookings = fetch_all("SELECT * FROM bookings WHERE event_id = ?", (event_id,))
+    # Resolve organizer email from audit_log or outbox
+    actor_row = fetch_one(
+        "SELECT actor FROM audit_log WHERE event_id = ? AND action IN ('CREATE_EVENT_REQUEST', 'SAVEPOINT_CREATE') ORDER BY timestamp ASC LIMIT 1",
+        (event_id,)
+    )
+    if actor_row and actor_row["actor"]:
+        event_dict["organizer_email"] = actor_row["actor"]
+    else:
+        outbox_row = fetch_one("SELECT recipient FROM outbox WHERE event_id = ? LIMIT 1", (event_id,))
+        event_dict["organizer_email"] = outbox_row["recipient"] if outbox_row else "organiser@galgotias.edu"
+
+    # Venue booking
+    venue_booking = fetch_one("""
+        SELECT b.*, r.name as room_name, r.capacity as room_capacity, r.location as room_location,
+               r.has_projector, r.has_audio, r.requires_special_approval
+        FROM bookings b
+        JOIN rooms r ON b.room_id = r.id
+        WHERE b.event_id = ? AND b.room_id IS NOT NULL
+        LIMIT 1
+    """, (event_id,))
+    venue_dict = dict(venue_booking) if venue_booking else None
+
+    # Requisition bookings (equipment / resources)
+    requisition_bookings = fetch_all("""
+        SELECT b.*, res.name as resource_name, res.category as resource_category,
+               res.stock as total_stock, res.allocated_stock, res.unit
+        FROM bookings b
+        JOIN resources res ON b.resource_id = res.id
+        WHERE b.event_id = ? AND b.resource_id IS NOT NULL
+        ORDER BY b.created_at ASC
+    """, (event_id,))
+    requisitions = [dict(r) for r in (requisition_bookings or [])]
+
+    # All raw bookings
+    all_bookings = fetch_all("SELECT * FROM bookings WHERE event_id = ? ORDER BY created_at ASC", (event_id,))
+
+    # Sessions / schedule agenda
+    sessions = fetch_all("""
+        SELECT s.*, 
+               sp.name as speaker_name, sp.department as speaker_department,
+               sp.topics as speaker_topics, sp.email as speaker_email,
+               rm.name as session_room_name
+        FROM sessions s
+        LEFT JOIN speakers sp ON s.speaker_id = sp.id
+        LEFT JOIN rooms rm ON s.room_id = rm.id
+        WHERE s.event_id = ?
+        ORDER BY s.start_time ASC
+    """, (event_id,))
+
+    # Registrations
     registrations_count = fetch_one("SELECT count(*) as count FROM registrations WHERE event_id = ? AND status = 'confirmed'", (event_id,))["count"]
     waitlist_count = fetch_one("SELECT count(*) as count FROM registrations WHERE event_id = ? AND status = 'waitlisted'", (event_id,))["count"]
+    attendees = fetch_all("""
+        SELECT reg.id as registration_id, reg.status, reg.registered_at,
+               st.id as student_id, st.name as student_name, st.email as student_email,
+               st.department as student_dept, st.year as student_year
+        FROM registrations reg
+        JOIN students st ON reg.student_id = st.id
+        WHERE reg.event_id = ?
+        ORDER BY reg.registered_at DESC
+        LIMIT 50
+    """, (event_id,))
+
+    # Outbox notifications
     outbox = fetch_all("SELECT * FROM outbox WHERE event_id = ? ORDER BY created_at DESC", (event_id,))
 
+    # Audit log
+    audit_trail = fetch_all("SELECT * FROM audit_log WHERE event_id = ? ORDER BY timestamp DESC", (event_id,))
+
     return {
-        "event": event,
-        "bookings": bookings,
+        "event": event_dict,
+        "venue": venue_dict,
+        "requisitions": requisitions,
+        "bookings": [dict(b) for b in (all_bookings or [])],
+        "sessions": [dict(s) for s in (sessions or [])],
         "confirmed_attendees": registrations_count,
         "waitlisted_attendees": waitlist_count,
-        "outbox": outbox
+        "attendees": [dict(a) for a in (attendees or [])],
+        "outbox": [dict(o) for o in (outbox or [])],
+        "audit_trail": [dict(a) for a in (audit_trail or [])],
     }
+
+
+def get_all_events_for_supervisor(
+    status_filter: Optional[str] = None,
+    search: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Returns rich event records for supervisor oversight with all joined metadata:
+    venue, timings, attendance counts, requisitions count, and organizer info.
+    """
+    query = """
+        SELECT e.*,
+               (SELECT r.name FROM bookings b JOIN rooms r ON b.room_id = r.id WHERE b.event_id = e.id LIMIT 1) as venue_name,
+               (SELECT r.location FROM bookings b JOIN rooms r ON b.room_id = r.id WHERE b.event_id = e.id LIMIT 1) as venue_location,
+               (SELECT r.capacity FROM bookings b JOIN rooms r ON b.room_id = r.id WHERE b.event_id = e.id LIMIT 1) as venue_capacity,
+               (SELECT b.start_time FROM bookings b WHERE b.event_id = e.id AND b.room_id IS NOT NULL LIMIT 1) as start_time,
+               (SELECT b.end_time FROM bookings b WHERE b.event_id = e.id AND b.room_id IS NOT NULL LIMIT 1) as end_time,
+               (SELECT count(*) FROM registrations reg WHERE reg.event_id = e.id AND reg.status = 'confirmed') as confirmed_count,
+               (SELECT count(*) FROM registrations reg WHERE reg.event_id = e.id AND reg.status = 'waitlisted') as waitlisted_count,
+               (SELECT count(*) FROM bookings b WHERE b.event_id = e.id AND b.resource_id IS NOT NULL) as req_count,
+               (SELECT count(*) FROM sessions s WHERE s.event_id = e.id) as session_count,
+               (SELECT a.actor FROM audit_log a WHERE a.event_id = e.id AND a.action = 'CREATE_EVENT_REQUEST' LIMIT 1) as creator_email
+        FROM events e
+        WHERE 1=1
+    """
+    params: List[Any] = []
+
+    if status_filter:
+        s_filt = status_filter.lower().strip()
+        if s_filt == "pending":
+            query += " AND e.approval_status = 'pending_dean_approval'"
+        elif s_filt == "approved":
+            query += " AND e.approval_status IN ('approved', 'auto_approved') AND e.status != 'cancelled'"
+        elif s_filt == "auto_approved":
+            query += " AND e.approval_status = 'auto_approved' AND e.status != 'cancelled'"
+        elif s_filt == "rejected":
+            query += " AND e.approval_status = 'rejected'"
+        elif s_filt == "cancelled":
+            query += " AND (e.approval_status = 'cancelled' OR e.status = 'cancelled')"
+
+    if search:
+        s_term = f"%{search.strip()}%"
+        query += """ AND (
+            e.name LIKE ? OR 
+            e.id LIKE ? OR 
+            e.organizer_department LIKE ? OR 
+            e.event_type LIKE ? OR
+            e.brief LIKE ? OR
+            e.id IN (SELECT b.event_id FROM bookings b JOIN rooms r ON b.room_id = r.id WHERE r.name LIKE ?)
+        )"""
+        params.extend([s_term, s_term, s_term, s_term, s_term, s_term])
+
+    query += " ORDER BY e.created_at DESC"
+
+    rows = fetch_all(query, tuple(params))
+    events = []
+    for r in rows:
+        d = dict(r)
+        if not d.get("creator_email"):
+            d["creator_email"] = "organiser@galgotias.edu"
+        events.append(d)
+    return events
