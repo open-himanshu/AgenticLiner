@@ -227,10 +227,10 @@ class MemoryNoteRequest(BaseModel):
 
 class AutopilotRequest(BaseModel):
     prompt: str
-    date: str = "2026-11-25"
-    start_time: str = "09:00:00"
-    end_time: str = "17:00:00"
-    budget: Optional[float] = Field(default=100000.0, gt=0)
+    date: Optional[str] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    budget: Optional[float] = Field(default=None, gt=0)
 
 class StudentRegistrationRequest(BaseModel):
     event_id: str = "ev_001"
@@ -1270,9 +1270,9 @@ async def run_autopilot_api(
                 venue_name=res.get("venue"),
                 headcount=res.get("headcount") or 100,
                 equipment_items=res.get("items_allocated") or [],
-                target_date=req.date,
-                start_time=req.start_time,
-                end_time=req.end_time,
+                target_date=res.get("date") or req.date,
+                start_time=res.get("start_time") or req.start_time,
+                end_time=res.get("end_time") or req.end_time,
                 department=user.get("department", "School of AI")
             )
         except Exception as exc:

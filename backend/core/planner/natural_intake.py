@@ -60,6 +60,101 @@ def validate_prompt_safety(prompt: str) -> Tuple[bool, Optional[str]]:
     return True, None
 
 
+def _resolve_time_window_with_assumptions(
+    combined_time: str,
+) -> Optional[Tuple[str, str, float, List[str]]]:
+    """
+    Parse explicit time ranges, 12h/24h start times, or time-of-day keywords.
+    Returns (start_time, end_time, duration_hours, assumptions) or None if no cue matched.
+    """
+    def _to_24h(hour: int, meridiem: Optional[str]) -> Optional[int]:
+        if meridiem in ("am", "pm"):
+            if hour < 1 or hour > 12:
+                return None
+            if meridiem == "pm" and hour < 12:
+                return hour + 12
+            if meridiem == "am" and hour == 12:
+                return 0
+            return hour
+        return hour if 0 <= hour <= 23 else None
+
+    # 1. Explicit range with am/pm anchor (e.g. "6 to 8 PM", "6:30-8:30 pm", "10 AM to 2 PM")
+    meridiem_range = re.search(
+        r'(?<![\d:-])(\d{1,2})(?::([0-5]\d))?\s*(am|pm)?\s*(?:to|-|–|—|till|until)\s*(\d{1,2})(?::([0-5]\d))?\s*(am|pm)\b',
+        combined_time,
+    )
+    if meridiem_range:
+        s_raw_hr = int(meridiem_range.group(1))
+        s_min = int(meridiem_range.group(2) or 0)
+        s_mer = meridiem_range.group(3)
+        e_raw_hr = int(meridiem_range.group(4))
+        e_min = int(meridiem_range.group(5) or 0)
+        e_mer = meridiem_range.group(6)
+
+        e_hr = _to_24h(e_raw_hr, e_mer)
+        if s_mer is None and 1 <= s_raw_hr <= 12:
+            # Share end meridiem (e.g. "6 to 8 PM" -> 18:00-20:00), unless crossing from AM (e.g. "10 to 2 PM")
+            candidate_hr = _to_24h(s_raw_hr, e_mer)
+            if candidate_hr is not None and e_hr is not None and (candidate_hr * 60 + s_min) < (e_hr * 60 + e_min):
+                s_mer = e_mer
+            else:
+                s_mer = "am"
+        s_hr = _to_24h(s_raw_hr, s_mer)
+
+        if s_hr is not None and e_hr is not None:
+            s_total = s_hr * 60 + s_min
+            e_total = e_hr * 60 + e_min
+            if e_total > s_total:
+                start_str = f"{s_hr:02d}:{s_min:02d}:00"
+                end_str = f"{e_hr:02d}:{e_min:02d}:00"
+                return start_str, end_str, round((e_total - s_total) / 60.0, 2), []
+
+    # 2. Explicit 24-hour range (e.g. "18:00 to 20:00", "09:00-17:00")
+    h24_range = re.search(
+        r'(?<![\d:-])([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?\s*(?:to|-|–|—|till|until)\s*([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?\b(?![\d:-])',
+        combined_time,
+    )
+    if h24_range:
+        s_hr, s_min = int(h24_range.group(1)), int(h24_range.group(2))
+        e_hr, e_min = int(h24_range.group(3)), int(h24_range.group(4))
+        s_total = s_hr * 60 + s_min
+        e_total = e_hr * 60 + e_min
+        if e_total > s_total:
+            return f"{s_hr:02d}:{s_min:02d}:00", f"{e_hr:02d}:{e_min:02d}:00", round((e_total - s_total) / 60.0, 2), []
+
+    # 3. Single 12-hour start time (e.g. "6 PM", "6:30 pm", "10 AM") -> 2-hour default
+    hour_match = re.search(r'(?<![\d:-])(\d{1,2})(?::([0-5]\d))?\s*(am|pm)\b', combined_time)
+    if hour_match:
+        hr = _to_24h(int(hour_match.group(1)), hour_match.group(3))
+        minute = int(hour_match.group(2) or 0)
+        if hr is not None:
+            start_total = hr * 60 + minute
+            end_total = min(23 * 60 + 59, start_total + 120)
+            end_hr, end_min = divmod(end_total, 60)
+            start_str = f"{hr:02d}:{minute:02d}:00"
+            end_str = f"{end_hr:02d}:{end_min:02d}:00"
+            assumption = f"Assumption: 2-hour default window ({start_str} - {end_str}) because no end time was specified."
+            return start_str, end_str, round((end_total - start_total) / 60.0, 2), [assumption]
+
+    # 4. Single 24-hour clock time (e.g. "18:00", "09:30") -> 2-hour default
+    h24_match = re.search(
+        r'(?<![\d:-])([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?\b(?![\d:-])',
+        combined_time,
+    )
+    if h24_match:
+        hr = int(h24_match.group(1))
+        minute = int(h24_match.group(2))
+        start_total = hr * 60 + minute
+        end_total = min(23 * 60 + 59, start_total + 120)
+        end_hr, end_min = divmod(end_total, 60)
+        start_str = f"{hr:02d}:{minute:02d}:00"
+        end_str = f"{end_hr:02d}:{end_min:02d}:00"
+        assumption = f"Assumption: 2-hour default window ({start_str} - {end_str}) because no end time was specified."
+        return start_str, end_str, round((end_total - start_total) / 60.0, 2), [assumption]
+
+    return None
+
+
 def resolve_natural_datetime(
     date_phrase: Optional[str] = None,
     time_phrase: Optional[str] = None,
@@ -150,20 +245,10 @@ def resolve_natural_datetime(
     end_time = "13:00:00"
     duration_hours = 3.0
 
-    # Specific hour detection (e.g. 6 PM, 14:00, 2:30 PM, shaam 6 baje)
-    hour_match = re.search(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b', combined_time)
-    if hour_match:
-        hr = int(hour_match.group(1))
-        minute = int(hour_match.group(2) or 0)
-        meridiem = hour_match.group(3)
-        if meridiem == "pm" and hr < 12:
-            hr += 12
-        elif meridiem == "am" and hr == 12:
-            hr = 0
-        start_time = f"{hr:02d}:{minute:02d}:00"
-        end_hr = min(23, hr + 3)
-        end_time = f"{end_hr:02d}:{minute:02d}:00"
-        duration_hours = 3.0
+    # Specific hour / time-range / 24h detection (e.g. 6 to 8 PM, 6 PM, 6:30 pm, 18:00)
+    parsed_window = _resolve_time_window_with_assumptions(combined_time)
+    if parsed_window is not None:
+        start_time, end_time, duration_hours, _ = parsed_window
     elif re.search(r'(\d{1,2})\s*baje\b', combined_time):
         baje_match = re.search(r'(\d{1,2})\s*baje\b', combined_time)
         hr = int(baje_match.group(1))
@@ -177,8 +262,8 @@ def resolve_natural_datetime(
         # Part-of-day defaults
         if any(k in combined_time for k in ["evening", "shaam"]):
             start_time = "18:00:00"
-            end_time = "21:00:00"
-            duration_hours = 3.0
+            end_time = "20:00:00"
+            duration_hours = 2.0
         elif any(k in combined_time for k in ["afternoon", "dopahar"]):
             start_time = "14:00:00"
             end_time = "17:00:00"
@@ -193,6 +278,48 @@ def resolve_natural_datetime(
             duration_hours = 4.0
 
     return target_date, start_time, end_time, duration_hours
+
+
+def resolve_natural_datetime_with_assumptions(
+    date_phrase: Optional[str] = None,
+    time_phrase: Optional[str] = None,
+    ref_date: Optional[CalendarDate] = None,
+) -> Dict[str, Any]:
+    """
+    Resolve natural date and time phrases and return extracted slot details
+    along with any documented scheduling assumptions.
+    """
+    target_date, start_time, end_time, duration_hours = resolve_natural_datetime(
+        date_phrase=date_phrase,
+        time_phrase=time_phrase,
+        ref_date=ref_date,
+    )
+    clean_date = (date_phrase or "").lower().strip()
+    clean_time = (time_phrase or "").lower().strip()
+    combined_time = clean_time if clean_date == clean_time else f"{clean_date} {clean_time}".strip()
+
+    parsed_window = _resolve_time_window_with_assumptions(combined_time)
+    assumptions: List[str] = []
+    has_explicit_time = parsed_window is not None
+
+    if parsed_window is not None:
+        assumptions.extend(parsed_window[3])
+    elif any(k in combined_time for k in ["evening", "shaam"]):
+        has_explicit_time = True
+        assumptions.append(
+            f"Assumption: mapped 'evening' to default 2-hour window ({start_time} - {end_time})."
+        )
+    elif any(k in combined_time for k in ["morning", "subah", "afternoon", "dopahar", "night", "raat", "baje"]):
+        has_explicit_time = True
+
+    return {
+        "date": target_date,
+        "start_time": start_time,
+        "end_time": end_time,
+        "duration_hours": duration_hours,
+        "has_explicit_time": has_explicit_time,
+        "assumptions": assumptions,
+    }
 
 
 def _extract_entities_deterministic(prompt: str) -> ExtractedEventEntities:

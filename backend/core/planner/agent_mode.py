@@ -221,10 +221,10 @@ def _build_system_prompt(budget: float, today: str, next_friday: str) -> str:
 
 def run_agent_mode(
     prompt: str,
-    date: str = "2026-11-25",
-    start_time: str = "09:00:00",
-    end_time: str = "17:00:00",
-    budget: float = DEFAULT_BUDGET,
+    date: Optional[str] = None,
+    start_time: Optional[str] = None,
+    end_time: Optional[str] = None,
+    budget: Optional[float] = None,
     call_llm_fn=None,
 ) -> Dict[str, Any]:
     """
@@ -278,7 +278,8 @@ def run_agent_mode(
     total_tokens: Dict[str, int] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
     ask_user_count = 0
 
-    system_prompt = _build_system_prompt(budget, today, next_friday)
+    effective_budget = float(budget) if budget is not None else float(DEFAULT_BUDGET)
+    system_prompt = _build_system_prompt(effective_budget, today, next_friday)
     messages: List[Dict[str, Any]] = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": prompt},
@@ -333,7 +334,7 @@ def run_agent_mode(
                     tool_status = "completed"
                 elif name == "requisition":
                     # Enforce budget in code before calling Kavach.
-                    result = _execute_requisition(arguments, event_id, budget)
+                    result = _execute_requisition(arguments, event_id, effective_budget)
                     tool_status = "committed" if result.get("status") == "committed" else "rolled_back"
                 elif name in TOOL_DISPATCH:
                     try:
@@ -421,10 +422,10 @@ def _summarize_result(tool_name: str, result: Any) -> str:
 
 def run_autopilot_with_fallback(
     prompt: str,
-    date: str = "2026-11-25",
-    start_time: str = "09:00:00",
-    end_time: str = "17:00:00",
-    budget: float = DEFAULT_BUDGET,
+    date: Optional[str] = None,
+    start_time: Optional[str] = None,
+    end_time: Optional[str] = None,
+    budget: Optional[float] = None,
     call_llm_fn=None,
 ) -> Dict[str, Any]:
     """
