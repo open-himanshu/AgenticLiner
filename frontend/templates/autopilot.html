@@ -395,7 +395,7 @@
 
                 <div class="mb-3 d-none">
                     <label class="form-label small fw-semibold" for="agentBudget">Recorded budget</label>
-                    <input type="number" class="form-control form-control-sm" id="agentBudget" value="100000" min="0.01" step="0.01">
+                    <input type="number" class="form-control form-control-sm" id="agentBudget" value="" placeholder="Optional (or mention in prompt)" min="0.01" step="0.01">
                     <div class="form-text" style="font-size: 0.75rem;">Recorded on the event only; cost estimation is not implemented and there is no payment step.</div>
                 </div>
 
@@ -1206,7 +1206,8 @@
 
         const prompt = entities.raw_prompt || document.getElementById('agentPrompt').value;
         const finalDate = entities.target_date || document.getElementById('agentDate').value || '2026-11-28';
-        const finalBudget = entities.budget_limit || Number(document.getElementById('agentBudget').value) || 50000;
+        const budgetEl = document.getElementById('agentBudget');
+        const finalBudget = entities.budget_limit || ((budgetEl && Number(budgetEl.value) > 0) ? Number(budgetEl.value) : null);
 
         btn.disabled = true;
         btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Agent Running...`;
@@ -1385,7 +1386,7 @@
         const prompt = document.getElementById('agentPrompt').value;
         const targetDate = document.getElementById('agentDate').value || '2026-11-28';
         const budgetInput = document.getElementById('agentBudget');
-        const budget = (budgetInput && Number(budgetInput.value) > 0) ? Number(budgetInput.value) : 100000.0;
+        const budget = (budgetInput && Number(budgetInput.value) > 0) ? Number(budgetInput.value) : null;
         const btn = document.getElementById('btnRunAgent');
         const container = document.getElementById('timelineContainer');
         const statusContainer = document.getElementById('statusBadgeContainer');

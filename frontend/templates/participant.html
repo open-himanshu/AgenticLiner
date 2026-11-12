@@ -296,38 +296,48 @@
         feedbackModalInstance.show();
     }
 
-    document.getElementById('btnModalSubmitFeedback').addEventListener('click', async () => {
-        const eventId = document.getElementById('modalEventId').value;
-        const rating = parseInt(document.getElementById('modalRating').value);
-        const comment = document.getElementById('modalComment').value.trim();
-        const alertBox = document.getElementById('modalAlert');
+    document.addEventListener('DOMContentLoaded', () => {
+        const btnSubmitFb = document.getElementById('btnModalSubmitFeedback');
+        if (!btnSubmitFb) return;
+        btnSubmitFb.addEventListener('click', async () => {
+            const eventId = document.getElementById('modalEventId').value;
+            const rating = parseInt(document.getElementById('modalRating').value);
+            const comment = document.getElementById('modalComment').value.trim();
+            const alertBox = document.getElementById('modalAlert');
 
-        if (!comment) {
-            alert('Please write your comments.');
-            return;
-        }
+            if (!comment) {
+                alert('Please write your comments.');
+                return;
+            }
 
-        try {
-            const res = await fetch('/api/feedback/submit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    event_id: eventId,
-                    student_id: '{{ student.id }}',
-                    rating: rating,
-                    comment: comment
-                })
-            });
-            const data = await res.json();
-            alertBox.className = 'small alert alert-success py-2';
-            alertBox.innerHTML = `✓ Feedback recorded! Sentiment: <b>${data.analysis.sentiment.toUpperCase()}</b> | Themes: <b>${data.themes.join(', ')}</b>`;
-            alertBox.style.display = 'block';
-            setTimeout(() => {
-                if (feedbackModalInstance) feedbackModalInstance.hide();
-            }, 1500);
-        } catch (e) {
-            alert('Failed to submit feedback: ' + e);
-        }
+            try {
+                const res = await fetch('/api/feedback/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event_id: eventId,
+                        student_id: '{{ student.id }}',
+                        rating: rating,
+                        comment: comment
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    alertBox.className = 'small alert alert-danger py-2';
+                    alertBox.innerHTML = data.detail || 'Could not submit feedback.';
+                    alertBox.style.display = 'block';
+                    return;
+                }
+                alertBox.className = 'small alert alert-success py-2';
+                alertBox.innerHTML = `✓ Feedback recorded! Sentiment: <b>${data.analysis.sentiment.toUpperCase()}</b> | Themes: <b>${data.themes.join(', ')}</b>`;
+                alertBox.style.display = 'block';
+                setTimeout(() => {
+                    if (feedbackModalInstance) feedbackModalInstance.hide();
+                }, 1500);
+            } catch (e) {
+                alert('Failed to submit feedback: ' + e);
+            }
+        });
     });
 </script>
 

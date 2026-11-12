@@ -516,5 +516,27 @@ def execute_universal_command(command: str, user_role: str = "organiser") -> Dic
             'data': res
         }
 
+    # 7. Read-only listing queries (prevent falling through to event creation)
+    is_read_query = any(w in c_lower for w in ["show", "list", "available", "find", "check", "view", "dikhao", "batao"])
+    is_write_intent = any(w in c_lower for w in ["add", "create", "new", "plan", "organize", "organise", "book", "schedule", "banao", "jodo"])
+    if is_read_query and not is_write_intent:
+        if any(w in c_lower for w in ["room", "rooms", "venue", "venues", "hall", "halls"]):
+            rooms = fetch_all("SELECT id, name, capacity, location FROM rooms ORDER BY capacity ASC")
+            room_summary = ", ".join(f"{r['name']} ({r['capacity']} seats)" for r in rooms[:8]) or "No rooms found."
+            return {
+                "success": True,
+                "action": "VENUES_LISTED",
+                "message": f"Found {len(rooms)} campus venue(s): {room_summary}",
+                "data": {"rooms": rooms}
+            }
+        if any(w in c_lower for w in ["event", "events"]):
+            events = fetch_all("SELECT id, name, event_type, expected_participants, approval_status FROM events ORDER BY created_at DESC LIMIT 10")
+            return {
+                "success": True,
+                "action": "EVENTS_LISTED",
+                "message": f"Found {len(events)} campus event(s).",
+                "data": {"events": events}
+            }
+
     # Default fallback: Treat as full event auto-genesis
     return execute_autonomous_event_genesis(command)

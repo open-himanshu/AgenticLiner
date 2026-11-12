@@ -68,17 +68,17 @@ _draft_cache: Dict[str, EventDraftPlan] = {}
 
 # Standard campus equipment cost reference catalog (fallback if DB unavailable)
 _FALLBACK_RESOURCE_COSTS: Dict[str, Dict[str, Any]] = {
-    "Ultra HD 4K Laser Projector": {"id": "res_proj_4k", "category": "equipment", "cost": 1500.0, "dean": False},
-    "Cordless Microphones": {"id": "res_mic_pair", "category": "equipment", "cost": 800.0, "dean": False},
-    "Wireless Handheld Mic Set (Pair)": {"id": "res_mic_pair", "category": "equipment", "cost": 800.0, "dean": False},
-    "Lapel / Collar Mic (Wireless)": {"id": "res_mic_lapel", "category": "equipment", "cost": 600.0, "dean": False},
-    "High-Power Sound System": {"id": "res_audio_sound", "category": "equipment", "cost": 3000.0, "dean": False},
-    "JBL High-Power Sound & PA System": {"id": "res_audio_sound", "category": "equipment", "cost": 3000.0, "dean": False},
-    "Stage LED Lighting": {"id": "res_light_pack", "category": "equipment", "cost": 2500.0, "dean": False},
-    "Stage LED Par Lights & Spotlights": {"id": "res_light_pack", "category": "equipment", "cost": 2500.0, "dean": False},
+    "Ultra HD 4K Laser Projector": {"id": "res_projector_4k", "category": "equipment", "cost": 1500.0, "dean": False},
+    "Cordless Microphones": {"id": "res_mic_cordless", "category": "equipment", "cost": 800.0, "dean": False},
+    "Wireless Handheld Mic Set (Pair)": {"id": "res_mic_cordless", "category": "equipment", "cost": 800.0, "dean": False},
+    "Lapel / Collar Mic (Wireless)": {"id": "res_mic_collar", "category": "equipment", "cost": 600.0, "dean": False},
+    "High-Power Sound System": {"id": "res_sound_jbl", "category": "equipment", "cost": 3000.0, "dean": False},
+    "JBL High-Power Sound & PA System": {"id": "res_sound_jbl", "category": "equipment", "cost": 3000.0, "dean": False},
+    "Stage LED Lighting": {"id": "res_led_lights", "category": "equipment", "cost": 2500.0, "dean": False},
+    "Stage LED Par Lights & Spotlights": {"id": "res_led_lights", "category": "equipment", "cost": 2500.0, "dean": False},
     "Heavy Duty Extension Spike Boards": {"id": "res_ext_boards", "category": "equipment", "cost": 350.0, "dean": False},
-    "Standard Refreshment Snack Box": {"id": "res_snack_box", "category": "food", "cost": 85.0, "dean": False},
-    "Student Volunteers (Registration & Helpdesk)": {"id": "res_vol_desk", "category": "volunteers", "cost": 0.0, "dean": False},
+    "Standard Refreshment Snack Box": {"id": "res_food_snack", "category": "food", "cost": 85.0, "dean": False},
+    "Student Volunteers (Registration & Helpdesk)": {"id": "res_volunteer_reg", "category": "volunteers", "cost": 0.0, "dean": False},
     "Galgotias Campus Shuttle Bus (50-Seater)": {"id": "res_bus_shuttle", "category": "transport", "cost": 4500.0, "dean": True},
 }
 
