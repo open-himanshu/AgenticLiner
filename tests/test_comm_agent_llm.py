@@ -7,6 +7,7 @@ Verifies:
 4. Universal command endpoint blocks participants with 403 and clear detail.
 """
 
+import os
 import pytest
 from unittest.mock import patch, MagicMock
 from backend.core.planner.call_llm import ProviderError, call_llm
@@ -16,8 +17,25 @@ import httpx
 from conftest import TEST_PASSWORDS
 
 
+def test_provider_env_is_isolated_from_ambient_environment():
+    """Guard verifies no test inherits ambient PROVIDER or API keys from host env."""
+    for var in (
+        "PROVIDER",
+        "GEMINI_API_KEY",
+        "GEMINI_MODEL",
+        "GROQ_API_KEY",
+        "GROQ_MODEL",
+        "OLLAMA_MODEL",
+    ):
+        assert os.getenv(var) is None
+
+
 def test_comm_agent_answers_with_llm_when_available(monkeypatch):
     """When an LLM provider is configured, answer_query uses LLM with grounded facts."""
+    monkeypatch.setenv("PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-fake-gemini-key")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+
     agent = CommunicationAgent()
 
     # Mock call_llm to simulate active real-time AI response
@@ -27,7 +45,7 @@ def test_comm_agent_answers_with_llm_when_available(monkeypatch):
             "tool_calls": [],
             "usage": {"total_tokens": 42},
             "provider": "gemini",
-            "model": "gemini-2.5-flash",
+            "model": "gemini-3.1-flash-lite",
         }
 
     monkeypatch.setattr("backend.modules.module5_comm_agent.agent.call_llm", fake_call_llm)

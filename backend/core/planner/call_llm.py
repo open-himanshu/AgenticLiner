@@ -234,12 +234,24 @@ def _call_gemini(
     return {
         "text": "\n".join(text_parts),
         "tool_calls": calls,
+        "raw_content": content,
         "usage": {
             "prompt_tokens": int(getattr(usage_meta, "prompt_token_count", 0) or 0),
             "completion_tokens": int(getattr(usage_meta, "candidates_token_count", 0) or 0),
             "total_tokens": int(getattr(usage_meta, "total_token_count", 0) or 0),
         },
     }
+
+
+def _gemini_tool_response(raw_content: Any) -> Dict[str, Any]:
+    """Ensure tool output sent to Part.from_function_response is always a dict."""
+    if isinstance(raw_content, dict):
+        return raw_content
+    try:
+        parsed = json.loads(raw_content) if isinstance(raw_content, str) else raw_content
+    except json.JSONDecodeError:
+        parsed = raw_content
+    return parsed if isinstance(parsed, dict) else {"result": parsed}
 
 
 def _gemini_contents(messages: List[Dict[str, Any]], types: Any) -> list:
@@ -258,20 +270,24 @@ def _gemini_contents(messages: List[Dict[str, Any]], types: Any) -> list:
                 tm = messages[idx]
                 parts.append(types.Part.from_function_response(
                     name=tm["name"],
-                    response=json.loads(tm["content"]),
+                    response=_gemini_tool_response(tm["content"]),
                 ))
                 idx += 1
             contents.append(types.Content(role="user", parts=parts))
             continue
         if role == "assistant":
-            parts = []
-            if msg.get("content"):
-                parts.append(types.Part(text=msg["content"]))
-            for call in msg.get("tool_calls", []):
-                parts.append(types.Part(function_call=types.FunctionCall(
-                    name=call["name"], args=call["arguments"],
-                )))
-            contents.append(types.Content(role="model", parts=parts))
+            raw_content = msg.get("raw_content")
+            if raw_content is not None:
+                contents.append(raw_content)
+            else:
+                parts = []
+                if msg.get("content"):
+                    parts.append(types.Part(text=msg["content"]))
+                for call in msg.get("tool_calls", []):
+                    parts.append(types.Part(function_call=types.FunctionCall(
+                        name=call["name"], args=call["arguments"],
+                    )))
+                contents.append(types.Content(role="model", parts=parts))
         else:
             contents.append(types.Content(
                 role="user",

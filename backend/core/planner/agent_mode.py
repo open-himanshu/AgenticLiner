@@ -306,6 +306,8 @@ def run_agent_mode(
                 "content": final_text,
                 "tool_calls": response.get("tool_calls", []),
             }
+            if response.get("raw_content") is not None:
+                assistant_msg["raw_content"] = response["raw_content"]
             messages.append(assistant_msg)
 
             tool_calls = response.get("tool_calls", [])
