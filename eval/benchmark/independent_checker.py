@@ -34,6 +34,7 @@ class IndependentDBChecker:
             "bookings",
             "events",
             "outbox",
+            "resources",
             "rooms",
             "sessions",
             "speakers",
@@ -43,12 +44,13 @@ class IndependentDBChecker:
         overlaps = []
         booking_capacity = []
         session_capacity = []
+        stock_violations = []
         speaker_clashes = []
         orphan_events = []
         outbox_leaks = []
         foreign_key_violations = []
 
-        if {"bookings", "rooms"} <= tables:
+        if "bookings" in tables:
             overlaps = [
                 dict(row)
                 for row in connection.execute(
@@ -62,7 +64,7 @@ class IndependentDBChecker:
                      AND first.id < second.id
                      AND first.status = 'confirmed'
                      AND second.status = 'confirmed'
-                    JOIN rooms AS room ON first.room_id = room.id
+                    LEFT JOIN rooms AS room ON first.room_id = room.id
                     WHERE first.room_id IS NOT NULL
                       AND first.start_time < second.end_time
                       AND first.end_time > second.start_time
@@ -70,10 +72,20 @@ class IndependentDBChecker:
                 )
             ]
         if {"bookings", "events", "rooms"} <= tables:
+            session_exclusion = (
+                """
+                      AND NOT EXISTS (
+                          SELECT 1 FROM sessions AS session
+                          WHERE session.event_id = event.id
+                      )
+                """
+                if "sessions" in tables
+                else ""
+            )
             booking_capacity = [
                 dict(row)
                 for row in connection.execute(
-                    """
+                    f"""
                     SELECT booking.id AS booking_id, event.id AS event_id,
                            event.expected_participants, room.name AS room_name,
                            room.capacity
@@ -83,10 +95,7 @@ class IndependentDBChecker:
                     WHERE booking.status = 'confirmed'
                       AND booking.room_id IS NOT NULL
                       AND event.expected_participants > room.capacity
-                      AND NOT EXISTS (
-                          SELECT 1 FROM sessions AS session
-                          WHERE session.event_id = event.id
-                      )
+                      {session_exclusion}
                     """
                 )
             ]
@@ -104,20 +113,107 @@ class IndependentDBChecker:
                     """
                 )
             ]
-        if {"sessions", "speakers"} <= tables:
-            speaker_clashes = [
+        if "resources" in tables:
+            stock_violations.extend(
                 dict(row)
                 for row in connection.execute(
                     """
+                    SELECT id AS resource_id, name AS resource_name,
+                           stock, allocated_stock,
+                           CASE
+                               WHEN stock < 0 THEN 'stock_below_zero'
+                               WHEN allocated_stock < 0 THEN 'allocated_below_zero'
+                               ELSE 'allocated_exceeds_stock'
+                           END AS violation_type
+                    FROM resources
+                    WHERE stock < 0
+                       OR allocated_stock < 0
+                       OR allocated_stock > stock
+                    """
+                )
+            )
+            if "bookings" in tables:
+                stock_violations.extend(
+                    dict(row)
+                    for row in connection.execute(
+                        """
+                        SELECT resource.id AS resource_id,
+                               resource.name AS resource_name,
+                               resource.stock AS stock,
+                               booking.id AS booking_id,
+                               booking.start_time AS start_time,
+                               booking.end_time AS end_time,
+                               (
+                                   SELECT COALESCE(SUM(other.quantity), 0)
+                                   FROM bookings AS other
+                                   WHERE other.resource_id = resource.id
+                                     AND other.status = 'confirmed'
+                                     AND (
+                                         other.id = booking.id
+                                         OR booking.start_time IS NULL
+                                         OR booking.end_time IS NULL
+                                         OR other.start_time IS NULL
+                                         OR other.end_time IS NULL
+                                         OR (
+                                             other.start_time <= booking.start_time
+                                             AND other.end_time > booking.start_time
+                                         )
+                                     )
+                               ) AS booked_quantity,
+                               'booking_exceeds_stock' AS violation_type
+                        FROM bookings AS booking
+                        JOIN resources AS resource ON resource.id = booking.resource_id
+                        WHERE booking.resource_id IS NOT NULL
+                          AND booking.status = 'confirmed'
+                          AND (
+                              booking.quantity < 0
+                              OR (
+                                  SELECT COALESCE(SUM(other.quantity), 0)
+                                  FROM bookings AS other
+                                  WHERE other.resource_id = resource.id
+                                    AND other.status = 'confirmed'
+                                    AND (
+                                        other.id = booking.id
+                                        OR booking.start_time IS NULL
+                                        OR booking.end_time IS NULL
+                                        OR other.start_time IS NULL
+                                        OR other.end_time IS NULL
+                                        OR (
+                                            other.start_time <= booking.start_time
+                                            AND other.end_time > booking.start_time
+                                        )
+                                    )
+                              ) > resource.stock
+                          )
+                        """
+                    )
+                )
+        if "sessions" in tables:
+            speaker_select = (
+                "COALESCE(speaker.name, first.speaker_id) AS speaker_name"
+                if "speakers" in tables
+                else "first.speaker_id AS speaker_name"
+            )
+            speaker_join = (
+                """
+                    LEFT JOIN speakers AS speaker
+                      ON first.speaker_id = speaker.id
+                """
+                if "speakers" in tables
+                else ""
+            )
+            speaker_clashes = [
+                dict(row)
+                for row in connection.execute(
+                    f"""
                     SELECT first.id AS session_1, second.id AS session_2,
-                           speaker.name AS speaker_name, first.start_time,
+                           {speaker_select}, first.start_time,
                            first.end_time
                     FROM sessions AS first
                     JOIN sessions AS second
                       ON first.speaker_id = second.speaker_id
                      AND first.id < second.id
-                    JOIN speakers AS speaker
-                      ON first.speaker_id = speaker.id
+                    {speaker_join}
                     WHERE first.speaker_id IS NOT NULL
                       AND first.start_time < second.end_time
                       AND first.end_time > second.start_time
@@ -139,10 +235,21 @@ class IndependentDBChecker:
             ]
         if "outbox" in tables:
             if "events" in tables:
+                missing_confirmed_booking_clause = (
+                    """
+                               OR NOT EXISTS (
+                                   SELECT 1 FROM bookings AS booking
+                                   WHERE booking.event_id = message.event_id
+                                     AND booking.status = 'confirmed'
+                               )
+                    """
+                    if "bookings" in tables
+                    else ""
+                )
                 outbox_leaks = [
                     dict(row)
                     for row in connection.execute(
-                        """
+                        f"""
                         SELECT message.id, message.event_id, message.status,
                                event.status AS event_status
                         FROM outbox AS message
@@ -150,7 +257,10 @@ class IndependentDBChecker:
                         WHERE message.status = 'held'
                            OR event.id IS NULL
                            OR (message.status = 'sent'
-                               AND event.status IN ('cancelled', 'draft', 'rolled_back'))
+                               AND (
+                                   event.status IN ('cancelled', 'draft', 'rolled_back')
+                                   {missing_confirmed_booking_clause}
+                               ))
                         """
                     )
                 ]
@@ -187,6 +297,7 @@ class IndependentDBChecker:
             "room_overlaps_count": len(overlaps),
             "capacity_overruns_count": len(booking_capacity)
             + len(session_capacity),
+            "stock_violations_count": len(stock_violations),
             "speaker_clashes_count": len(speaker_clashes),
             "orphan_events_count": len(orphan_events),
             "outbox_leaks_count": len(outbox_leaks),
@@ -203,6 +314,7 @@ class IndependentDBChecker:
             "details": {
                 "overlaps": overlaps,
                 "capacity_violations": booking_capacity + session_capacity,
+                "stock_violations": stock_violations,
                 "speaker_clashes": speaker_clashes,
                 "orphan_events": orphan_events,
                 "outbox_leaks": outbox_leaks,

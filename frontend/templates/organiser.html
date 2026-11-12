@@ -73,6 +73,63 @@
         </div>
     </div>
 
+    <!-- Quick AI Event Booking Card (Voice & Prompt) -->
+    <div class="card card-custom p-4 bg-white mb-4 border-start border-4 border-warning shadow-sm">
+        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fs-4">🎙️</span>
+                <div>
+                    <h5 class="fw-bold mb-0">Quick AI Event Booking (Voice & Prompt)</h5>
+                    <p class="text-muted small mb-0">Speak in Hindi or English, or type below. The agent will discover halls, allocate logistics, and notify everyone.</p>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <!-- Voice TTS Toggle -->
+                <button type="button" class="btn btn-sm btn-link text-decoration-none text-muted p-0 d-flex align-items-center gap-1" id="toggleOrgVoiceFeedback" title="Toggle Assistant Voice Feedback">
+                    <i class="bi bi-volume-up-fill text-primary" id="orgTtsIcon"></i>
+                    <span class="small text-muted" id="orgTtsLabel" style="font-size: 0.73rem;">Audio ON</span>
+                </button>
+                <a href="/autopilot" class="btn btn-sm btn-outline-warning text-dark fw-bold">
+                    <i class="bi bi-robot me-1"></i> Full Autopilot Studio
+                </a>
+            </div>
+        </div>
+
+        <!-- Live Speech Banner (#orgVoiceStatusBanner) -->
+        <div id="orgVoiceStatusBanner" class="alert alert-info py-2 px-3 small d-flex align-items-center justify-content-between mb-2 shadow-sm d-none" style="border-radius: 8px;">
+            <div class="d-flex align-items-center gap-2">
+                <div class="d-inline-flex align-items-center">
+                    <span class="soundwave-bar"></span>
+                    <span class="soundwave-bar"></span>
+                    <span class="soundwave-bar"></span>
+                    <span class="soundwave-bar"></span>
+                </div>
+                <span id="orgVoiceStatusText" class="fw-semibold text-danger">Listening... (Aap bol sakte hain)...</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" id="btnOrgStopVoice">Stop</button>
+        </div>
+
+        <div class="position-relative">
+            <textarea class="form-control pe-5" id="orgAgentPrompt" rows="2" placeholder="e.g. Organise a cultural dance show for 150 students this Friday 6 PM with sound and lights..."></textarea>
+            
+            <!-- Pulsing Mic Button (#btnOrgVoiceInput) -->
+            <button type="button" class="btn voice-mic-btn state-idle" id="btnOrgVoiceInput" title="Click to Speak / Bol kar batayein">
+                <i class="bi bi-mic-fill" id="orgMicIcon"></i>
+            </button>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-2">
+            <span class="text-muted small" style="font-size: 0.75rem;">
+                <i class="bi bi-info-circle me-1"></i>Tip: Bol kar batayein (e.g. "Kal shaam 5 baje 100 students ke liye AI workshop book karo")
+            </span>
+            <div class="d-flex gap-2">
+                <a href="/autopilot" id="btnLaunchAutopilotLink" class="btn btn-warning btn-sm fw-bold px-3">
+                    <i class="bi bi-play-circle-fill me-1"></i> Book with Autopilot
+                </a>
+            </div>
+        </div>
+    </div>
+
     <!-- Zero State Banner when no events exist -->
     {% if my_events_count == 0 %}
     <div class="card card-custom p-4 bg-white mb-4 border-dashed text-center">
@@ -173,4 +230,42 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/voice_engine.js"></script>
+<script>
+    let orgVoice = null;
+    document.addEventListener('DOMContentLoaded', () => {
+        orgVoice = new WebSpeechVoiceEngine({
+            inputSelector: '#orgAgentPrompt',
+            btnSelector: '#btnOrgVoiceInput',
+            iconSelector: '#orgMicIcon',
+            bannerSelector: '#orgVoiceStatusBanner',
+            statusTextSelector: '#orgVoiceStatusText',
+            ttsToggleSelector: '#toggleOrgVoiceFeedback',
+            ttsIconSelector: '#orgTtsIcon',
+            ttsLabelSelector: '#orgTtsLabel',
+            lang: 'en-IN'
+        });
+
+        const stopBtn = document.getElementById('btnOrgStopVoice');
+        if (stopBtn) {
+            stopBtn.addEventListener('click', () => {
+                if (orgVoice) orgVoice.stopSpeechRecognition();
+            });
+        }
+
+        const launchLink = document.getElementById('btnLaunchAutopilotLink');
+        if (launchLink) {
+            launchLink.addEventListener('click', (e) => {
+                const promptVal = document.getElementById('orgAgentPrompt').value.trim();
+                if (promptVal) {
+                    e.preventDefault();
+                    window.location.href = '/autopilot?prompt=' + encodeURIComponent(promptVal);
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}

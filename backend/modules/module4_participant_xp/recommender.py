@@ -7,11 +7,38 @@ Implements:
 4. Cold-start popularity fallback.
 """
 
+import ast
 import json
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from backend.core.database.connection import get_connection
+
+
+def _parse_interests_list(raw: Any) -> List[str]:
+    """Parse JSON array, Python list literal, or CSV interests safely."""
+    if not raw:
+        return []
+    if isinstance(raw, list):
+        return [str(x).strip() for x in raw if str(x).strip()]
+    if isinstance(raw, str):
+        s = raw.strip()
+        if not s:
+            return []
+        try:
+            parsed = json.loads(s)
+            if isinstance(parsed, list):
+                return [str(x).strip() for x in parsed if str(x).strip()]
+        except Exception:
+            pass
+        try:
+            parsed = ast.literal_eval(s)
+            if isinstance(parsed, list):
+                return [str(x).strip() for x in parsed if str(x).strip()]
+        except Exception:
+            pass
+        return [part.strip() for part in s.split(",") if part.strip()]
+    return []
 
 class ParticipantExperienceEngine:
     def __init__(self):
@@ -93,10 +120,10 @@ class ParticipantExperienceEngine:
             cur.execute("SELECT id, name, department, interests FROM students WHERE id = ?", (student_id,))
             target = cur.fetchone()
             if not target:
-                return {"peers": [], "speakers": []}
+                return {"student_id": student_id, "peer_matches": [], "mentor_matches": []}
 
-            target_interests = json.loads(target["interests"]) if target["interests"] else []
-            target_str = " ".join(target_interests) + " " + target["department"]
+            target_interests = _parse_interests_list(target["interests"])
+            target_str = " ".join(target_interests) + " " + (target["department"] or "")
 
             # 1. Fetch other students
             cur.execute("SELECT id, name, department, year, interests FROM students WHERE id != ? LIMIT 30", (student_id,))
@@ -106,7 +133,7 @@ class ParticipantExperienceEngine:
             if other_students:
                 student_docs = [target_str]
                 for s in other_students:
-                    ints = json.loads(s["interests"]) if s.get("interests") else []
+                    ints = _parse_interests_list(s.get("interests"))
                     student_docs.append(" ".join(ints) + " " + s["department"])
 
                 vec = TfidfVectorizer(stop_words="english")

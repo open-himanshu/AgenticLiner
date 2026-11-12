@@ -175,7 +175,7 @@
                 <div>
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-robot text-primary me-2"></i>Campus Event Assistant</h5>
-                        <span class="badge bg-info-subtle text-info border">Grounded AI</span>
+                        <span class="badge bg-secondary-subtle text-secondary border" id="assistantModeBadge">Grounded answers</span>
                     </div>
                     <p class="text-muted small mb-3">Answers strictly from verified campus schedules, venues, and timings.</p>
 
@@ -236,20 +236,44 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ event_id: 'ev_001', query })
             });
+            if (!res.ok) {
+                throw new Error(`Assistant request failed with status ${res.status}.`);
+            }
             const data = await res.json();
 
             // Append Assistant Message
             const botDiv = document.createElement('div');
             botDiv.className = 'p-2 mb-2 bg-white rounded border small me-auto shadow-sm';
             botDiv.style.maxWidth = '85%';
-            botDiv.innerHTML = `<strong>🤖 Assistant:</strong> ${data.answer}`;
+            const label = document.createElement('strong');
+            label.innerText = '🤖 Assistant: ';
+            botDiv.appendChild(label);
+            const answer = document.createElement('span');
+            answer.innerText = data.answer || 'The assistant returned no answer.';
+            botDiv.appendChild(answer);
+
+            const isLiveLlm = data.mode === 'llm';
+            const modeBadge = document.getElementById('assistantModeBadge');
+            modeBadge.className = isLiveLlm
+                ? 'badge bg-success-subtle text-success border border-success'
+                : 'badge bg-warning-subtle text-warning-emphasis border border-warning';
+            modeBadge.innerText = isLiveLlm
+                ? `Live LLM: ${data.provider || 'provider'}${data.model ? ` · ${data.model}` : ''}`
+                : 'Grounded rules fallback';
+
+            if (!isLiveLlm && data.fallback_reason) {
+                const fallbackNote = document.createElement('div');
+                fallbackNote.className = 'text-secondary mt-1 small fst-italic';
+                fallbackNote.innerText = `ℹ️ ${data.fallback_reason}`;
+                botDiv.appendChild(fallbackNote);
+            }
             chatLog.appendChild(botDiv);
             chatLog.scrollTop = chatLog.scrollHeight;
 
         } catch (err) {
             const errDiv = document.createElement('div');
             errDiv.className = 'p-2 mb-2 bg-danger-subtle text-danger rounded border small';
-            errDiv.innerText = 'Error querying event assistant.';
+            errDiv.innerText = 'Could not reach the event assistant. Please try again.';
             chatLog.appendChild(errDiv);
         }
     });
@@ -272,38 +296,48 @@
         feedbackModalInstance.show();
     }
 
-    document.getElementById('btnModalSubmitFeedback').addEventListener('click', async () => {
-        const eventId = document.getElementById('modalEventId').value;
-        const rating = parseInt(document.getElementById('modalRating').value);
-        const comment = document.getElementById('modalComment').value.trim();
-        const alertBox = document.getElementById('modalAlert');
+    document.addEventListener('DOMContentLoaded', () => {
+        const btnSubmitFb = document.getElementById('btnModalSubmitFeedback');
+        if (!btnSubmitFb) return;
+        btnSubmitFb.addEventListener('click', async () => {
+            const eventId = document.getElementById('modalEventId').value;
+            const rating = parseInt(document.getElementById('modalRating').value);
+            const comment = document.getElementById('modalComment').value.trim();
+            const alertBox = document.getElementById('modalAlert');
 
-        if (!comment) {
-            alert('Please write your comments.');
-            return;
-        }
+            if (!comment) {
+                alert('Please write your comments.');
+                return;
+            }
 
-        try {
-            const res = await fetch('/api/feedback/submit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    event_id: eventId,
-                    student_id: '{{ student.id }}',
-                    rating: rating,
-                    comment: comment
-                })
-            });
-            const data = await res.json();
-            alertBox.className = 'small alert alert-success py-2';
-            alertBox.innerHTML = `✓ Feedback recorded! Sentiment: <b>${data.analysis.sentiment.toUpperCase()}</b> | Themes: <b>${data.themes.join(', ')}</b>`;
-            alertBox.style.display = 'block';
-            setTimeout(() => {
-                if (feedbackModalInstance) feedbackModalInstance.hide();
-            }, 1500);
-        } catch (e) {
-            alert('Failed to submit feedback: ' + e);
-        }
+            try {
+                const res = await fetch('/api/feedback/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event_id: eventId,
+                        student_id: '{{ student.id }}',
+                        rating: rating,
+                        comment: comment
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    alertBox.className = 'small alert alert-danger py-2';
+                    alertBox.innerHTML = data.detail || 'Could not submit feedback.';
+                    alertBox.style.display = 'block';
+                    return;
+                }
+                alertBox.className = 'small alert alert-success py-2';
+                alertBox.innerHTML = `✓ Feedback recorded! Sentiment: <b>${data.analysis.sentiment.toUpperCase()}</b> | Themes: <b>${data.themes.join(', ')}</b>`;
+                alertBox.style.display = 'block';
+                setTimeout(() => {
+                    if (feedbackModalInstance) feedbackModalInstance.hide();
+                }, 1500);
+            } catch (e) {
+                alert('Failed to submit feedback: ' + e);
+            }
+        });
     });
 </script>
 

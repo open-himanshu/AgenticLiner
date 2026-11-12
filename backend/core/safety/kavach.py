@@ -16,9 +16,8 @@ import uuid
 import json
 import math
 import os
-from typing import Dict, Any, List, Optional, Callable
+from typing import Dict, Any, Optional, Callable
 from datetime import date, datetime
-from backend.core.database.connection import get_connection
 
 class InvariantViolation(Exception):
     """Raised when an operation violates a core campus invariant."""
@@ -109,13 +108,22 @@ class KavachEngine:
                 suggestion="Choose a different time slot or allocate an alternative hall."
             )
 
-    def verify_speaker_clash(self, conn: sqlite3.Connection, speaker_id: str, start_time: str, end_time: str, exclude_session_id: Optional[str] = None) -> None:
-        """Verify that faculty/speaker is not booked in two sessions simultaneously."""
+    def verify_speaker_clash(
+        self,
+        conn: sqlite3.Connection,
+        speaker_id: str,
+        start_time: str,
+        end_time: str,
+        exclude_session_id: Optional[str] = None,
+    ) -> None:
+        """Verify that a speaker is not double-booked across simultaneous sessions on campus."""
+        if not speaker_id:
+            return
         cur = conn.cursor()
         query = """
             SELECT s.id, s.title, s.start_time, s.end_time, spk.name as speaker_name
             FROM sessions s
-            JOIN speakers spk ON s.speaker_id = spk.id
+            LEFT JOIN speakers spk ON s.speaker_id = spk.id
             WHERE s.speaker_id = ?
               AND (
                   (s.start_time < ? AND s.end_time > ?) OR
@@ -126,15 +134,15 @@ class KavachEngine:
         if exclude_session_id:
             query += " AND s.id != ?"
             params.append(exclude_session_id)
-
         cur.execute(query, tuple(params))
         conflict = cur.fetchone()
         if conflict:
+            spk_name = conflict["speaker_name"] or speaker_id
             raise InvariantViolation(
-                rule="speaker_clash",
-                item=conflict["speaker_name"],
-                detail=f"Faculty/Speaker is already lecturing in session '{conflict['title']}' ({conflict['start_time']} to {conflict['end_time']}).",
-                suggestion="Re-assign to another time slot or allocate an available co-speaker."
+                rule="speaker_simultaneity_clash",
+                item=spk_name,
+                detail=f"Speaker is already assigned to session '{conflict['title']}' from {conflict['start_time']} to {conflict['end_time']}.",
+                suggestion="Schedule session during an available time window or assign another speaker."
             )
 
     def verify_resource_stock(self, conn: sqlite3.Connection, resource_id: str, requested_qty: int, start_time: str, end_time: str) -> None:

@@ -3,11 +3,32 @@ import tempfile
 
 import pytest
 
+# Ensure import-time load_dotenv() runs once before per-test env scrubbing.
+import backend.core.planner.call_llm  # noqa: F401
+
 
 _collection_db_dir = tempfile.TemporaryDirectory(prefix="agenticliner-pytest-")
 _collection_db_path = os.path.join(_collection_db_dir.name, "collection.sqlite3")
 os.environ["DATABASE_PATH"] = _collection_db_path
 os.environ["DATABASE_URL"] = f"sqlite:///{_collection_db_path}"
+
+_PROVIDER_ENV_VARS = (
+    "PROVIDER",
+    "GEMINI_API_KEY",
+    "GEMINI_MODEL",
+    "GROQ_API_KEY",
+    "GROQ_MODEL",
+    "OLLAMA_MODEL",
+    "OLLAMA_HOST",
+    "GROQ_REASONING_EFFORT",
+)
+
+
+@pytest.fixture(autouse=True)
+def isolated_provider_env(monkeypatch):
+    """Strip ambient provider and API-key env vars so tests stay hermetic."""
+    for var in _PROVIDER_ENV_VARS:
+        monkeypatch.delenv(var, raising=False)
 
 TEST_PASSWORDS = {
     "SUPERVISOR_PASSWORD": "test-supervisor-password",

@@ -5,11 +5,10 @@ All state mutations are checked and guarded by the Kavach Safety Engine.
 
 import json
 import uuid
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 from backend.core.database.connection import get_connection
 from backend.core.safety.kavach import KavachEngine, InvariantViolation
 from backend.modules.module3_resource_opt.engine import ResourceOptimizer
-from backend.modules.module1_coplan.brief_parser import adaptive_intake, parse_event_brief
 
 kavach = KavachEngine()
 resource_opt = ResourceOptimizer()

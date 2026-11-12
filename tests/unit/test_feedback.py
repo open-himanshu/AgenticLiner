@@ -16,6 +16,26 @@ def test_sentiment_analysis():
     assert neg_res["sentiment"] == "negative"
     assert neg_res["score"] < 0
 
+def test_negation_and_hinglish_sentiment():
+    analyzer = FeedbackAnalyzer()
+
+    # Negation inversion: "not bad" should not be negative
+    not_bad = analyzer.analyze_sentiment("The keynote was not bad at all, actually quite decent.")
+    assert not_bad["sentiment"] == "positive"
+    assert not_bad["score"] > 0
+
+    # Negated positive: "not good" should be negative
+    not_good = analyzer.analyze_sentiment("The mic was not good, audio was unclear.")
+    assert not_good["sentiment"] == "negative"
+    assert not_good["score"] < 0
+
+    # Hinglish expressions
+    hinglish_pos = analyzer.analyze_sentiment("Maza aa gaya, session bohot badhiya tha!")
+    assert hinglish_pos["sentiment"] == "positive"
+
+    hinglish_neg = analyzer.analyze_sentiment("Bilkul bakwas arrangement, time waste ho gaya.")
+    assert hinglish_neg["sentiment"] == "negative"
+
 def test_thematic_detection():
     analyzer = FeedbackAnalyzer()
 

@@ -9,9 +9,9 @@ import json
 import uuid
 import re
 from typing import Dict, Any, List, Optional
+from backend.core.planner.natural_intake import extract_event_entities_llm
 from backend.core.planner.tools import (
     tool_find_free_venues,
-    tool_check_equipment,
     tool_recommend_from_history,
     tool_requisition_campus_resources
 )
@@ -33,7 +33,14 @@ class AutopilotAgent:
         self.timeline.append(step_entry)
         return step_entry
 
-    def run_autopilot(self, prompt: str, date: str = "2026-11-25", start_time: str = "09:00:00", end_time: str = "17:00:00", budget: float = 25000) -> Dict[str, Any]:
+    def run_autopilot(
+        self,
+        prompt: str,
+        date: str | None = None,
+        start_time: str | None = None,
+        end_time: str | None = None,
+        budget: float | None = None,
+    ) -> Dict[str, Any]:
         """
         Executes autonomous campus event planning:
         1. Adaptive Intake & Entity Extraction (Event Type, headcount, timing)
@@ -46,9 +53,11 @@ class AutopilotAgent:
         event_id = f"ev_auto_{uuid.uuid4().hex[:8]}"
 
         # Step 1: Entity Extraction from Natural Language Prompt
+        from backend.core.planner.natural_intake import resolve_natural_datetime_with_assumptions
+
         step_no = 1
         prompt_lower = prompt.lower()
-        
+
         # Extract Headcount
         headcount_match = re.search(r'(\d+)\s*(students|people|attendees|participants|heads)', prompt_lower)
         if headcount_match:
@@ -57,26 +66,65 @@ class AutopilotAgent:
             numbers = re.findall(r'\b\d{2,4}\b', prompt)
             headcount = int(numbers[0]) if numbers else 120
 
-        # Extract Event Type
-        if "hackathon" in prompt_lower or "coding" in prompt_lower:
-            event_type = "hackathon"
-            event_name = "Campus AI Hackathon"
-        elif "cultural" in prompt_lower or "dance" in prompt_lower or "music" in prompt_lower:
+        # Extract Budget if omitted by caller
+        if budget is None:
+            budget_match = re.search(
+                r'(?:budget|rs\.?|inr|₹)\s*[:=]?\s*(\d[\d,]*)|(\d[\d,]*)\s*(?:budget|rs\.?|inr)\b',
+                prompt_lower,
+            )
+            if budget_match:
+                budget = float((budget_match.group(1) or budget_match.group(2)).replace(",", ""))
+            else:
+                budget = 25000.0
+
+        # Extract Date, Time, and Assumptions if omitted by caller
+        assumptions: list[str] = []
+        used_intake_time = start_time is None and end_time is None
+        if date is None or start_time is None or end_time is None:
+            dt_info = resolve_natural_datetime_with_assumptions(prompt, prompt)
+            if date is None:
+                date = dt_info["date"]
+            if start_time is None:
+                start_time = dt_info["start_time"]
+            if end_time is None:
+                end_time = dt_info["end_time"]
+            if used_intake_time:
+                assumptions.extend(dt_info["assumptions"])
+
+        # Extract Event Type (word boundaries prevent accidental substring mismatches)
+        if re.search(r'\b(dance(?:\s+performance)?|cultural|music|drama)\b', prompt_lower):
             event_type = "cultural"
             event_name = "University Cultural Performance"
-        elif "workshop" in prompt_lower or "hands-on" in prompt_lower:
+        elif re.search(r'\b(hackathon|coding|ctf)\b', prompt_lower):
+            event_type = "hackathon"
+            event_name = "Campus AI Hackathon"
+        elif re.search(r'\bfest(?:ival)?\b', prompt_lower):
+            event_type = "cultural"
+            event_name = "University Cultural Performance"
+        elif re.search(r'\b(workshop|hands-on|bootcamp|training)\b', prompt_lower):
             event_type = "workshop"
             event_name = "Technical Workshop"
         else:
             event_type = "seminar"
             event_name = "Academic Seminar"
 
+        assumption_suffix = (" " + " ".join(assumptions)) if assumptions else ""
         self._log_step(
             step_no=step_no,
             tool_name="adaptive_intake",
-            arguments={"prompt": prompt, "date": date},
+            arguments={
+                "prompt": prompt,
+                "date": date,
+                "start_time": start_time,
+                "end_time": end_time,
+                "assumptions": assumptions,
+            },
             status="completed",
-            summary=f"Extracted: Event Type='{event_type.capitalize()}', Headcount={headcount} students, Slot={date} ({start_time} - {end_time})."
+            summary=(
+                f"Extracted: Event Type='{event_type.capitalize()}', "
+                f"Headcount={headcount} students, Slot={date} ({start_time} - {end_time})."
+                f"{assumption_suffix}"
+            ),
         )
 
         # Step 2: Discover and filter free venues with adequate capacity
@@ -88,13 +136,16 @@ class AutopilotAgent:
             self._log_step(
                 step_no=step_no,
                 tool_name="find_free_venues",
-                arguments={"min_capacity": headcount, "date": date},
+                arguments={"min_capacity": headcount, "date": date, "start_time": start_time, "end_time": end_time},
                 status="rolled_back",
                 summary=f"No hall on campus satisfies requested capacity of {headcount} students on {date}. Proposing alternative hall or date."
             )
             return {
                 "success": False,
                 "event_id": event_id,
+                "date": date,
+                "start_time": start_time,
+                "end_time": end_time,
                 "timeline": self.timeline,
                 "error": f"No campus venue satisfies required capacity of {headcount} seats."
             }
@@ -105,7 +156,7 @@ class AutopilotAgent:
         self._log_step(
             step_no=step_no,
             tool_name="find_free_venues",
-            arguments={"min_capacity": headcount, "date": date},
+            arguments={"min_capacity": headcount, "date": date, "start_time": start_time, "end_time": end_time},
             status="completed",
             summary=f"Discovered {len(available_venues)} available campus halls. Allocated '{chosen_venue['name']}' (Seats: {chosen_venue['capacity']}){approval_note}.",
             details=chosen_venue
@@ -183,6 +234,11 @@ class AutopilotAgent:
                 "success": True,
                 "event_id": event_id,
                 "event_name": event_name,
+                "event_type": event_type,
+                "headcount": headcount,
+                "date": date,
+                "start_time": start_time,
+                "end_time": end_time,
                 "venue": chosen_venue["name"],
                 "timeline": self.timeline,
                 "recommendations": recs,

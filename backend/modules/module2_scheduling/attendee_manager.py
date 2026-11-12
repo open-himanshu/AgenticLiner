@@ -9,6 +9,7 @@ Implements:
 
 import io
 import csv
+import json
 import uuid
 from typing import Dict, Any, List, Optional
 from backend.core.database.connection import get_connection
@@ -41,7 +42,7 @@ class AttendeeManager:
             else:
                 cur.execute(
                     "INSERT INTO students (id, name, email, department, year, interests) VALUES (?, ?, ?, ?, ?, ?)",
-                    (student_id, name, email, department, year, str(interests))
+                    (student_id, name, email, department, year, json.dumps(interests))
                 )
 
             # Check if student already registered for this event
@@ -87,7 +88,7 @@ class AttendeeManager:
             cur.execute("""
                 INSERT INTO registrations (id, event_id, student_id, status, interests_snapshot, preferred_sessions)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (reg_id, event_id, student_id, reg_status, str(interests), str(preferred_sessions)))
+            """, (reg_id, event_id, student_id, reg_status, json.dumps(interests), json.dumps(preferred_sessions)))
 
             # Stage notice in Outbox
             outbox_id = f"notif_{uuid.uuid4().hex[:8]}"

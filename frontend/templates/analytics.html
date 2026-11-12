@@ -17,8 +17,15 @@
                         Automated sentiment classification, thematic clustering, gate attendance turnout, and tamper-proof digital certificates with online QR verification.
                     </p>
                 </div>
-                <div class="d-flex gap-2 flex-wrap">
-                    <a href="/api/report/pdf/ev_001" class="btn btn-primary fw-bold">
+                <div class="d-flex gap-2 flex-wrap align-items-center">
+                    {% if events %}
+                    <select class="form-select form-select-sm" style="width: auto; max-width: 240px;" onchange="window.location='/analytics?event_id=' + encodeURIComponent(this.value)">
+                        {% for ev in events %}
+                        <option value="{{ ev.id }}" {% if ev.id == (selected_event_id or 'ev_001') %}selected{% endif %}>{{ ev.name }}</option>
+                        {% endfor %}
+                    </select>
+                    {% endif %}
+                    <a href="/api/report/pdf/{{ selected_event_id or 'ev_001' }}" class="btn btn-primary fw-bold">
                         <i class="bi bi-file-earmark-pdf-fill me-1"></i> Executive Report (PDF)
                     </a>
                     <a href="/outbox" class="btn btn-outline-dark fw-semibold">
@@ -49,7 +56,7 @@
             <div class="card card-custom p-3 bg-white border-start border-4 border-warning shadow-sm h-100">
                 <span class="text-muted small fw-semibold text-uppercase">Feedback Sentiment</span>
                 <h3 class="fw-bold text-dark mb-0 mt-1" id="statRating">
-                    {% if fb_count > 0 %}{{ avg_rating }} / 5.0{% else %}4.8 / 5.0{% endif %}
+                    {% if fb_count > 0 %}{{ avg_rating }} / 5.0{% else %}N/A{% endif %}
                 </h3>
                 <span class="text-muted small" id="statFbCount">{{ fb_count or 0 }} student reviews submitted</span>
             </div>
@@ -69,7 +76,7 @@
             <div class="card card-custom p-4 bg-white border shadow-sm mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="fw-bold mb-0"><i class="bi bi-chat-heart text-danger me-2"></i>Automated Feedback Intelligence</h5>
-                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">VADER Polarity Engine</span>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Lexicon + Hinglish Sentiment Engine</span>
                 </div>
                 
                 <!-- Sentiment Polarity Progress Bar -->
@@ -77,15 +84,18 @@
                     <div class="d-flex justify-content-between align-items-center mb-1 small">
                         <span class="fw-bold">Sentiment Polarity Distribution</span>
                         <span>
-                            <span class="text-success fw-bold">{{ sentiment_stats.positive_pct or 75 }}% Positive</span> | 
-                            <span class="text-secondary fw-semibold">{{ sentiment_stats.neutral_pct or 15 }}% Neutral</span> | 
-                            <span class="text-danger fw-bold">{{ sentiment_stats.negative_pct or 10 }}% Negative</span>
+                            {% set pos_pct = sentiment_stats.positive_pct if fb_count > 0 else 0 %}
+                            {% set neu_pct = sentiment_stats.neutral_pct if fb_count > 0 else 0 %}
+                            {% set neg_pct = sentiment_stats.negative_pct if fb_count > 0 else 0 %}
+                            <span class="text-success fw-bold">{{ pos_pct }}% Positive</span> | 
+                            <span class="text-secondary fw-semibold">{{ neu_pct }}% Neutral</span> | 
+                            <span class="text-danger fw-bold">{{ neg_pct }}% Negative</span>
                         </span>
                     </div>
                     <div class="progress" style="height: 12px;">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ sentiment_stats.positive_pct or 75 }}%" title="Positive"></div>
-                        <div class="progress-bar bg-secondary" role="progressbar" style="width: {{ sentiment_stats.neutral_pct or 15 }}%" title="Neutral"></div>
-                        <div class="progress-bar bg-danger" role="progressbar" style="width: {{ sentiment_stats.negative_pct or 10 }}%" title="Negative"></div>
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ pos_pct }}%" title="Positive"></div>
+                        <div class="progress-bar bg-secondary" role="progressbar" style="width: {{ neu_pct }}%" title="Neutral"></div>
+                        <div class="progress-bar bg-danger" role="progressbar" style="width: {{ neg_pct }}%" title="Negative"></div>
                     </div>
                 </div>
 
@@ -186,15 +196,25 @@
                 <div class="p-3 rounded bg-light border">
                     <h6 class="fw-bold small text-primary mb-2"><i class="bi bi-robot me-1"></i> Autonomous Post-Event AI Advisory:</h6>
                     <ul class="list-unstyled small mb-0 text-muted">
-                        <li class="mb-2">
-                            💡 <b>Auditorium Sizing:</b> High turn-up rate indicates moving the next hackathon round to <b>Main Auditorium A (300 capacity)</b> to prevent overflow.
+                        {% if fb_count == 0 and (total_reg or 0) == 0 %}
+                        <li class="mb-1">
+                            💡 <b>Awaiting Event Data:</b> Collect student registrations, gate check-ins, and feedback to generate grounded recommendations for the next edition.
                         </li>
+                        {% else %}
                         <li class="mb-2">
-                            💡 <b>Campus Logistics:</b> Allocate 10 additional laptop power distribution strips based on lab coding rounds feedback.
+                            💡 <b>Turnout &amp; Attendance:</b> {{ total_checked or 0 }} checked in out of {{ total_reg or 0 }} registered ({{ turnout_rate or 0.0 }}% turnout). {% if (turnout_rate or 0.0) < 50 %}Send automated pre-event Outbox reminders 24h prior to improve check-in rate.{% else %}Strong attendance recorded across scheduled tracks.{% endif %}
                         </li>
+                        {% if concerns %}
+                        <li class="mb-2">
+                            💡 <b>Top Improvement Areas:</b> {{ concerns | join('; ') }}
+                        </li>
+                        {% endif %}
+                        {% if strengths %}
                         <li>
-                            💡 <b>Outbox Automation:</b> Send pre-event schedule reminder broadcast 24h prior to optimize early morning session attendance.
+                            💡 <b>Highlighted Strengths:</b> {{ strengths | join('; ') }}
                         </li>
+                        {% endif %}
+                        {% endif %}
                     </ul>
                 </div>
             </div>

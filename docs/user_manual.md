@@ -24,7 +24,7 @@ The application includes workflows for **campus facility requisitions, inventory
 +-----------------------------------------------------------------------------------+
 |                        KAVACH TRANSACTIONAL SAFETY ENGINE                         |
 |   SQLite SAVEPOINTS | Application-level safety checks and outbox handling             |
-|   (Capacity, overlap, stock, time window, budget, recipient and blast-radius rules)|
+|   (Capacity, overlap, stock, time window, recipient and blast-radius rules)        |
 +-----------------------------------------+-----------------------------------------+
        |                                  |                                  |
        v                                  v                                  v
@@ -35,7 +35,7 @@ The application includes workflows for **campus facility requisitions, inventory
 +---------------+                +-----------------+                +---------------+
 ```
 
-Resource estimates use Ridge regression when enough historical records are available; otherwise the module uses a rule-based baseline.
+Event budgets are recorded on the event, cost estimation is not implemented for Autopilot bookings (`estimated_cost` stays `0.0`), and there is no payment step or wallet table. Resource estimates use Ridge regression when enough historical records are available; otherwise the module uses a rule-based baseline.
 
 ---
 

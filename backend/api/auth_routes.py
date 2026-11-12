@@ -4,11 +4,11 @@ Handles login, signup, real email OTP dispatch (Option A), Google One-Tap/OAuth 
 password resets, and role-based redirects.
 """
 
-from fastapi import APIRouter, Request, Form, HTTPException, status, Depends
+from fastapi import APIRouter, Request, Form, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 import os
 import logging
 import json
@@ -34,10 +34,25 @@ from backend.services.auth_service import (
 import urllib.parse
 from backend.services.email_service import send_email_otp, is_smtp_configured
 from backend.api.dependencies import get_session_user
+from backend.core.database.connection import execute_query
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Authentication"])
+
+def set_user_session(request: Request, user: Dict[str, Any], **extra_claims) -> Dict[str, Any]:
+    """Establishes authenticated user session payload in signed session cookie."""
+    session_payload = {
+        "id": user["id"] if "id" in user else "",
+        "username": user["username"],
+        "email": user["email"],
+        "role": user["role"],
+        "full_name": user["full_name"],
+        "department": user.get("department") or "School of AI"
+    }
+    session_payload.update(extra_claims)
+    request.session["user"] = session_payload
+    return session_payload
 
 class FirebaseAuthConfigurationError(RuntimeError):
     pass
@@ -181,7 +196,7 @@ async def login_submit(
         raise HTTPException(status_code=401, detail=error_msg or "Invalid credentials.")
 
     # Set session cookie
-    request.session["user"] = user
+    set_user_session(request, user)
 
     target_url = ROLE_DASHBOARDS.get(user["role"], "/")
 
@@ -245,14 +260,14 @@ async def signup_submit(
             pass
 
     google_client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+    # Security Policy: Public registration always provisions Participant role to prevent privilege escalation.
+    role = "participant"
     form_data = {
         "full_name": full_name or "",
         "email": email or "",
-        "role": role or "participant",
+        "role": role,
         "department": department or "School of AI"
     }
-    role = "participant"
-    form_data["role"] = role
 
     if not full_name or not email or not password:
         return templates.TemplateResponse(
@@ -489,6 +504,7 @@ async def google_auth_callback(request: Request):
 
     credential = data.get("credential") or data.get("id_token")
     is_demo = data.get("demo_google") is True
+    demo_role = None
 
     if is_demo:
         if not is_demo_login_enabled(request):
@@ -499,6 +515,9 @@ async def google_auth_callback(request: Request):
         google_email = data.get("email")
         google_name = data.get("name")
         department = data.get("department", "School of AI")
+        candidate_role = data.get("role")
+        if candidate_role in {"organiser", "supervisor", "data_manager", "participant"}:
+            demo_role = candidate_role
     else:
         if not isinstance(credential, str) or not credential.strip():
             raise HTTPException(status_code=401, detail="A Firebase ID token is required.")
@@ -534,8 +553,16 @@ async def google_auth_callback(request: Request):
         department=department
     )
 
+    if is_demo and demo_role:
+        if user.get("role") != demo_role:
+            execute_query(
+                "UPDATE users SET role = ? WHERE email = ?",
+                (demo_role, google_email.strip().lower())
+            )
+            user["role"] = demo_role
+
     # Establish session cookie
-    request.session["user"] = user
+    set_user_session(request, user)
     target_url = ROLE_DASHBOARDS.get(user["role"], "/")
 
     return JSONResponse(content={

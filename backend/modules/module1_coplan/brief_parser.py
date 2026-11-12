@@ -1,11 +1,11 @@
 """
-Module 1: AI Event Planning Copilot - Event Brief Parser & Adaptive Intake Engine.
+Module 1: Event Brief Parser & Adaptive Intake Engine.
 Parses natural language event briefs, extracts structured operational requirements,
 and prompts clarifying questions when critical campus details are missing.
 """
 
 import re
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 def adaptive_intake(raw_text: str) -> Dict[str, Any]:
     """
@@ -30,22 +30,30 @@ def adaptive_intake(raw_text: str) -> Dict[str, Any]:
 
     # Check for date / time / duration
     has_timing = any(k in text_lower for k in [
-        "day", "hour", "morning", "afternoon", "friday", "monday", "tuesday", "wednesday",
-        "thursday", "saturday", "sunday", "tomorrow", "next week", "december", "nov", "oct", "202"
-    ])
+        "day", "hour", "morning", "afternoon", "evening", "shaam", "tonight", "today",
+        "friday", "monday", "tuesday", "wednesday", "thursday", "saturday", "sunday",
+        "tomorrow", "next week", "december", "nov", "oct", "202"
+    ]) or bool(
+        re.search(
+            r'\b\d{1,2}(?::[0-5]\d)?\s*(?:am|pm)\b|\b(?:[01]?\d|2[0-3]):[0-5]\d\b',
+            text_lower,
+        )
+    )
     if not has_timing:
         missing_fields.append("timeline")
         clarification_questions.append("When will the event take place (target date and start/end time)?")
 
     # Check for event type
     event_type = "general"
-    if any(k in text_lower for k in ["hackathon", "coding", "hack", "ctf", "sprint"]):
-        event_type = "hackathon"
-    elif any(k in text_lower for k in ["workshop", "bootcamp", "training", "hands-on"]):
-        event_type = "workshop"
-    elif any(k in text_lower for k in ["cultural", "dance", "drama", "music", "fest"]):
+    if re.search(r'\b(dance(?:\s+performance)?|cultural|drama|music)\b', text_lower):
         event_type = "cultural"
-    elif any(k in text_lower for k in ["seminar", "talk", "panel", "lecture", "keynote"]):
+    elif re.search(r'\b(hackathon|coding|hack|ctf|sprint)\b', text_lower):
+        event_type = "hackathon"
+    elif re.search(r'\bfest(?:ival)?\b', text_lower):
+        event_type = "cultural"
+    elif re.search(r'\b(workshop|bootcamp|training|hands-on)\b', text_lower):
+        event_type = "workshop"
+    elif re.search(r'\b(seminar|talk|panel|lecture|keynote)\b', text_lower):
         event_type = "seminar"
     else:
         if len(text_lower.split()) < 7:
@@ -111,3 +119,4 @@ def parse_event_brief(raw_text: str) -> Dict[str, Any]:
         "is_complete": intake["is_complete"],
         "clarification_questions": intake["clarification_questions"]
     }
+

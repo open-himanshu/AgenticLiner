@@ -19,8 +19,12 @@ import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import Any, Dict, List, Optional
+from dotenv import load_dotenv, find_dotenv
 
-DEFAULT_OLLAMA_MODEL = "qwen3.5:9b"
+load_dotenv(find_dotenv(usecwd=True))
+
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+DEFAULT_OLLAMA_MODEL = "qwen3.5:9b" 
 MAX_RATE_LIMIT_RETRIES = 6
 
 
@@ -31,6 +35,33 @@ class ProviderError(Exception):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+_PLACEHOLDER_VALUES = {
+    "changeme",
+    "change_me",
+    "replace_me",
+    "placeholder",
+    "none",
+    "null",
+    "unset",
+}
+
+
+def _is_placeholder(value: str) -> bool:
+    """Return True if an API key value is an unreplaced template placeholder."""
+    lower = value.strip().lower()
+    if not lower:
+        return True
+    if lower in _PLACEHOLDER_VALUES:
+        return True
+    if (lower.startswith("your_") or lower.startswith("your-")) and (
+        lower.endswith("_here") or lower.endswith("-here")
+    ):
+        return True
+    if lower.startswith("<") and lower.endswith(">"):
+        return True
+    return False
+
 
 def _clean_env(name: str, fallback: str = "") -> str:
     """Read, strip quotes/BOM, and return an env var."""
@@ -97,14 +128,14 @@ def get_provider_config() -> Dict[str, str]:
     provider = _clean_env("PROVIDER", "gemini").lower()
     if provider == "gemini":
         api_key = _clean_env("GEMINI_API_KEY")
-        model = _clean_env("GEMINI_MODEL")
-        if not api_key or not model:
-            raise ProviderError("GEMINI_API_KEY and GEMINI_MODEL must be set.")
+        model = _clean_env("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+        if _is_placeholder(api_key):
+            raise ProviderError("GEMINI_API_KEY must be set in environment.")
         return {"provider": "gemini", "model": model, "api_key": api_key}
     elif provider == "groq":
         api_key = _clean_env("GROQ_API_KEY")
         model = _clean_env("GROQ_MODEL")
-        if not api_key or not model:
+        if _is_placeholder(api_key) or not model:
             raise ProviderError("GROQ_API_KEY and GROQ_MODEL must be set.")
         return {"provider": "groq", "model": model, "api_key": api_key}
     elif provider == "ollama":
@@ -131,7 +162,7 @@ def _call_gemini(
     client = genai.Client(
         api_key=api_key,
         http_options=types.HttpOptions(
-            timeout=60_000,
+            timeout=20_000,
             retry_options=types.HttpRetryOptions(attempts=1),
         ),
     )
@@ -142,17 +173,19 @@ def _call_gemini(
             description=t["function"]["description"],
             parameters_json_schema=t["function"]["parameters"],
         )
-        for t in tools
+        for t in (tools or [])
     ]
     system_instruction = next(
         (m["content"] for m in messages if m["role"] == "system"), ""
     )
-    config = types.GenerateContentConfig(
-        system_instruction=system_instruction,
-        tools=[types.Tool(function_declarations=declarations)],
-        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
-        temperature=0,
-    )
+    config_kwargs: Dict[str, Any] = {
+        "system_instruction": system_instruction,
+        "temperature": 0,
+    }
+    if declarations:
+        config_kwargs["tools"] = [types.Tool(function_declarations=declarations)]
+        config_kwargs["automatic_function_calling"] = types.AutomaticFunctionCallingConfig(disable=True)
+    config = types.GenerateContentConfig(**config_kwargs)
     contents = _gemini_contents(messages, types)
 
     for attempt in range(MAX_RATE_LIMIT_RETRIES + 1):
@@ -201,12 +234,24 @@ def _call_gemini(
     return {
         "text": "\n".join(text_parts),
         "tool_calls": calls,
+        "raw_content": content,
         "usage": {
             "prompt_tokens": int(getattr(usage_meta, "prompt_token_count", 0) or 0),
             "completion_tokens": int(getattr(usage_meta, "candidates_token_count", 0) or 0),
             "total_tokens": int(getattr(usage_meta, "total_token_count", 0) or 0),
         },
     }
+
+
+def _gemini_tool_response(raw_content: Any) -> Dict[str, Any]:
+    """Ensure tool output sent to Part.from_function_response is always a dict."""
+    if isinstance(raw_content, dict):
+        return raw_content
+    try:
+        parsed = json.loads(raw_content) if isinstance(raw_content, str) else raw_content
+    except json.JSONDecodeError:
+        parsed = raw_content
+    return parsed if isinstance(parsed, dict) else {"result": parsed}
 
 
 def _gemini_contents(messages: List[Dict[str, Any]], types: Any) -> list:
@@ -225,20 +270,24 @@ def _gemini_contents(messages: List[Dict[str, Any]], types: Any) -> list:
                 tm = messages[idx]
                 parts.append(types.Part.from_function_response(
                     name=tm["name"],
-                    response=json.loads(tm["content"]),
+                    response=_gemini_tool_response(tm["content"]),
                 ))
                 idx += 1
             contents.append(types.Content(role="user", parts=parts))
             continue
         if role == "assistant":
-            parts = []
-            if msg.get("content"):
-                parts.append(types.Part(text=msg["content"]))
-            for call in msg.get("tool_calls", []):
-                parts.append(types.Part(function_call=types.FunctionCall(
-                    name=call["name"], args=call["arguments"],
-                )))
-            contents.append(types.Content(role="model", parts=parts))
+            raw_content = msg.get("raw_content")
+            if raw_content is not None:
+                contents.append(raw_content)
+            else:
+                parts = []
+                if msg.get("content"):
+                    parts.append(types.Part(text=msg["content"]))
+                for call in msg.get("tool_calls", []):
+                    parts.append(types.Part(function_call=types.FunctionCall(
+                        name=call["name"], args=call["arguments"],
+                    )))
+                contents.append(types.Content(role="model", parts=parts))
         else:
             contents.append(types.Content(
                 role="user",
@@ -266,10 +315,11 @@ def _call_groq(
     request_payload: Dict[str, Any] = {
         "model": model,
         "messages": groq_messages,
-        "tools": tools,
-        "tool_choice": "auto",
         "temperature": 0,
     }
+    if tools:
+        request_payload["tools"] = tools
+        request_payload["tool_choice"] = "auto"
     if "gpt-oss" in model.lower():
         effort = _clean_env("GROQ_REASONING_EFFORT", "low")
         request_payload["reasoning_effort"] = effort if effort in {"low", "medium", "high"} else "low"
@@ -380,13 +430,15 @@ def _call_ollama(
     hostname = hostname or "localhost"
 
     ollama_msgs = _ollama_messages(messages)
-    request_data = json.dumps({
+    body_payload: Dict[str, Any] = {
         "model": model,
         "messages": ollama_msgs,
-        "tools": tools,
         "stream": False,
         "options": {"temperature": 0},
-    }).encode("utf-8")
+    }
+    if tools:
+        body_payload["tools"] = tools
+    request_data = json.dumps(body_payload).encode("utf-8")
     req = urllib.request.Request(
         f"http://{hostname}:{port}/api/chat",
         data=request_data,
@@ -409,7 +461,7 @@ def _call_ollama(
                 ) from None
             delay = _retry_delay(error.headers, error_body)
             time.sleep(delay)
-        except urllib.error.URLError as error:
+        except urllib.error.URLError:
             raise ProviderError(
                 "Ollama is not running or is unreachable."
             ) from None
@@ -474,7 +526,7 @@ def _ollama_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def call_llm(
     messages: List[Dict[str, Any]],
-    tools: List[Dict[str, Any]],
+    tools: Optional[List[Dict[str, Any]]] = None,
     config: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """
@@ -482,6 +534,7 @@ def call_llm(
       text, tool_calls, usage  (and provider, model for metadata).
     Raises ProviderError on any non-retryable failure.
     """
+    tools = tools or []
     if config is None:
         config = get_provider_config()
     provider = config["provider"]
@@ -500,4 +553,5 @@ def call_llm(
     result["provider"] = provider
     result["model"] = model
     return result
+
 

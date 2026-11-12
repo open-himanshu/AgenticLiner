@@ -12,7 +12,7 @@ from pathlib import Path
 # Ensure root in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 
-from backend.core.database.connection import get_connection, get_db_path
+from backend.core.database.connection import get_connection
 from backend.core.database.demo_people import DEMO_FACULTY, HERO_SPEAKER
 
 SCHEMA_FILE = Path(__file__).parent / "schema.sql"

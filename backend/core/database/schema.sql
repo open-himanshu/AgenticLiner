@@ -241,3 +241,23 @@ CREATE TABLE IF NOT EXISTS historical_events (
     food_packs_needed INTEGER NOT NULL,
     buses_needed INTEGER DEFAULT 0
 );
+
+
+-- 16. Agent Memories (Pillar 3: Organiser Memory & Persistent Preference Store)
+CREATE TABLE IF NOT EXISTS agent_memories (
+    id TEXT PRIMARY KEY,
+    user_id TEXT UNIQUE NOT NULL,
+    department TEXT DEFAULT 'Campus',
+    favourite_venues TEXT DEFAULT '[]',
+    favourite_equipment TEXT DEFAULT '[]',
+    typical_headcount INTEGER DEFAULT 100,
+    preferred_start_time TEXT DEFAULT '10:00:00',
+    preferred_end_time TEXT DEFAULT '13:00:00',
+    preferred_days TEXT DEFAULT '["Friday"]',
+    memory_notes TEXT DEFAULT '[]',
+    total_events_planned INTEGER DEFAULT 0,
+    last_event_date TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_agent_memories_user_id ON agent_memories(user_id);

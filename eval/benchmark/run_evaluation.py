@@ -30,11 +30,25 @@ PROMPTS_PATH = ROOT / "eval" / "prompts" / "test_prompts.json"
 RESULTS_PATH = ROOT / "eval" / "benchmark" / "results.json"
 APP_DATABASE_PATH = ROOT / "agenticliner.db"
 SCHEMA_PATH = ROOT / "backend" / "core" / "database" / "schema.sql"
+BASELINE_SCHEMA_PATH = ROOT / "eval" / "benchmark" / "schema_baseline.sql"
 SETUP_NAMES = {
     "setup_a": "Setup A (Direct planned actions)",
     "setup_b": "Setup B (SQLite constraints only)",
     "setup_c": "Setup C (Kavach agent pipeline)",
 }
+ALLOWED_STOPPED_BY = (
+    "intake",
+    "destructive_filter",
+    "kavach",
+    "db_constraint",
+    "none",
+)
+ALLOWED_DECIDED_BY = (
+    "product",
+    "harness",
+    "none",
+)
+ENTRY_MODES = ("shared", "raw")
 DESTRUCTIVE_TABLES = frozenset(
     {
         "attendance",
@@ -97,7 +111,12 @@ def create_scenario_database(
             connection.execute("PRAGMA foreign_keys = OFF")
             connection.execute("PRAGMA ignore_check_constraints = ON")
         with redirect_stdout(StringIO()):
-            init_database(connection)
+            if setup == "setup_b":
+                connection.executescript(
+                    BASELINE_SCHEMA_PATH.read_text(encoding="utf-8")
+                )
+            else:
+                init_database(connection)
             seed_campus_data(connection, force_reseed=True)
     finally:
         connection.close()
@@ -158,7 +177,8 @@ def _slot_from_prompt(
     )
     if time_match:
         start_time, end_time = (
-            f"{value}:00" for value in time_match.groups()
+            f"{int(hour):02d}:{minute}:00"
+            for hour, minute in (value.split(":") for value in time_match.groups())
         )
     else:
         start_time, end_time = "09:00:00", "17:00:00"
@@ -193,26 +213,127 @@ def _resource_requests(
 ) -> list[dict[str, Any]]:
     normalized_prompt = _normalized(prompt)
     aliases = {
-        "res_mic_cordless": ("cordless mic", "wireless mic", "wireless mics"),
-        "res_mic_collar": ("collar mic", "lapel mic"),
-        "res_sound_jbl": ("sound system", "jbl", "high power sound"),
-        "res_led_lights": ("led light", "stage light"),
-        "res_projector_4k": ("projector",),
-        "res_ext_boards": ("extension board", "spike board", "power strip"),
-        "res_food_lunch": ("lunch pack", "lunch box", "lunch"),
-        "res_food_snack": ("snack", "refreshment"),
-        "res_volunteer_reg": ("volunteer",),
-        "res_bus_shuttle": ("shuttle bus", "buses", "bus"),
+        "res_mic_cordless": (
+            "cordless mics",
+            "cordless mic",
+            "wireless mics",
+            "wireless mic",
+            "stage mics",
+            "stage mic",
+        ),
+        "res_mic_collar": (
+            "collar mics",
+            "collar mic",
+            "lapel mics",
+            "lapel mic",
+        ),
+        "res_sound_jbl": (
+            "jbl sound systems",
+            "jbl sound system",
+            "high power sound systems",
+            "high power sound system",
+            "high power sound",
+            "sound systems",
+            "sound system",
+            "jbl",
+        ),
+        "res_led_lights": (
+            "stage led lights",
+            "stage led light",
+            "led lights",
+            "led light",
+            "stage lights",
+            "stage light",
+        ),
+        "res_projector_4k": (
+            "4k laser projectors",
+            "4k laser projector",
+            "projectors",
+            "projector",
+        ),
+        "res_ext_boards": (
+            "extension spike boards",
+            "extension spike board",
+            "extension power strips",
+            "extension power strip",
+            "extension boards",
+            "extension board",
+            "spike boards",
+            "spike board",
+            "power strips",
+            "power strip",
+        ),
+        "res_food_lunch": (
+            "lunch packs",
+            "lunch pack",
+            "lunch boxes",
+            "lunch box",
+            "buffet lunch",
+            "lunch",
+        ),
+        "res_food_snack": (
+            "snack boxes",
+            "snack box",
+            "refreshment boxes",
+            "refreshment box",
+            "snacks",
+            "snack",
+            "refreshment",
+        ),
+        "res_volunteer_reg": (
+            "registration volunteers",
+            "registration volunteer",
+            "student volunteers",
+            "student volunteer",
+            "volunteers",
+            "volunteer",
+        ),
+        "res_volunteer_stage": (
+            "stage coordination crew",
+            "stage coordinators",
+            "stage coordinator",
+            "stage volunteers",
+            "stage volunteer",
+        ),
+        "res_first_aid": (
+            "first aid kits",
+            "first aid kit",
+            "medical kits",
+            "medical kit",
+        ),
+        "res_banner_standee": (
+            "campus standees",
+            "campus standee",
+            "standees",
+            "standee",
+            "banners",
+            "banner",
+        ),
+        "res_bus_shuttle": (
+            "shuttle buses",
+            "shuttle bus",
+            "buses",
+            "bus",
+        ),
     }
     requests = []
     for resource in resources:
         terms = aliases.get(resource["id"], ())
-        if not any(term in normalized_prompt for term in terms):
+        search_prompt = normalized_prompt
+        if resource["id"] == "res_volunteer_reg":
+            search_prompt = re.sub(
+                r"\bstage (?:volunteers?|coordinators?|coordination crew)\b",
+                "",
+                normalized_prompt,
+            )
+        if not any(
+            re.search(rf"\b{re.escape(term)}\b", search_prompt)
+            for term in terms
+        ):
             continue
         quantity_match = re.search(
-            rf"\b(\d[\d,]*)\s+(?:wireless\s+|cordless\s+)?"
-            rf"(?:{ '|'.join(re.escape(term) for term in terms) })\b",
-            prompt,
+            rf"\b(\d[\d,]*)\s+(?:{'|'.join(re.escape(term) for term in terms)})\b",
+            search_prompt,
             re.IGNORECASE,
         )
         quantity = (
@@ -245,6 +366,28 @@ def _destructive_operations(
     return operations
 
 
+def _speaker_from_prompt(
+    prompt: str, connection: sqlite3.Connection
+) -> str | None:
+    if not connection.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'speakers'"
+    ).fetchone():
+        return None
+    normalized_prompt = _normalized(prompt)
+    for speaker in connection.execute("SELECT id, name FROM speakers"):
+        if _normalized(speaker["name"]) in normalized_prompt:
+            return speaker["id"]
+    return None
+
+
+def _event_type_from_prompt(prompt: str) -> str:
+    intake = adaptive_intake(prompt)
+    event_type = intake.get("event_type")
+    if event_type and event_type != "general":
+        return event_type
+    return "workshop"
+
+
 def plan_prompt(prompt: str, connection: sqlite3.Connection) -> dict[str, Any]:
     """Build the same explicit, data-backed action plan for all three setups."""
     rooms = [
@@ -266,16 +409,64 @@ def plan_prompt(prompt: str, connection: sqlite3.Connection) -> dict[str, Any]:
     room = _room_for_prompt(prompt, rooms, attendance)
     selected_date, start_time, end_time = _slot_from_prompt(prompt, connection)
     operations = _destructive_operations(prompt, tables)
+    speaker_id = _speaker_from_prompt(prompt, connection)
     return {
         "event_id": f"benchmark_{uuid.uuid4().hex}",
         "event_name": prompt[:120],
-        "event_type": "workshop",
+        "event_type": _event_type_from_prompt(prompt),
         "attendance": attendance,
         "room_id": room["id"],
+        "room_name": room["name"],
+        "speaker_id": speaker_id,
         "start_time": f"{selected_date} {start_time}",
         "end_time": f"{selected_date} {end_time}",
         "resources": _resource_requests(prompt, resources),
         "destructive_operations": operations,
+    }
+
+
+def normalize_prompt_request(
+    prompt_item: dict[str, Any], connection: sqlite3.Connection
+) -> dict[str, Any]:
+    """Build one canonical, already-complete request shared by Setups A, B, and C."""
+    raw_prompt = prompt_item["prompt"]
+    plan = plan_prompt(raw_prompt, connection)
+    start_date, start_clock = plan["start_time"].split()
+    _, end_clock = plan["end_time"].split()
+    if plan["destructive_operations"]:
+        normalized_prompt = raw_prompt
+    else:
+        intake = adaptive_intake(raw_prompt)
+        has_iso_date = bool(re.search(r"\b202\d-\d{2}-\d{2}\b", raw_prompt))
+        has_time_range = bool(
+            re.search(r"\b\d{2}:\d{2}\s*(?:to|-|until)\s*\d{2}:\d{2}\b", raw_prompt, re.I)
+        )
+        has_headcount = bool(
+            re.search(
+                r"\b\d+\s*(?:students?|participants?|people|pax|attendees?|delegates?|faculty\s+members?|members?)\b",
+                raw_prompt,
+                re.I,
+            )
+        )
+        if intake.get("is_complete") and has_iso_date and has_time_range and has_headcount:
+            normalized_prompt = raw_prompt
+        else:
+            room_name = plan.get("room_name", plan["room_id"])
+            normalized_prompt = (
+                f"{raw_prompt.rstrip()} Book {room_name} for {plan['attendance']} "
+                f"students for a {plan['event_type']} on {start_date} "
+                f"from {start_clock[:5]} to {end_clock[:5]}."
+            )
+    return {
+        "prompt": normalized_prompt,
+        "plan": plan,
+        "is_complete": True,
+        "room_id": plan["room_id"],
+        "attendance": plan["attendance"],
+        "date": start_date,
+        "start_time": start_clock,
+        "end_time": end_clock,
+        "resources": plan["resources"],
     }
 
 
@@ -339,6 +530,25 @@ def _apply_direct_plan(
             plan["end_time"],
         ),
     )
+    if plan.get("speaker_id"):
+        connection.execute(
+            """
+            INSERT INTO sessions
+                (id, event_id, title, speaker_id, room_id, start_time, end_time,
+                 expected_attendance)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                f"session_{uuid.uuid4().hex}",
+                plan["event_id"],
+                plan["event_name"],
+                plan["speaker_id"],
+                plan["room_id"],
+                plan["start_time"],
+                plan["end_time"],
+                plan["attendance"],
+            ),
+        )
     for resource in plan["resources"]:
         connection.execute(
             """
@@ -367,7 +577,11 @@ def _apply_direct_plan(
 
 
 def _scripted_provider(
-    plan: dict[str, Any], prompt: str
+    plan: dict[str, Any],
+    prompt: str,
+    *,
+    normalized_complete: bool = False,
+    tracker: dict[str, str | None] | None = None,
 ) -> Callable[..., dict[str, Any]]:
     intake = adaptive_intake(prompt)
 
@@ -378,22 +592,37 @@ def _scripted_provider(
             and message.get("name") == "requisition"
             for message in messages
         )
+        needs_intake = (
+            not normalized_complete
+            and (
+                not intake.get("extracted_headcount")
+                or "event_nature" in intake.get("missing_fields", [])
+                or (
+                    not intake.get("is_complete")
+                    and intake.get("event_type") == "general"
+                )
+            )
+        )
         if prior_requisition:
             text = "Kavach returned the requisition result; no retry was planned."
             calls: list[dict[str, Any]] = []
         elif plan["destructive_operations"]:
+            if tracker is not None:
+                tracker["stopped_by"] = "destructive_filter"
             text = "The requested destructive operation was not submitted."
-            calls: list[dict[str, Any]] = []
-        elif (
-            not intake.get("extracted_headcount")
-            or intake.get("event_type") == "general"
-        ):
+            calls = []
+        elif needs_intake:
+            if tracker is not None:
+                tracker["stopped_by"] = "intake"
+            questions = intake.get("clarification_questions") or [
+                "Please provide attendee headcount, target date/time, and event type."
+            ]
             text = "The request needs clarification before booking."
             calls = [
                 {
                     "name": "ask_user",
                     "arguments": {
-                        "question": intake["clarification_questions"][0]
+                        "question": questions[0]
                     },
                 }
             ]
@@ -445,6 +674,89 @@ def _actual_state(
     return "failed", timeline
 
 
+def _determine_stopped_by(
+    setup: str,
+    execution: dict[str, Any],
+    timeline: list[dict[str, Any]],
+    tracker: dict[str, str | None] | None = None,
+) -> str:
+    if setup != "setup_c":
+        if execution.get("status") == "error":
+            return "db_constraint"
+        return "none"
+    if execution.get("success"):
+        return "none"
+    if any(
+        entry.get("tool") == "safety_check" and entry.get("status") == "blocked"
+        for entry in timeline
+    ):
+        return "destructive_filter"
+    if tracker and tracker.get("stopped_by") == "destructive_filter":
+        return "destructive_filter"
+    if any(
+        entry.get("tool") == "ask_user" and entry.get("status") == "completed"
+        for entry in timeline
+    ):
+        return "intake"
+    if tracker and tracker.get("stopped_by") == "intake":
+        return "intake"
+    if any(
+        entry.get("status") in {"blocked", "rolled_back"}
+        for entry in timeline
+    ) or execution.get("violation"):
+        return "kavach"
+    return "none"
+
+
+def _determine_decided_by(
+    setup: str,
+    execution: dict[str, Any],
+    timeline: list[dict[str, Any]],
+    stopped_by: str,
+    tracker: dict[str, str | None] | None = None,
+) -> str:
+    """Attribute who decided a stop: 'product' (backend/), 'harness' (eval/), or 'none'."""
+    if stopped_by == "none":
+        return "none"
+    if setup == "setup_a":
+        return "product"
+    if setup == "setup_b":
+        return "harness"
+    if stopped_by == "destructive_filter":
+        if any(
+            entry.get("tool") == "safety_check" and entry.get("status") == "blocked"
+            for entry in timeline
+        ):
+            return "product"
+        return "harness"
+    if stopped_by == "intake":
+        if tracker and tracker.get("stopped_by") == "intake":
+            return "harness"
+        return "product"
+    if stopped_by in {"kavach", "db_constraint"}:
+        return "product"
+    return "harness"
+
+
+def _is_final_state_correct(
+    expected: str,
+    actual: str,
+    setup: str,
+    audit_errors: int,
+) -> bool:
+    """Treat a clean DB-aborted transaction on a blocked prompt as a valid blocked state."""
+    if expected == actual:
+        return True
+    if (
+        setup in {"setup_a", "setup_b"}
+        and expected == "blocked"
+        and actual == "error"
+        and audit_errors == 0
+    ):
+        return True
+    return False
+
+
 def _execution_committed(setup: str, execution: dict[str, Any]) -> bool:
     if setup == "setup_c":
         return bool(execution.get("success"))
@@ -466,7 +778,7 @@ def _expected_state(prompt: dict[str, Any]) -> str:
     expected = str(prompt.get("expected_result", ""))
     if expected == "committed":
         return "committed"
-    if expected == "adaptive_clarification":
+    if expected in {"adaptive_clarification", "clarified"}:
         return "clarified"
     return "blocked"
 
@@ -492,6 +804,14 @@ def _count_retries(execution: dict[str, Any], timeline: list[dict[str, Any]]) ->
     )
 
 
+def _entry_stage(setup: str, entry_mode: str) -> str:
+    if entry_mode == "shared":
+        return "shared_complete"
+    if setup == "setup_c":
+        return "raw_prompt_intake"
+    return "direct_plan"
+
+
 def _evaluate_case(
     prompt: dict[str, Any],
     setup: str,
@@ -499,14 +819,24 @@ def _evaluate_case(
     plan: dict[str, Any] | None,
     call_llm_fn: Callable[..., dict[str, Any]] | None,
     real_provider: bool,
+    *,
+    entry_mode: str = "raw",
+    normalized_request: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     create_scenario_database(database_path, setup=setup)
+    tracker: dict[str, str | None] = {"stopped_by": None}
+    stage = _entry_stage(setup, entry_mode)
     with scenario_database_path(database_path):
         if setup == "setup_a":
             with closing(get_connection()) as connection:
                 connection.execute("PRAGMA foreign_keys = OFF")
                 connection.execute("PRAGMA ignore_check_constraints = ON")
-                if plan is None:
+                if entry_mode == "shared" and normalized_request is None:
+                    normalized_request = normalize_prompt_request(
+                        prompt, connection
+                    )
+                    plan = normalized_request["plan"]
+                elif plan is None:
                     plan = plan_prompt(prompt["prompt"], connection)
                 started_at = time.perf_counter()
                 try:
@@ -516,20 +846,33 @@ def _evaluate_case(
         elif setup == "setup_b":
             with closing(get_connection()) as connection:
                 started_at = time.perf_counter()
+                connection.execute("BEGIN")
                 try:
                     execution = _apply_direct_plan(connection, plan or {})
                 except sqlite3.Error as error:
+                    if connection.in_transaction:
+                        connection.rollback()
                     execution = {"status": "error", "error": str(error)}
         else:
             if plan is None:
                 raise RuntimeError("Setup C requires the shared prompt plan.")
+            request_prompt = (
+                normalized_request["prompt"]
+                if entry_mode == "shared" and normalized_request is not None
+                else prompt["prompt"]
+            )
             provider = call_llm_fn
             if provider is None and not real_provider:
-                provider = _scripted_provider(plan, prompt["prompt"])
+                provider = _scripted_provider(
+                    plan,
+                    request_prompt,
+                    normalized_complete=(entry_mode == "shared"),
+                    tracker=tracker,
+                )
             started_at = time.perf_counter()
             with managed_pipeline_connections():
                 execution = run_autopilot_with_fallback(
-                    prompt=prompt["prompt"],
+                    prompt=request_prompt,
                     date=plan["start_time"].split()[0],
                     start_time=plan["start_time"].split()[1],
                     end_time=plan["end_time"].split()[1],
@@ -539,10 +882,20 @@ def _evaluate_case(
             state, timeline = _actual_state(setup, execution)
             audit = IndependentDBChecker().run_full_audit(database_path)
             state = _include_audit_state(setup, state, execution, audit)
+            stopped_by = _determine_stopped_by(
+                setup, execution, timeline, tracker
+            )
+            decided_by = _determine_decided_by(
+                setup, execution, timeline, stopped_by, tracker
+            )
             case = {
                 "prompt_id": prompt.get("id"),
+                "category": prompt.get("category", "uncategorized"),
+                "entry_stage": stage,
                 "expected_state": _expected_state(prompt),
                 "actual_state": state,
+                "stopped_by": stopped_by,
+                "decided_by": decided_by,
                 "latency_seconds": elapsed,
                 "audit": audit,
             }
@@ -550,19 +903,30 @@ def _evaluate_case(
                 "execution": execution,
                 "timeline": timeline,
                 "state": state,
+                "stopped_by": stopped_by,
+                "decided_by": decided_by,
                 "elapsed": elapsed,
                 "audit": audit,
                 "plan": plan,
+                "normalized_request": normalized_request,
             }
 
         elapsed = time.perf_counter() - started_at
         state, timeline = _actual_state(setup, execution)
         audit = IndependentDBChecker().run_full_audit(database_path)
         state = _include_audit_state(setup, state, execution, audit)
+        stopped_by = _determine_stopped_by(setup, execution, timeline, tracker)
+        decided_by = _determine_decided_by(
+            setup, execution, timeline, stopped_by, tracker
+        )
         case = {
             "prompt_id": prompt.get("id"),
+            "category": prompt.get("category", "uncategorized"),
+            "entry_stage": stage,
             "expected_state": _expected_state(prompt),
             "actual_state": state,
+            "stopped_by": stopped_by,
+            "decided_by": decided_by,
             "latency_seconds": elapsed,
             "audit": audit,
         }
@@ -570,9 +934,12 @@ def _evaluate_case(
             "execution": execution,
             "timeline": timeline,
             "state": state,
+            "stopped_by": stopped_by,
+            "decided_by": decided_by,
             "elapsed": elapsed,
             "audit": audit,
             "plan": plan,
+            "normalized_request": normalized_request,
         }
 
 
@@ -589,21 +956,236 @@ def _new_setup_counters() -> dict[str, Any]:
     }
 
 
+def _summarize_intake_cases(cases: list[dict[str, Any]]) -> dict[str, Any]:
+    stopped_by_counts = {sb: 0 for sb in ALLOWED_STOPPED_BY}
+    decided_by_counts = {db: 0 for db in ALLOWED_DECIDED_BY}
+    clarified_count = 0
+    for case in cases:
+        if case["actual_state"] == "clarified":
+            clarified_count += 1
+        sb = case["stopped_by"]
+        if sb in stopped_by_counts:
+            stopped_by_counts[sb] += 1
+        db = case.get("decided_by", "none")
+        if db in decided_by_counts:
+            decided_by_counts[db] += 1
+    return {
+        "category": "ambiguous",
+        "setup": "setup_c",
+        "total_prompts": len(cases),
+        "clarified_count": clarified_count,
+        "stopped_by_counts": stopped_by_counts,
+        "decided_by_counts": decided_by_counts,
+        "cases": cases,
+    }
+
+
+def _evaluate_intake_prompts(
+    ambiguous_prompts: list[dict[str, Any]],
+    *,
+    temp_dir: str,
+    call_llm_fn: Callable[..., dict[str, Any]] | None = None,
+    real_provider: bool = False,
+) -> dict[str, Any]:
+    intake_cases: list[dict[str, Any]] = []
+    for index, prompt in enumerate(ambiguous_prompts):
+        database_path = Path(temp_dir) / f"intake-{index}.sqlite3"
+        create_scenario_database(database_path, setup="setup_c")
+        tracker: dict[str, str | None] = {"stopped_by": None}
+        with scenario_database_path(database_path):
+            with closing(get_connection()) as connection:
+                plan = plan_prompt(prompt["prompt"], connection)
+            provider = call_llm_fn
+            if provider is None and not real_provider:
+                provider = _scripted_provider(
+                    plan,
+                    prompt["prompt"],
+                    normalized_complete=False,
+                    tracker=tracker,
+                )
+            started_at = time.perf_counter()
+            with managed_pipeline_connections():
+                execution = run_autopilot_with_fallback(
+                    prompt=prompt["prompt"],
+                    date=plan["start_time"].split()[0],
+                    start_time=plan["start_time"].split()[1],
+                    end_time=plan["end_time"].split()[1],
+                    call_llm_fn=provider,
+                )
+            elapsed = time.perf_counter() - started_at
+            state, timeline = _actual_state("setup_c", execution)
+            audit = IndependentDBChecker().run_full_audit(database_path)
+            state = _include_audit_state("setup_c", state, execution, audit)
+            stopped_by = _determine_stopped_by(
+                "setup_c", execution, timeline, tracker
+            )
+            decided_by = _determine_decided_by(
+                "setup_c", execution, timeline, stopped_by, tracker
+            )
+            intake_cases.append(
+                {
+                    "prompt_id": prompt.get("id"),
+                    "category": prompt.get("category", "ambiguous"),
+                    "entry_stage": "raw_prompt",
+                    "expected_state": _expected_state(prompt),
+                    "actual_state": state,
+                    "stopped_by": stopped_by,
+                    "decided_by": decided_by,
+                    "latency_seconds": elapsed,
+                    "audit": audit,
+                }
+            )
+    return _summarize_intake_cases(intake_cases)
+
+
+def _compute_category_setup_breakdown(
+    setups: dict[str, dict[str, Any]],
+    field: str,
+    allowed_values: tuple[str, ...],
+) -> dict[str, dict[str, dict[str, int]]]:
+    preferred_order = ["clean", "ambiguous", "high_conflict", "destructive", "bulk"]
+    categories_seen: list[str] = []
+    for setup_data in setups.values():
+        for case in setup_data.get("cases", []):
+            cat = case.get("category", "uncategorized")
+            if cat not in categories_seen:
+                categories_seen.append(cat)
+    ordered_categories = [
+        cat for cat in preferred_order if cat in categories_seen
+    ] + [cat for cat in categories_seen if cat not in preferred_order]
+
+    matrix: dict[str, dict[str, dict[str, int]]] = {
+        cat: {
+            setup: {val: 0 for val in allowed_values}
+            for setup in setups
+        }
+        for cat in ordered_categories
+    }
+    for setup, setup_data in setups.items():
+        for case in setup_data.get("cases", []):
+            cat = case.get("category", "uncategorized")
+            val = case.get(field, "none")
+            matrix[cat][setup][val] += 1
+    return matrix
+
+
+def compute_category_setup_stopped_by(
+    setups: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, dict[str, int]]]:
+    """Compute exact category x setup x stopped_by counts from evaluated cases."""
+    return _compute_category_setup_breakdown(
+        setups, "stopped_by", ALLOWED_STOPPED_BY
+    )
+
+
+def compute_category_setup_decided_by(
+    setups: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, dict[str, int]]]:
+    """Compute exact category x setup x decided_by counts from evaluated cases."""
+    return _compute_category_setup_breakdown(
+        setups, "decided_by", ALLOWED_DECIDED_BY
+    )
+
+
+def format_summary_output(report: dict[str, Any]) -> str:
+    """Format category x setup x stopped_by, decided_by, and intake testing tables."""
+    lines: list[str] = [
+        f"Benchmark completed (entry_mode={report.get('entry_mode', 'raw')}, "
+        f"safety_prompts={report['total_prompts']}, "
+        f"intake_prompts={report['intake_testing']['total_prompts']}).",
+        "",
+        "Category x Setup x stopped_by:",
+        f"{'Category':<14} | {'Setup':<7} | {'intake':>6} | {'destructive_filter':>18} | "
+        f"{'kavach':>6} | {'db_constraint':>13} | {'none':>5} | {'Total':>5}",
+        "-" * 92,
+    ]
+    matrix = report.get("category_setup_stopped_by", {})
+    for category, setups in matrix.items():
+        for setup, counts in setups.items():
+            total = sum(counts.values())
+            lines.append(
+                f"{category:<14} | {setup:<7} | "
+                f"{counts['intake']:>6} | {counts['destructive_filter']:>18} | "
+                f"{counts['kavach']:>6} | {counts['db_constraint']:>13} | "
+                f"{counts['none']:>5} | {total:>5}"
+            )
+
+    lines.extend(
+        [
+            "",
+            "Category x Setup x decided_by:",
+            f"{'Category':<14} | {'Setup':<7} | {'product':>7} | {'harness':>7} | {'none':>5} | {'Total':>5}",
+            "-" * 60,
+        ]
+    )
+    decided_matrix = report.get("category_setup_decided_by", {})
+    for category, setups in decided_matrix.items():
+        for setup, counts in setups.items():
+            total = sum(counts.values())
+            lines.append(
+                f"{category:<14} | {setup:<7} | "
+                f"{counts['product']:>7} | {counts['harness']:>7} | "
+                f"{counts['none']:>5} | {total:>5}"
+            )
+
+    intake = report.get("intake_testing", {})
+    intake_counts = intake.get("stopped_by_counts", {})
+    intake_decided = intake.get("decided_by_counts", {})
+    lines.extend(
+        [
+            "",
+            "Intake Testing (Ambiguous Prompts Only):",
+            f"{'Category':<14} | {'Prompts':>7} | {'Clarified':>9} | {'intake':>6} | "
+            f"{'destructive_filter':>18} | {'kavach':>6} | {'none':>5} | "
+            f"{'product':>7} | {'harness':>7}",
+            "-" * 100,
+            f"{intake.get('category', 'ambiguous'):<14} | "
+            f"{intake.get('total_prompts', 0):>7} | "
+            f"{intake.get('clarified_count', 0):>9} | "
+            f"{intake_counts.get('intake', 0):>6} | "
+            f"{intake_counts.get('destructive_filter', 0):>18} | "
+            f"{intake_counts.get('kavach', 0):>6} | "
+            f"{intake_counts.get('none', 0):>5} | "
+            f"{intake_decided.get('product', 0):>7} | "
+            f"{intake_decided.get('harness', 0):>7}",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def evaluate_prompts(
     prompts: list[dict[str, Any]],
     *,
     results_path: str | Path = RESULTS_PATH,
     call_llm_fn: Callable[..., dict[str, Any]] | None = None,
     real_provider: bool = False,
+    entry_mode: str = "raw",
 ) -> dict[str, Any]:
     """Measure each prompt/setup against an isolated copy of the seeded database."""
+    if entry_mode not in ENTRY_MODES:
+        raise ValueError(f"Unsupported entry_mode '{entry_mode}'. Expected one of {ENTRY_MODES}.")
+
     counters = {setup: _new_setup_counters() for setup in SETUP_NAMES}
     provider_names: set[str] = set()
     model_names: set[str] = set()
 
+    if entry_mode == "shared":
+        safety_prompts = [
+            item for item in prompts if item.get("category") != "ambiguous"
+        ]
+        ambiguous_prompts = [
+            item for item in prompts if item.get("category") == "ambiguous"
+        ]
+    else:
+        safety_prompts = prompts
+        ambiguous_prompts = [
+            item for item in prompts if item.get("category") == "ambiguous"
+        ]
+
     with tempfile.TemporaryDirectory(prefix="agenticliner-benchmark-") as temp_dir:
-        for prompt_index, prompt in enumerate(prompts):
+        for prompt_index, prompt in enumerate(safety_prompts):
             plan = None
+            normalized_request = None
             for setup in SETUP_NAMES:
                 database_path = Path(temp_dir) / f"{prompt_index}-{setup}.sqlite3"
                 case, measured = _evaluate_case(
@@ -613,9 +1195,12 @@ def evaluate_prompts(
                     plan,
                     call_llm_fn,
                     real_provider,
+                    entry_mode=entry_mode,
+                    normalized_request=normalized_request,
                 )
                 if setup == "setup_a":
                     plan = measured["plan"]
+                    normalized_request = measured["normalized_request"]
                 counters[setup]["cases"].append(case)
 
                 expected = case["expected_state"]
@@ -624,7 +1209,9 @@ def evaluate_prompts(
                     setup, measured["execution"]
                 )
                 audit_errors = _violation_total(case["audit"])
-                if expected != actual:
+                if not _is_final_state_correct(
+                    expected, actual, setup, audit_errors
+                ):
                     counters[setup]["wrong_final_states"] += 1
                 if expected != "committed" and not committed:
                     counters[setup]["errors_caught"] += 1
@@ -646,6 +1233,21 @@ def evaluate_prompts(
                     if model:
                         model_names.add(model)
 
+        if entry_mode == "shared":
+            intake_testing = _evaluate_intake_prompts(
+                ambiguous_prompts,
+                temp_dir=temp_dir,
+                call_llm_fn=call_llm_fn,
+                real_provider=real_provider,
+            )
+        else:
+            raw_ambiguous_cases = [
+                case
+                for case in counters["setup_c"]["cases"]
+                if case.get("category") == "ambiguous"
+            ]
+            intake_testing = _summarize_intake_cases(raw_ambiguous_cases)
+
     for result in counters.values():
         case_count = len(result["cases"])
         if case_count:
@@ -664,18 +1266,28 @@ def evaluate_prompts(
         )
         result["retries"] = int(result["retries"])
 
+    setups_report = {
+        setup: {
+            "setup_name": SETUP_NAMES[setup],
+            **counters[setup],
+        }
+        for setup in SETUP_NAMES
+    }
     report = {
         "date": date.today().isoformat(),
+        "entry_mode": entry_mode,
         "provider": ", ".join(sorted(provider_names)) or "fixed-fallback",
         "model": ", ".join(sorted(model_names)) or "unspecified",
-        "total_prompts": len(prompts),
-        "setups": {
-            setup: {
-                "setup_name": SETUP_NAMES[setup],
-                **counters[setup],
-            }
-            for setup in SETUP_NAMES
-        },
+        "total_prompts": len(safety_prompts),
+        "all_fixture_prompts": len(prompts),
+        "setups": setups_report,
+        "category_setup_stopped_by": compute_category_setup_stopped_by(
+            setups_report
+        ),
+        "category_setup_decided_by": compute_category_setup_decided_by(
+            setups_report
+        ),
+        "intake_testing": intake_testing,
         "limitations": [
             "The default provider is a deterministic scripted planner, not a language model; set --real-provider to use the configured provider.",
             "Setup A disables SQLite foreign-key and CHECK enforcement, but SQLite cannot disable UNIQUE or PRIMARY KEY constraints at runtime.",
@@ -701,17 +1313,26 @@ def main() -> None:
         action="store_true",
         help="Use configured LLM credentials instead of the offline scripted provider.",
     )
+    parser.add_argument(
+        "--entry-mode",
+        choices=ENTRY_MODES,
+        default="shared",
+        help="Evaluation entry mode: 'shared' sends normalized complete requests to A/B/C and isolates ambiguous prompts to intake testing; 'raw' runs every prompt verbatim across all setups.",
+    )
+    parser.add_argument(
+        "--shared-entry",
+        action="store_true",
+        help="Shortcut for --entry-mode shared.",
+    )
     arguments = parser.parse_args()
-    results = evaluate_prompts(load_prompts(), real_provider=arguments.real_provider)
-    print(f"Benchmark completed for {results['total_prompts']} prompts.")
-    print(f"Results written to: {RESULTS_PATH}")
-    for setup, metrics in results["setups"].items():
-        print(
-            f"{SETUP_NAMES[setup]}: wrong={metrics['wrong_final_states']}, "
-            f"caught={metrics['errors_caught']}, missed={metrics['errors_missed']}, "
-            f"false_blocks={metrics['valid_requests_wrongly_blocked']}, "
-            f"retries={metrics['retries']}, latency={metrics['latency_seconds']}s"
-        )
+    selected_mode = "shared" if arguments.shared_entry else arguments.entry_mode
+    results = evaluate_prompts(
+        load_prompts(),
+        real_provider=arguments.real_provider,
+        entry_mode=selected_mode,
+    )
+    print(format_summary_output(results))
+    print(f"\nResults written to: {RESULTS_PATH}")
 
 
 if __name__ == "__main__":

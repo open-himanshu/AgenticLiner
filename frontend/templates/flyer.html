@@ -55,9 +55,9 @@
 
     <div class="flyer-sheet">
         <div class="flyer-header">
-            <span class="badge bg-warning text-dark fw-bold px-3 py-1 mb-2 text-uppercase tracking-wide">Galgotias University • School of AI</span>
+            <span class="badge bg-warning text-dark fw-bold px-3 py-1 mb-2 text-uppercase tracking-wide">Galgotias University • {{ (event.event_type or 'Campus Event') | upper }}</span>
             <h1 class="display-6 fw-bold mb-2">{{ event.name }}</h1>
-            <p class="lead mb-0 text-white-50">Intelligent Campus Innovation, Coding & Research Summit</p>
+            <p class="lead mb-0 text-white-50">{{ event.brief or 'Official University Event Showcase & Schedule' }}</p>
         </div>
 
         <div class="flyer-body">
@@ -71,19 +71,21 @@
                 </div>
                 <div class="col-md-6 text-md-end text-center">
                     <div class="p-3 bg-light rounded d-inline-block border">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=https://galgotiasuniversity.edu.in/event-registration" alt="Registration QR" width="130" height="130" class="rounded">
-                        <p class="small text-muted mb-0 mt-2">Scan QR to Register Online</p>
+                        <a href="/register?event_id={{ event.id }}" class="text-decoration-none">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=https://galgotiasuniversity.edu.in/register?event_id={{ event.id }}" alt="Registration QR" width="130" height="130" class="rounded">
+                        </a>
+                        <p class="small text-muted mb-0 mt-2">Scan or Click to Register ({{ event.id }})</p>
                     </div>
                 </div>
             </div>
 
             <div class="mb-4">
-                <h5 class="fw-bold text-dark border-bottom pb-2">🎯 Key Sessions & Tracks</h5>
+                <h5 class="fw-bold text-dark border-bottom pb-2">🎯 Event Highlights</h5>
                 <div class="d-flex flex-wrap gap-2 mt-2">
-                    <span class="track-badge">Generative AI & LLM Systems</span>
-                    <span class="track-badge">Hands-on PyTorch Coding Lab</span>
-                    <span class="track-badge">Autonomous Agents & Reasoning</span>
-                    <span class="track-badge">Hackathon Final Evaluation</span>
+                    <span class="track-badge">{{ (event.event_type or 'Campus') | title }} Track</span>
+                    <span class="track-badge">{{ venue }}</span>
+                    <span class="track-badge">Expected Attendance: {{ event.expected_participants or 'Open' }}</span>
+                    <span class="track-badge">Digital QR Gate Pass Included</span>
                 </div>
             </div>
 

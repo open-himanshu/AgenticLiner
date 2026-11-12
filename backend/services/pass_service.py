@@ -9,9 +9,9 @@ import json
 import base64
 import uuid
 import qrcode
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
-from backend.core.database.connection import get_connection, fetch_one, fetch_all, execute_query
+from backend.core.database.connection import get_connection, fetch_all
 from backend.modules.module4_participant_xp.recommender import ParticipantExperienceEngine
 
 participant_xp = ParticipantExperienceEngine()

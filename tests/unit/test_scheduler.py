@@ -23,18 +23,58 @@ def test_conflict_free_scheduling():
     assert result["total_sessions_scheduled"] == 3
 
     sched_map = {item["session_id"]: item for item in result["schedule"]}
-    
+
     # Check 1: Keynote s1 has 250 attendees, MUST be in Main Audi (capacity 300), NOT Lab 1 (capacity 50)
     assert sched_map["s1"]["room_id"] == "r1"
-    
+
     # Check 2: Precedence: s1 (Keynote) happens strictly BEFORE s2 (Hands-on PyTorch)
     assert sched_map["s1"]["slot_index"] < sched_map["s2"]["slot_index"]
-    
+
     # Check 3: Precedence: s2 happens strictly BEFORE s3
     assert sched_map["s2"]["slot_index"] < sched_map["s3"]["slot_index"]
 
     # Check 4: Speaker 1 (spk1) has s1 and s3; they must be at different slots
     assert sched_map["s1"]["slot_index"] != sched_map["s3"]["slot_index"]
+
+def test_speaker_availability_window_enforced():
+    rooms = [{"id": "r1", "name": "Hall A", "capacity": 100}]
+    slots = [
+        "Slot 1 (09:00 - 10:30)",
+        "Slot 2 (11:00 - 12:30)",
+        "Slot 3 (14:00 - 15:30)"
+    ]
+    # Speaker is ONLY available in Slot 3 (14:00 - 15:30)
+    speakers = [
+        {"id": "spk_busy", "name": "Prof. Busy", "availability_slots": [2]}
+    ]
+    sessions = [
+        {"id": "s1", "title": "Guest Lecture", "expected_attendance": 50, "speaker_id": "spk_busy", "depends_on": None}
+    ]
+
+    scheduler = EventScheduler(rooms=rooms, slots=slots, sessions=sessions, speakers=speakers)
+    result = scheduler.solve()
+
+    assert result["success"] is True
+    assert len(result["schedule"]) == 1
+    # Must be scheduled in slot 2 (which is the 3rd slot)
+    assert result["schedule"][0]["slot_index"] == 2
+    assert result["schedule"][0]["slot_time"] == "Slot 3 (14:00 - 15:30)"
+
+def test_speaker_infeasible_availability():
+    rooms = [{"id": "r1", "name": "Hall A", "capacity": 100}]
+    slots = ["Slot 1 (09:00 - 10:30)", "Slot 2 (11:00 - 12:30)"]
+    # Speaker has empty availability slots
+    speakers = [
+        {"id": "spk_none", "name": "Unavailable Speaker", "availability_slots": []}
+    ]
+    sessions = [
+        {"id": "s1", "title": "Impossible Session", "expected_attendance": 50, "speaker_id": "spk_none", "depends_on": None}
+    ]
+
+    scheduler = EventScheduler(rooms=rooms, slots=slots, sessions=sessions, speakers=speakers)
+    result = scheduler.solve()
+    assert result["success"] is False
+    assert result["status"] == "INFEASIBLE"
 
 def test_infeasible_scheduling():
     # Only 1 room with 50 capacity, but session needs 100

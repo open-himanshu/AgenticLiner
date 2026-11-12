@@ -7,9 +7,18 @@ Implements:
 """
 
 import uuid
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv(usecwd=True))
+
 from backend.core.database.connection import get_connection
 from backend.core.safety.kavach import KavachEngine, InvariantViolation
+
+import logging
+from backend.core.planner.call_llm import call_llm, get_provider_config, ProviderError
+
+logger = logging.getLogger(__name__)
 
 kavach = KavachEngine()
 
@@ -29,6 +38,20 @@ class CommunicationAgent:
         try:
             cur = conn.cursor()
             query_lower = query.lower()
+            provider_name = ""
+            model_name = ""
+            fallback_reason = "LLM provider is not configured; using grounded rules."
+
+            def rules_response(found: bool, answer: str, **details) -> Dict[str, Any]:
+                return {
+                    "found": found,
+                    "answer": answer,
+                    **details,
+                    "mode": "rules_fallback",
+                    "provider": provider_name,
+                    "model": model_name,
+                    "fallback_reason": fallback_reason,
+                }
 
             # 1. Fetch event sessions, rooms, speakers
             cur.execute("""
@@ -39,6 +62,67 @@ class CommunicationAgent:
                 WHERE s.event_id = ?
             """, (event_id,))
             sessions = [dict(r) for r in cur.fetchall()]
+
+            # Grounded real-time LLM inference when provider is configured
+            provider_call_started = False
+            try:
+                provider_cfg = get_provider_config()
+                provider = (provider_cfg.get("provider") or "").lower()
+                provider_name = provider
+                model_name = provider_cfg.get("model") or ""
+                has_key = bool(provider_cfg.get("api_key")) or provider == "ollama"
+                if provider in {"gemini", "groq", "ollama"} and has_key:
+                    provider_call_started = True
+                    schedule_lines = []
+                    for s in sessions:
+                        schedule_lines.append(
+                            f"- Session: '{s['title']}', Time: {s['start_time']} - {s['end_time']}, "
+                            f"Room: {s.get('room_name')} ({s.get('location')}), Speaker: {s.get('speaker_name') or 'TBD'}"
+                        )
+                    schedule_text = "\n".join(schedule_lines) if schedule_lines else "No formal sessions published yet."
+
+                    system_prompt = (
+                        "You are the Grounded Campus Event Assistant for Galgotias University SparkX 3.0. "
+                        "Answer questions from students/participants clearly, politely, and factually. "
+                        "Ground your answers strictly on the verified schedule and rules below:\n\n"
+                        f"SCHEDULE & VENUE FACTS:\n{schedule_text}\n"
+                        "LUNCH: Cafeteria & Courtyard from 13:00 to 14:00.\n"
+                        "ROLE & PERMISSIONS POLICY: Participants can view sessions, personalized agendas, and scan QR gate passes. "
+                        "Booking halls, managing inventory, and creating events are strictly restricted to Organisers and Supervisors.\n\n"
+                        "RULES:\n"
+                        "- If asked about booking halls or administrative tools, politely explain that participants can view events but booking is reserved for Organisers.\n"
+                        "- Never hallucinate fake event dates, timings, or non-existent rooms.\n"
+                        "- Keep responses concise (under 3 sentences)."
+                    )
+
+                    llm_resp = call_llm(
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": query},
+                        ],
+                        tools=[],
+                        config=provider_cfg,
+                    )
+                    ans_text = (llm_resp.get("text") or "").strip()
+                    if ans_text:
+                        return {
+                            "found": True,
+                            "answer": ans_text,
+                            "mode": "llm",
+                            "provider": llm_resp.get("provider"),
+                            "model": llm_resp.get("model"),
+                        }
+                    fallback_reason = "LLM returned an empty answer; using grounded rules."
+            except ProviderError as pe:
+                logger.error(f"Campus Assistant ProviderError: {pe}", exc_info=True)
+                fallback_reason = (
+                    "LLM request failed; using grounded rules."
+                    if provider_call_started
+                    else "LLM provider is not configured; using grounded rules."
+                )
+            except Exception as e:
+                logger.error(f"Campus Assistant Unexpected Error: {e}", exc_info=True)
+                fallback_reason = "LLM request failed; using grounded rules." 
 
             # Match query against sessions
             matched_session = None
@@ -54,11 +138,7 @@ class CommunicationAgent:
                     f"in {matched_session['room_name']} ({matched_session['location']}). "
                     f"Speaker: {matched_session['speaker_name'] or 'TBD'}."
                 )
-                return {
-                    "found": True,
-                    "answer": ans,
-                    "session_matched": matched_session
-                }
+                return rules_response(True, ans, session_matched=matched_session)
 
             # 2. General Venue queries
             if "where" in query_lower or "venue" in query_lower or "hall" in query_lower or "audi" in query_lower:
@@ -84,23 +164,23 @@ class CommunicationAgent:
                     venue_list = ", ".join([f"{v['name']} ({v['location']})" for v in venues])
                 else:
                     venue_list = "Main Auditorium A (C-Block Floor 1), Auditorium B (Mini Hall)"
-                return {
-                    "found": True,
-                    "answer": f"The event sessions and activities are taking place in: {venue_list}."
-                }
+                return rules_response(
+                    True,
+                    f"The event sessions and activities are taking place in: {venue_list}.",
+                )
 
             # 3. Lunch / Refreshment queries
             if "lunch" in query_lower or "food" in query_lower or "snack" in query_lower:
-                return {
-                    "found": True,
-                    "answer": "Lunch and refreshments will be served at the cafeteria and courtyard during the afternoon break (13:00 - 14:00)."
-                }
+                return rules_response(
+                    True,
+                    "Lunch and refreshments will be served at the cafeteria and courtyard during the afternoon break (13:00 - 14:00).",
+                )
 
             # If not found in grounded records
-            return {
-                "found": False,
-                "answer": "I don't have this specific information in the official event schedule yet. I've flagged this question for the student coordinators to answer."
-            }
+            return rules_response(
+                False,
+                "I don't have this specific information in the official event schedule yet. I've flagged this question for the student coordinators to answer.",
+            )
         finally:
             if close_conn:
                 conn.close()
@@ -184,23 +264,3 @@ class CommunicationAgent:
             if close_conn:
                 conn.close()
 
-    def generate_faqs(self, event_name: str, venue_name: str) -> List[Dict[str, str]]:
-        """Generates standard grounded event FAQs."""
-        return [
-            {
-                "question": f"Where is {event_name} being hosted?",
-                "answer": f"The event is held at {venue_name}, Galgotias University campus."
-            },
-            {
-                "question": "Will I receive a verifiable certificate?",
-                "answer": "Yes, every registered attendee who completes session check-in will receive a digital verifiable PDF certificate with a scannable QR code."
-            },
-            {
-                "question": "Are meals and refreshments provided?",
-                "answer": "Yes, refreshments and lunch boxes are allocated for all confirmed participants."
-            },
-            {
-                "question": "What should I bring to the event?",
-                "answer": "Please carry your University student ID card and your laptop with chargers (for hackathons/workshops)."
-            }
-        ]

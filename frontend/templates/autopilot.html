@@ -2,6 +2,126 @@
 
 {% block title %}AgenticLiner - Autopilot Agentic Engine{% endblock %}
 
+
+<style>
+    .chat-bubble-agent {
+        background-color: #f1f5f9;
+        color: #1e293b;
+        border-radius: 12px 12px 12px 2px;
+        padding: 8px 12px;
+        max-width: 90%;
+        font-size: 0.82rem;
+        border: 1px solid #e2e8f0;
+    }
+    .chat-bubble-user {
+        background-color: #0d6efd;
+        color: #ffffff;
+        border-radius: 12px 12px 2px 12px;
+        padding: 8px 12px;
+        max-width: 90%;
+        font-size: 0.82rem;
+        align-self: flex-end;
+    }
+    .chip-btn {
+        border-radius: 16px;
+        font-size: 0.72rem;
+        padding: 3px 10px;
+        background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .chip-btn:hover {
+        background-color: #0d6efd;
+        color: #ffffff;
+        border-color: #0d6efd;
+        transform: translateY(-1px);
+    }
+    /* ChatGPT-Style Interactive Voice Orb */
+    .voice-orb {
+        position: relative;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .orb-core {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: radial-gradient(circle, #6366f1 0%, #3b82f6 60%, #1d4ed8 100%);
+        box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+        transition: all 0.3s ease;
+        z-index: 2;
+    }
+    .orb-ring {
+        position: absolute;
+        border-radius: 50%;
+        border: 2px solid rgba(99, 102, 241, 0.3);
+        animation: orb-pulse 3s infinite ease-in-out;
+    }
+    .ring-1 { width: 56px; height: 56px; animation-delay: 0s; }
+    .ring-2 { width: 70px; height: 70px; animation-delay: 0.8s; }
+    .ring-3 { width: 84px; height: 84px; animation-delay: 1.6s; }
+
+    /* States */
+    .orb-idle .orb-core {
+        background: radial-gradient(circle, #818cf8 0%, #4f46e5 100%);
+        box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+        animation: orb-breathe 2.5s infinite ease-in-out;
+    }
+    .orb-listening .orb-core {
+        background: radial-gradient(circle, #ef4444 0%, #dc2626 100%);
+        box-shadow: 0 0 25px rgba(239, 68, 68, 0.8);
+        transform: scale(1.15);
+    }
+    .orb-listening .orb-ring {
+        border-color: rgba(239, 68, 68, 0.5);
+        animation: orb-ripple 1s infinite ease-out;
+    }
+    .orb-thinking .orb-core {
+        background: radial-gradient(circle, #f59e0b 0%, #ec4899 50%, #8b5cf6 100%);
+        box-shadow: 0 0 30px rgba(236, 72, 153, 0.7);
+        animation: orb-spin 0.9s infinite linear;
+    }
+    .orb-speaking .orb-core {
+        background: radial-gradient(circle, #10b981 0%, #06b6d4 100%);
+        box-shadow: 0 0 25px rgba(16, 185, 129, 0.7);
+        animation: orb-speak 1.2s infinite ease-in-out;
+    }
+    .orb-confirmed .orb-core {
+        background: radial-gradient(circle, #10b981 0%, #059669 100%);
+        box-shadow: 0 0 35px rgba(16, 185, 129, 0.9);
+        transform: scale(1.2);
+    }
+
+    @keyframes orb-breathe {
+        0%, 100% { transform: scale(1); opacity: 0.9; }
+        50% { transform: scale(1.06); opacity: 1; }
+    }
+    @keyframes orb-ripple {
+        0% { transform: scale(0.9); opacity: 0.8; }
+        100% { transform: scale(1.4); opacity: 0; }
+    }
+    @keyframes orb-spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    @keyframes orb-speak {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.18); }
+    }
+    @keyframes orb-pulse {
+        0%, 100% { transform: scale(1); opacity: 0.3; }
+        50% { transform: scale(1.1); opacity: 0.7; }
+    }
+</style>
+
 {% block content %}
 <div class="container-fluid px-4">
     <!-- Header -->
@@ -26,9 +146,245 @@
             <div class="card card-custom p-4 bg-white mb-4">
                 <h5 class="fw-bold mb-3"><i class="bi bi-chat-left-dots text-primary me-2"></i>Organiser Request</h5>
                 
+                                <!-- Organiser Persistent Memory Indicator Badge (Pillar 3) -->
+                <div id="memoryBadgeContainer" class="d-flex align-items-center justify-content-between p-2 rounded mb-2 border bg-light small" style="font-size: 0.75rem;">
+                    <div class="d-flex align-items-center gap-1 text-truncate">
+                        <i class="bi bi-cpu-fill text-primary" id="memoryIcon"></i>
+                        <span id="memoryBadgeText" class="text-secondary fw-semibold">Loading agent memory...</span>
+                    </div>
+                    <button type="button" class="btn btn-link btn-sm text-decoration-none text-muted p-0 ms-2" id="btnManageMemory" title="Inspect or reset saved memory profile">
+                        <i class="bi bi-gear-fill"></i>
+                    </button>
+                </div>
+
+                <!-- Live Speech Banner (#voiceStatusBanner) -->
+                <div id="voiceStatusBanner" class="alert alert-info py-2 px-3 small d-flex align-items-center justify-content-between mb-2 shadow-sm d-none" style="border-radius: 8px;">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="d-inline-flex align-items-center" id="soundwaveBars">
+                            <span class="soundwave-bar"></span>
+                            <span class="soundwave-bar"></span>
+                            <span class="soundwave-bar"></span>
+                            <span class="soundwave-bar"></span>
+                        </div>
+                        <span id="voiceStatusText" class="fw-semibold text-danger">Listening... (Aap English ya Hindi/Hinglish me bol sakte hain)...</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" id="btnStopVoice">Stop</button>
+                </div>
+
                 <div class="mb-3">
-                    <label class="form-label small fw-semibold">Event Prompt</label>
-                    <textarea class="form-control" id="agentPrompt" rows="3" placeholder="Describe the campus event, e.g. Organize an AI hackathon for 150 students with workshops, lunch, and stage mics..."></textarea>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small fw-semibold mb-0">Event Prompt (Type or Speak)</label>
+                        <!-- Voice TTS Toggle (#toggleVoiceFeedback) -->
+                        <button type="button" class="btn btn-sm btn-link text-decoration-none text-muted p-0 d-flex align-items-center gap-1" id="toggleVoiceFeedback" title="Toggle Assistant Voice Feedback (TTS)">
+                            <i class="bi bi-volume-up-fill text-primary" id="ttsIcon"></i>
+                            <span class="small text-muted" id="ttsLabel" style="font-size: 0.73rem;">Voice Audio ON</span>
+                        </button>
+                    </div>
+
+                    <div class="position-relative">
+                        <textarea class="form-control pe-5" id="agentPrompt" rows="3" placeholder="Describe the campus event, e.g. Organize an AI hackathon for 150 students with workshops, lunch, and stage mics..."></textarea>
+                        
+                        <!-- Pulsing Mic Button (#btnVoiceInput) -->
+                        <button type="button" class="btn voice-mic-btn state-idle" id="btnVoiceInput" title="Click to Speak / Bol kar batayein" aria-label="Microphone input">
+                            <i class="bi bi-mic-fill" id="micIcon"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                        <span class="text-muted" style="font-size: 0.72rem;" id="voiceHintText">
+                            <i class="bi bi-info-circle me-1"></i>Click 🎙️ to speak in Hindi or English
+                        </span>
+                        <span id="voiceStateBadge" class="badge bg-light text-secondary border" style="font-size: 0.68rem;">Idle</span>
+                    </div>
+                </div>
+
+                <!-- Interactive Dialogue & Counter-Questions Engine (Pillar 2) -->
+                <div id="agentDialogueBox" class="card border border-warning shadow-sm mb-3 d-none" style="border-radius: 10px; background: #fffdf5;">
+                    <div class="card-header bg-warning bg-opacity-10 border-bottom border-warning d-flex justify-content-between align-items-center py-2 px-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-robot text-warning fs-5"></i>
+                            <strong class="text-dark small">AI Agent Clarification</strong>
+                            <span id="dialogueTurnBadge" class="badge bg-warning text-dark border border-warning" style="font-size: 0.7rem;">Turn 1 of 2</span>
+                        </div>
+                        <span class="badge bg-light text-muted border small" style="font-size: 0.65rem;" title="Loop Circuit Breaker: Automatically commits with campus defaults after Turn 2">
+                            <i class="bi bi-shield-check text-success me-1"></i>Loop Guard (Max 2 Turns)
+                        </span>
+                    </div>
+                    <div class="card-body p-3">
+                        <!-- Dialogue Thread Bubbles -->
+                        <div id="dialogueThread" class="d-flex flex-column gap-2 mb-3" style="max-height: 220px; overflow-y: auto;">
+                            <!-- Filled dynamically -->
+                        </div>
+
+                        <!-- Smart Quick-Reply Chips -->
+                        <div id="quickRepliesSection" class="mb-3">
+                            <div class="small text-muted fw-semibold mb-1" style="font-size: 0.75rem;">
+                                <i class="bi bi-lightning-charge-fill text-warning me-1"></i>Quick Options:
+                            </div>
+                            <div id="quickReplyChips" class="d-flex flex-wrap gap-1">
+                                <!-- Chips dynamically injected -->
+                            </div>
+                        </div>
+
+                        <!-- Assumptions Banner (Shown when loop breaker activates) -->
+                        <div id="assumptionsBanner" class="alert alert-info py-2 px-3 small mb-3 d-none" style="font-size: 0.78rem;">
+                            <i class="bi bi-info-circle-fill me-1"></i>
+                            <strong id="assumptionsTitle">Campus Defaults Applied:</strong>
+                            <ul id="assumptionsList" class="mb-0 mt-1 ps-3"></ul>
+                        </div>
+
+                        <!-- Reply Input & Controls -->
+                        <div id="dialogueInputArea">
+                            <div class="input-group input-group-sm mb-2">
+                                <input type="text" class="form-control" id="dialogueReplyInput" placeholder="Speak or type answer (e.g. This Friday 5 PM, 100 students)...">
+                                <button class="btn btn-outline-secondary" type="button" id="btnDialogueVoiceInput" title="Speak reply with microphone">
+                                    <i class="bi bi-mic" id="dialogueMicIcon"></i>
+                                </button>
+                                <button class="btn btn-primary fw-semibold px-3" type="button" id="btnSendReply">
+                                    <i class="bi bi-send-fill me-1"></i> Reply
+                                </button>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <button class="btn btn-link btn-sm text-decoration-none text-muted p-0" id="btnSkipClarification" style="font-size: 0.72rem;">
+                                    <i class="bi bi-arrow-right-circle me-1"></i> Skip & Use Campus Defaults
+                                </button>
+                                <button class="btn btn-link btn-sm text-decoration-none text-danger p-0" id="btnResetDialogue" style="font-size: 0.72rem;">
+                                    <i class="bi bi-x-circle me-1"></i> Reset Dialogue
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div></div>
+
+                <!-- Netflix / Flipkart Recommendation Section (Pillar 4) -->
+                <div id="recommendationSection" class="card border border-info shadow-sm mb-3 d-none" style="border-radius: 10px; background: #f0f9ff;">
+                    <div class="card-header bg-info bg-opacity-10 border-bottom border-info d-flex justify-content-between align-items-center py-2 px-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-stars text-info fs-5"></i>
+                            <strong class="text-dark small">Campus Recommendations & Bundles</strong>
+                        </div>
+                        <span id="matchedBlueprintBadge" class="badge bg-primary text-white" style="font-size: 0.68rem;">95% Match</span>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="mb-2">
+                            <span class="text-muted small" style="font-size: 0.75rem;">Based on past successful event:</span>
+                            <div id="matchedBlueprintTitle" class="fw-bold text-dark small">-</div>
+                        </div>
+                        <div class="small fw-semibold text-secondary mb-1" style="font-size: 0.75rem;">
+                            <i class="bi bi-bag-check-fill text-success me-1"></i>Curated Turnkey Packages:
+                        </div>
+                        <div id="turnkeyBundlesList" class="d-flex flex-column gap-2 mb-2">
+                            <!-- Bundles injected here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pre-Commit Interactive Confirmation Card (Pillar 5) -->
+                <div id="preCommitConfirmationCard" class="card border border-primary shadow-sm mb-3 d-none" style="border-radius: 12px; background: #ffffff;">
+                    <div class="card-header bg-primary bg-opacity-10 border-bottom border-primary d-flex justify-content-between align-items-center py-2 px-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-shield-check text-primary fs-5"></i>
+                            <strong class="text-dark small">Pre-Commit Review & Confirmation</strong>
+                        </div>
+                        <span class="badge bg-success-subtle text-success border border-success" style="font-size: 0.68rem;">
+                            <i class="bi bi-lock-fill me-1"></i>Kavach Verified
+                        </span>
+                    </div>
+                    <div class="card-body p-3">
+                        <!-- ChatGPT-Style Interactive Voice Orb -->
+                        <div class="text-center my-2">
+                            <div id="chatgptVoiceOrb" class="voice-orb orb-idle mx-auto" title="Click to speak confirmation or say 'Haan' / 'Cancel'">
+                                <div class="orb-core"></div>
+                                <div class="orb-ring ring-1"></div>
+                                <div class="orb-ring ring-2"></div>
+                                <div class="orb-ring ring-3"></div>
+                            </div>
+                            <div class="mt-2 text-center">
+                                <span id="voiceOrbStatusLabel" class="small fw-semibold text-secondary">Voice Assistant Ready</span>
+                                <div class="text-muted" style="font-size: 0.72rem;">Say "Haan", "Yes", "Confirm" or click button to book</div>
+                            </div>
+                        </div>
+
+                        <!-- Spoken Voice Hook Banner -->
+                        <div class="alert alert-primary bg-primary bg-opacity-10 border border-primary py-2 px-3 small mb-3" id="spokenHookBanner" style="font-size: 0.78rem;">
+                            <i class="bi bi-chat-quote-fill text-primary me-1"></i>
+                            <span id="spokenHookText">Compiling event draft...</span>
+                        </div>
+
+                        <!-- Executive Pill (Event, Venue & Timings) -->
+                        <div class="p-2 bg-light rounded border mb-3">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <strong class="text-dark small" id="confirmEventName">-</strong>
+                                <span class="badge bg-primary" id="confirmEventType">-</span>
+                            </div>
+                            <div class="row g-2 mt-1 small" style="font-size: 0.75rem;">
+                                <div class="col-6">
+                                    <span class="text-muted d-block">Venue Allotted:</span>
+                                    <strong id="confirmVenueName">-</strong>
+                                    <span class="text-muted d-block" id="confirmVenueCapacity" style="font-size: 0.7rem;">Capacity: -</span>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-muted d-block">Date & Slot:</span>
+                                    <strong id="confirmDateTime">-</strong>
+                                    <span class="text-muted d-block" id="confirmDuration" style="font-size: 0.7rem;">Duration: -</span>
+                                </div>
+                            </div>
+                            <div id="confirmDeanBadge" class="mt-2 d-none">
+                                <span class="badge bg-warning text-dark border border-warning">
+                                    <i class="bi bi-exclamation-circle-fill me-1"></i> Requires Dean / Administrative Approval
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Itemized Logistics Table -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small fw-semibold text-secondary" style="font-size: 0.75rem;">
+                                    <i class="bi bi-box-seam me-1"></i>Resource Allocation:
+                                </span>
+                                <span class="small fw-bold text-dark" id="confirmTotalCost" style="font-size: 0.78rem;">Total: Rs. 0</span>
+                            </div>
+                            <div class="table-responsive" style="max-height: 150px; overflow-y: auto;">
+                                <table class="table table-sm table-bordered mb-0 small" style="font-size: 0.72rem;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Item</th>
+                                            <th>Qty</th>
+                                            <th>Cost</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="confirmResourceTableBody">
+                                        <!-- Dynamic items -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Assumptions Audit Strip -->
+                        <div id="confirmAssumptionsStrip" class="mb-3 p-2 bg-light rounded border small d-none" style="font-size: 0.72rem;">
+                            <span class="fw-semibold text-muted d-block mb-1">
+                                <i class="bi bi-info-circle me-1"></i>Assumed Defaults:
+                            </span>
+                            <ul id="confirmAssumptionsList" class="mb-0 ps-3 text-secondary"></ul>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex flex-column gap-2" id="confirmActionButtons">
+                            <button type="button" class="btn btn-success fw-bold py-2 shadow-sm d-flex align-items-center justify-content-center gap-2" id="btnConfirmAndBook">
+                                <i class="bi bi-check-circle-fill fs-5"></i>
+                                <span>Confirm & Book Event (Voice: "Haan")</span>
+                            </button>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-warning btn-sm w-50 fw-semibold" id="btnEditConfirmation">
+                                    <i class="bi bi-pencil-square me-1"></i> Edit Details
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm w-50" id="btnCancelConfirmation">
+                                    <i class="bi bi-x-circle me-1"></i> Cancel Plan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="mb-3">
@@ -37,10 +393,10 @@
                     <div class="form-text" style="font-size: 0.75rem;">Select event date. The agent verifies venue availability and checks capacity.</div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label small fw-semibold" for="agentBudget">Budget limit</label>
-                    <input type="number" class="form-control form-control-sm" id="agentBudget" min="0.01" step="0.01" required>
-                    <div class="form-text" style="font-size: 0.75rem;">The planner will not requisition above this amount.</div>
+                <div class="mb-3 d-none">
+                    <label class="form-label small fw-semibold" for="agentBudget">Recorded budget</label>
+                    <input type="number" class="form-control form-control-sm" id="agentBudget" value="" placeholder="Optional (or mention in prompt)" min="0.01" step="0.01">
+                    <div class="form-text" style="font-size: 0.75rem;">Recorded on the event only; cost estimation is not implemented and there is no payment step.</div>
                 </div>
 
                 <div class="mb-3">
@@ -51,6 +407,12 @@
                         </button>
                         <button class="btn btn-sm btn-outline-secondary text-start" onclick="setScenario('Organize an annual dance performance for 200 students with high-power sound system, stage LED lights and snacks.', '2026-11-29')">
                             <i class="bi bi-play-circle text-primary me-1"></i> Cultural: 200 Students (29 Nov)
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary text-start" onclick="setScenario('Speaker Dr. Sharma has an emergency. Find replacement faculty and stage reschedule notice in Outbox.', '2026-11-28')">
+                            <i class="bi bi-arrow-repeat text-info me-1"></i> Emergency: Speaker Substitution &amp; Outbox Notice
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary text-start" onclick="setScenario('Promote 2 waitlisted students to confirmed seats and issue digital QR passes.', '2026-11-28')">
+                            <i class="bi bi-person-check text-success me-1"></i> Operations: Auto-Promote Waitlist Attendees
                         </button>
                         <button class="btn btn-sm btn-outline-secondary text-start" onclick="setScenario('Organize a rival campus hackathon for 150 students in Auditorium A.', '2026-11-25')">
                             <i class="bi bi-shield-x text-warning me-1"></i> Kavach Test: Hall Overlap Clash (25 Nov)
@@ -132,6 +494,19 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Pillar 6: Tripartite Stakeholder Notification Outbox Feed -->
+                    <div class="mt-3 p-3 bg-white rounded border" id="summaryStakeholdersBox">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold mb-0 text-dark small">
+                                <i class="bi bi-send-check-fill text-primary me-1"></i> Autonomous Stakeholder Broadcast Feed (Pillar 6)
+                            </h6>
+                            <span class="badge bg-success" id="summaryStakeholderCount">All Notified</span>
+                        </div>
+                        <div class="d-flex flex-column gap-2" id="summaryStakeholderNotices">
+                            <!-- Injected notices for Dean, Organiser, Students -->
+                        </div>
+                    </div>
                     <div class="mt-3 text-end">
                         <a href="/schedule" class="btn btn-sm btn-outline-primary fw-semibold me-2">
                             <i class="bi bi-calendar3 me-1"></i> View In Timetable
@@ -145,10 +520,325 @@
         </div>
     </div>
 </div>
+<!-- Memory Inspection Modal (Pillar 3) -->
+<div class="modal fade" id="memoryModal" tabindex="-1" aria-labelledby="memoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h6 class="modal-title fw-bold" id="memoryModalLabel">
+                    <i class="bi bi-cpu-fill text-primary me-2"></i>Organiser Persistent Memory Profile
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body small" id="memoryModalBody">
+                <!-- Dynamically filled -->
+            </div>
+            <div class="modal-footer bg-light py-2 d-flex justify-content-between">
+                <button type="button" class="btn btn-sm btn-outline-danger" id="btnClearMemoryBtn">
+                    <i class="bi bi-trash3 me-1"></i> Reset Memory
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="/static/js/voice_engine.js"></script>
 <script>
+    // Initialize Web Speech Voice Engines (Pillar 1 & Pillar 2)
+    let autopilotVoice = null;
+    let dialogueVoice = null;
+    let activeDialogueSessionId = null;
+
+    async function fetchAndRenderRecommendations(eventType, headcount) {
+        const recSection = document.getElementById('recommendationSection');
+        const bundlesList = document.getElementById('turnkeyBundlesList');
+        const bpTitle = document.getElementById('matchedBlueprintTitle');
+        const bpBadge = document.getElementById('matchedBlueprintBadge');
+        if (!recSection || !bundlesList) return;
+
+        try {
+            const resp = await fetch('/api/autopilot/recommendations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    event_type: eventType || 'general',
+                    headcount: headcount || 100,
+                    duration_hours: 4.0
+                })
+            });
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const recs = data.recommendations;
+            if (!recs) return;
+
+            // 1. Netflix Blueprint Match
+            if (recs.matched_event) {
+                bpTitle.textContent = `${recs.matched_event.title} (${recs.matched_event.student_rating}★)`;
+                bpBadge.textContent = `${recs.matched_event.match_percentage}% Match`;
+            }
+
+            // 2. Flipkart Bundles
+            bundlesList.innerHTML = '';
+            (recs.curated_bundles || []).forEach(bundle => {
+                const card = document.createElement('div');
+                card.className = 'p-2 bg-white rounded border';
+                const itemsSummary = bundle.items.map(i => `${i.quantity}x ${i.item_name}`).join(', ');
+                card.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div>
+                            <strong class="text-primary small d-block">${bundle.bundle_name}</strong>
+                            <span class="badge bg-warning text-dark border" style="font-size: 0.65rem;">${bundle.badge_text}</span>
+                        </div>
+                        <span class="badge bg-light text-dark border">₹${bundle.total_cost.toLocaleString()}</span>
+                    </div>
+                    <p class="text-muted mb-2" style="font-size: 0.72rem;">${itemsSummary}</p>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-xs btn-outline-success py-1 px-2 fw-semibold" style="font-size: 0.72rem;" onclick="applyTurnkeyBundle('${bundle.bundle_id}', '${bundle.bundle_name}', ${bundle.total_cost})">
+                            <i class="bi bi-cart-plus me-1"></i> + Add Bundle to Event
+                        </button>
+                    </div>
+                `;
+                bundlesList.appendChild(card);
+            });
+
+            recSection.classList.remove('d-none');
+        } catch (err) {
+            console.warn('Failed to load recommendations:', err);
+        }
+    }
+
+    async function applyTurnkeyBundle(bundleId, bundleName, bundleCost) {
+        if (!activeDialogueSessionId) {
+            // Pre-fill prompt with bundle items
+            const promptEl = document.getElementById('agentPrompt');
+            if (promptEl) {
+                promptEl.value += ` with ${bundleName}`;
+            }
+            alert(`Added '${bundleName}' to your event brief!`);
+            return;
+        }
+
+        try {
+            const resp = await fetch('/api/autopilot/recommendations/apply-bundle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: activeDialogueSessionId,
+                    bundle_id: bundleId
+                })
+            });
+            const data = await resp.json();
+            if (resp.ok && data.success) {
+                appendDialogueBubble('user', `Add ${bundleName}`);
+                appendDialogueBubble('agent', `Turnkey package '${bundleName}' (₹${bundleCost.toLocaleString()}) add kar diya gaya hai!`);
+                if (autopilotVoice) {
+                    autopilotVoice.speakAssistantVoice(`Bundle ${bundleName} added to event.`);
+                }
+            }
+        } catch (e) {
+            alert('Failed to apply bundle: ' + e);
+        }
+    }
+
+
+    async function loadMemoryBadge() {
+        try {
+            const resp = await fetch('/api/autopilot/memory');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const badgeEl = document.getElementById('memoryBadgeText');
+            if (!badgeEl) return;
+            if (data.badge && data.badge.has_memory) {
+                badgeEl.innerHTML = `<span class="badge bg-primary-subtle text-primary border me-1">Memory Active</span> ${data.badge.badge_text}`;
+                badgeEl.title = data.badge.summary || '';
+            } else {
+                badgeEl.innerHTML = `<span class="badge bg-light text-muted border me-1">Adaptive Learning</span> Agent remembers past event habits`;
+            }
+            window.currentMemoryProfile = data.profile;
+            window.currentMemoryBadge = data.badge;
+        } catch (err) {
+            console.warn('Memory badge load error:', err);
+        }
+    }
+
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Main prompt voice engine
+        autopilotVoice = new WebSpeechVoiceEngine({
+            inputSelector: '#agentPrompt',
+            btnSelector: '#btnVoiceInput',
+            iconSelector: '#micIcon',
+            bannerSelector: '#voiceStatusBanner',
+            statusTextSelector: '#voiceStatusText',
+            stateBadgeSelector: '#voiceStateBadge',
+            ttsToggleSelector: '#toggleVoiceFeedback',
+            ttsIconSelector: '#ttsIcon',
+            ttsLabelSelector: '#ttsLabel',
+            lang: 'en-IN'
+        });
+
+        // Dialogue reply voice engine
+        dialogueVoice = new WebSpeechVoiceEngine({
+            inputSelector: '#dialogueReplyInput',
+            btnSelector: '#btnDialogueVoiceInput',
+            iconSelector: '#dialogueMicIcon',
+            bannerSelector: '#voiceStatusBanner',
+            statusTextSelector: '#voiceStatusText',
+            stateBadgeSelector: '#voiceStateBadge',
+            lang: 'en-IN'
+        });
+
+        // Wire Stop Button
+                loadMemoryBadge();
+
+        const btnManageMemory = document.getElementById('btnManageMemory');
+        if (btnManageMemory) {
+            btnManageMemory.addEventListener('click', () => {
+                const modalBody = document.getElementById('memoryModalBody');
+                const p = window.currentMemoryProfile || {};
+                if (modalBody) {
+                    const venues = (p.favourite_venues || []).map(v => `${v.venue} (${v.count}x)`).join(', ') || 'None recorded yet';
+                    const gear = (p.favourite_equipment || []).join(', ') || 'None recorded yet';
+                    const notes = (p.memory_notes || []).map(n => `<li>${n}</li>`).join('') || '<li>No explicit custom notes.</li>';
+                    modalBody.innerHTML = `
+                        <div class="mb-2"><strong>Total Events Learned:</strong> ${p.total_events_planned || 0}</div>
+                        <div class="mb-2"><strong>Typical Turnout:</strong> ${p.typical_headcount || 100} students</div>
+                        <div class="mb-2"><strong>Top Venues:</strong> ${venues}</div>
+                        <div class="mb-2"><strong>Standard Logistics:</strong> ${gear}</div>
+                        <div class="mb-2"><strong>Preferred Slot:</strong> ${p.preferred_start_time || '10:00:00'} - ${p.preferred_end_time || '13:00:00'} (${(p.preferred_days || []).join(', ')})</div>
+                        <div><strong>Memory Facts:</strong> <ul class="mb-0 ps-3 mt-1">${notes}</ul></div>
+                    `;
+                }
+                const modal = new bootstrap.Modal(document.getElementById('memoryModal'));
+                modal.show();
+            });
+        }
+
+        const btnClearMemory = document.getElementById('btnClearMemoryBtn');
+        if (btnClearMemory) {
+            btnClearMemory.addEventListener('click', async () => {
+                if (!confirm('Are you sure you want to reset your saved organiser memory profile?')) return;
+                try {
+                    const resp = await fetch('/api/autopilot/memory/reset', { method: 'POST' });
+                    if (resp.ok) {
+                        alert('Memory profile reset.');
+                        const modalEl = document.getElementById('memoryModal');
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                        loadMemoryBadge();
+                    }
+                } catch (e) {
+                    alert('Failed to reset memory: ' + e);
+                }
+            });
+        }
+
+        const stopBtn = document.getElementById('btnStopVoice');
+        if (stopBtn) {
+            stopBtn.addEventListener('click', () => {
+                if (autopilotVoice) autopilotVoice.stopSpeechRecognition();
+                if (dialogueVoice) dialogueVoice.stopSpeechRecognition();
+            });
+        }
+
+        // Check if prompt was passed in URL query param
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlPrompt = urlParams.get('prompt');
+        if (urlPrompt) {
+            const promptEl = document.getElementById('agentPrompt');
+            if (promptEl) {
+                promptEl.value = decodeURIComponent(urlPrompt);
+                promptEl.focus();
+            }
+        }
+
+        // Wire dialogue controls
+        const btnSendReply = document.getElementById('btnSendReply');
+        if (btnSendReply) {
+            btnSendReply.addEventListener('click', () => {
+                const replyInput = document.getElementById('dialogueReplyInput');
+                if (replyInput && replyInput.value.trim()) {
+                    sendDialogueReply(replyInput.value.trim());
+                }
+            });
+        }
+
+        const dialogueInput = document.getElementById('dialogueReplyInput');
+        if (dialogueInput) {
+            dialogueInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (dialogueInput.value.trim()) {
+                        sendDialogueReply(dialogueInput.value.trim());
+                    }
+                }
+            });
+        }
+
+        const btnSkip = document.getElementById('btnSkipClarification');
+        if (btnSkip) {
+            btnSkip.addEventListener('click', () => {
+                sendDialogueReply("skip and use campus defaults");
+            });
+        }
+
+                // Pillar 5 Confirmation Card Action Listeners
+        const btnConfirm = document.getElementById('btnConfirmAndBook');
+        if (btnConfirm) {
+            btnConfirm.addEventListener('click', () => {
+                if (activeDialogueSessionId) {
+                    handleVoiceConfirmation("confirm");
+                }
+            });
+        }
+
+        const btnCancelPlan = document.getElementById('btnCancelConfirmation');
+        if (btnCancelPlan) {
+            btnCancelPlan.addEventListener('click', () => {
+                if (activeDialogueSessionId) {
+                    handleVoiceConfirmation("cancel");
+                }
+            });
+        }
+
+        const btnEditDetails = document.getElementById('btnEditConfirmation');
+        if (btnEditDetails) {
+            btnEditDetails.addEventListener('click', () => {
+                const card = document.getElementById('preCommitConfirmationCard');
+                const diagBox = document.getElementById('agentDialogueBox');
+                if (card) card.classList.add('d-none');
+                if (diagBox) diagBox.classList.remove('d-none');
+                const input = document.getElementById('dialogueReplyInput');
+                if (input) {
+                    input.focus();
+                    input.placeholder = "Type changes (e.g. Change headcount to 150, change time to 4 PM)...";
+                }
+            });
+        }
+
+        const btnReset = document.getElementById('btnResetDialogue');
+        if (btnReset) {
+            btnReset.addEventListener('click', async () => {
+                if (activeDialogueSessionId) {
+                    try {
+                        await fetch('/api/autopilot/session/reset', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ session_id: activeDialogueSessionId })
+                        });
+                    } catch (e) { console.warn(e); }
+                }
+                activeDialogueSessionId = null;
+                const diagBox = document.getElementById('agentDialogueBox');
+                if (diagBox) diagBox.classList.add('d-none');
+            });
+        }
+    });
+
     function setScenario(promptText, dateValue) {
         document.getElementById('agentPrompt').value = promptText;
         if (dateValue) {
@@ -156,32 +846,378 @@
         }
     }
 
-    document.getElementById('btnRunAgent').addEventListener('click', async () => {
-        const prompt = document.getElementById('agentPrompt').value;
-        const targetDate = document.getElementById('agentDate').value || '2026-11-28';
-        const budgetInput = document.getElementById('agentBudget');
-        const budget = Number(budgetInput.value);
+    function appendDialogueBubble(speaker, text) {
+        const thread = document.getElementById('dialogueThread');
+        if (!thread) return;
+        const bubble = document.createElement('div');
+        if (speaker === 'agent') {
+            bubble.className = 'chat-bubble-agent';
+            bubble.innerHTML = `<i class="bi bi-robot text-primary me-1"></i> ${text}`;
+        } else {
+            bubble.className = 'chat-bubble-user';
+            bubble.innerHTML = `<i class="bi bi-person-fill me-1"></i> ${text}`;
+        }
+        thread.appendChild(bubble);
+        thread.scrollTop = thread.scrollHeight;
+    }
+
+    function renderQuickReplies(replies) {
+        const chipsContainer = document.getElementById('quickReplyChips');
+        const section = document.getElementById('quickRepliesSection');
+        if (!chipsContainer || !section) return;
+        chipsContainer.innerHTML = '';
+        if (!replies || replies.length === 0) {
+            section.classList.add('d-none');
+            return;
+        }
+        section.classList.remove('d-none');
+        replies.forEach(txt => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'chip-btn';
+            btn.textContent = txt;
+            btn.addEventListener('click', () => {
+                sendDialogueReply(txt);
+            });
+            chipsContainer.appendChild(btn);
+        });
+    }
+
+    async function sendDialogueReply(replyText) {
+        if (!activeDialogueSessionId) return;
+        const inputEl = document.getElementById('dialogueReplyInput');
+        const btnSend = document.getElementById('btnSendReply');
+        if (inputEl) inputEl.value = '';
+        if (btnSend) btnSend.disabled = true;
+
+        appendDialogueBubble('user', replyText);
+
+        try {
+            const resp = await fetch('/api/autopilot/session/reply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: activeDialogueSessionId,
+                    reply: replyText,
+                    voice_mode: true
+                })
+            });
+
+            const data = await resp.json();
+            if (btnSend) btnSend.disabled = false;
+
+            if (!resp.ok || !data.success) {
+                alert(data.error || 'Failed to process clarification reply.');
+                return;
+            }
+
+            // Update Turn Badge
+            const turnBadge = document.getElementById('dialogueTurnBadge');
+            if (turnBadge) {
+                turnBadge.textContent = `Turn ${data.turn_count} of ${data.max_turns}`;
+                if (data.is_ready_for_planning) {
+                    turnBadge.className = 'badge bg-success text-white border';
+                    turnBadge.textContent = 'Plan Ready';
+                }
+            }
+
+            // Show assumptions if loop breaker activated
+            if (data.assumptions_made && data.assumptions_made.length > 0) {
+                const banner = document.getElementById('assumptionsBanner');
+                const list = document.getElementById('assumptionsList');
+                if (banner && list) {
+                    list.innerHTML = '';
+                    data.assumptions_made.forEach(a => {
+                        const li = document.createElement('li');
+                        li.textContent = a;
+                        list.appendChild(li);
+                    });
+                    banner.classList.remove('d-none');
+                }
+            }
+
+            if (data.is_ready_for_planning) {
+                appendDialogueBubble('agent', data.tts_response || 'All parameters confirmed. Launching venue planner!');
+                renderQuickReplies([]);
+                if (autopilotVoice && data.tts_response) {
+                    autopilotVoice.speakAssistantVoice(data.tts_response);
+                }
+
+                // Auto-fill resolved fields
+                if (data.entities && data.entities.target_date) {
+                    document.getElementById('agentDate').value = data.entities.target_date;
+                }
+                if (data.entities && data.entities.budget_limit) {
+                    document.getElementById('agentBudget').value = data.entities.budget_limit;
+                }
+
+                // Pillar 5: Trigger Pre-Commit Interactive Confirmation Card
+                setTimeout(() => {
+                    fetchAndRenderConfirmationCard(activeDialogueSessionId);
+                }, 800);
+
+            } else {
+                // Another counter-question turn
+                appendDialogueBubble('agent', data.current_question || data.tts_response);
+                renderQuickReplies(data.quick_replies);
+                if (autopilotVoice && data.tts_response) {
+                    autopilotVoice.speakAssistantVoice(data.tts_response);
+                }
+            }
+
+        } catch (err) {
+            if (btnSend) btnSend.disabled = false;
+            console.error('Dialogue reply error:', err);
+            alert('Failed to deliver reply: ' + err);
+        }
+    }
+
+        let currentDraftPlan = null;
+
+    async function fetchAndRenderConfirmationCard(sessionId) {
+        if (!sessionId) return;
+        const card = document.getElementById('preCommitConfirmationCard');
+        const diagBox = document.getElementById('agentDialogueBox');
+        if (!card) return;
+
+        if (window.voiceOrb) window.voiceOrb.setState('thinking');
+
+        try {
+            const resp = await fetch('/api/autopilot/draft', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId })
+            });
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (!data.success || !data.draft) return;
+
+            currentDraftPlan = data.draft;
+            renderDraftCardDetails(currentDraftPlan);
+
+            card.classList.remove('d-none');
+            if (diagBox) diagBox.classList.add('d-none');
+
+            // Play OpenAI-Style Spoken Hook & Auto-Prime Mic for Barge-In Response
+            if (autopilotVoice && currentDraftPlan.verbal_summary) {
+                autopilotVoice.speakAssistantVoice(currentDraftPlan.verbal_summary, () => {
+                    autopilotVoice.listenForConfirmation((spokenText) => {
+                        handleVoiceConfirmation(spokenText);
+                    });
+                });
+            }
+        } catch (e) {
+            console.warn('Failed to load draft plan:', e);
+        }
+    }
+
+    function renderDraftCardDetails(draft) {
+        document.getElementById('spokenHookText').textContent = draft.verbal_summary || 'Please review your plan details before confirmation.';
+        document.getElementById('confirmEventName').textContent = draft.event_name;
+        document.getElementById('confirmEventType').textContent = draft.event_type.toUpperCase();
+        document.getElementById('confirmVenueName').textContent = draft.venue.name;
+        document.getElementById('confirmVenueCapacity').textContent = `Capacity: ${draft.venue.capacity} seats | ${draft.venue.location}`;
+        document.getElementById('confirmDateTime').textContent = `${draft.target_date} (${draft.start_time.slice(0,5)} - ${draft.end_time.slice(0,5)})`;
+        document.getElementById('confirmDuration').textContent = `Duration: ${draft.duration_hours} hrs | ${draft.headcount} Students`;
+
+        const deanBadge = document.getElementById('confirmDeanBadge');
+        if (deanBadge) {
+            if (draft.requires_dean_approval) {
+                deanBadge.classList.remove('d-none');
+            } else {
+                deanBadge.classList.add('d-none');
+            }
+        }
+
+        const totalCostEl = document.getElementById('confirmTotalCost');
+        if (totalCostEl) totalCostEl.textContent = `Total: Rs. ${Number(draft.total_cost).toLocaleString()}`;
+
+        const tbody = document.getElementById('confirmResourceTableBody');
+        if (tbody) {
+            tbody.innerHTML = '';
+            const vRow = document.createElement('tr');
+            vRow.innerHTML = `
+                <td><strong>${draft.venue.name}</strong> <span class="badge bg-light text-muted border">Venue</span></td>
+                <td>1</td>
+                <td>Rs. ${draft.venue.total_cost}</td>
+                <td><span class="badge bg-secondary">Required</span></td>
+            `;
+            tbody.appendChild(vRow);
+
+            (draft.resources || []).forEach(res => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${res.name} <span class="badge bg-light text-secondary border" style="font-size:0.65rem;">${res.category}</span></td>
+                    <td>${res.quantity}</td>
+                    <td>Rs. ${res.total_cost}</td>
+                    <td>
+                        <button type="button" class="btn btn-xs btn-outline-danger p-0 px-1" title="Remove Item" onclick="removeDraftItem('${res.name}')">
+                            <i class="bi bi-trash" style="font-size:0.68rem;"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        const strip = document.getElementById('confirmAssumptionsStrip');
+        const list = document.getElementById('confirmAssumptionsList');
+        if (strip && list) {
+            if (draft.audit_assumptions && draft.audit_assumptions.length > 0) {
+                list.innerHTML = '';
+                draft.audit_assumptions.forEach(a => {
+                    const li = document.createElement('li');
+                    li.textContent = a;
+                    list.appendChild(li);
+                });
+                strip.classList.remove('d-none');
+            } else {
+                strip.classList.add('d-none');
+            }
+        }
+    }
+
+    async function handleVoiceConfirmation(spokenText) {
+        if (!spokenText || !activeDialogueSessionId) return;
+
+        if (window.voiceOrb) window.voiceOrb.setState('thinking');
+
+        try {
+            const resp = await fetch('/api/autopilot/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: activeDialogueSessionId,
+                    voice_input: spokenText
+                })
+            });
+            const data = await resp.json();
+
+            if (data.status === 'cancelled') {
+                if (window.voiceOrb) window.voiceOrb.setState('idle');
+                if (autopilotVoice && data.verbal_ack) {
+                    autopilotVoice.speakAssistantVoice(data.verbal_ack);
+                }
+                const card = document.getElementById('preCommitConfirmationCard');
+                if (card) card.classList.add('d-none');
+                alert(data.message || 'Plan cancelled.');
+            } else if (data.status === 'delta_applied') {
+                if (window.voiceOrb) window.voiceOrb.setState('idle');
+                currentDraftPlan = data.draft;
+                renderDraftCardDetails(currentDraftPlan);
+                if (autopilotVoice && data.verbal_ack) {
+                    autopilotVoice.speakAssistantVoice(data.verbal_ack, () => {
+                        autopilotVoice.listenForConfirmation(handleVoiceConfirmation);
+                    });
+                }
+            } else if (data.status === 'committed') {
+                handleCommitSuccess(data);
+            } else {
+                alert(data.error || 'Confirmation error.');
+            }
+        } catch (e) {
+            console.error('Confirmation error:', e);
+        }
+    }
+
+    async function removeDraftItem(itemName) {
+        if (!activeDialogueSessionId) return;
+        if (window.voiceOrb) window.voiceOrb.setState('thinking');
+
+        try {
+            const resp = await fetch('/api/autopilot/delta', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: activeDialogueSessionId,
+                    delta_params: { remove_items: [itemName] }
+                })
+            });
+            const data = await resp.json();
+            if (resp.ok && data.success) {
+                currentDraftPlan = data.draft;
+                renderDraftCardDetails(currentDraftPlan);
+                if (window.voiceOrb) window.voiceOrb.setState('idle');
+                if (autopilotVoice && data.verbal_summary) {
+                    autopilotVoice.speakAssistantVoice(data.verbal_summary, () => {
+                        autopilotVoice.listenForConfirmation(handleVoiceConfirmation);
+                    });
+                }
+            }
+        } catch (e) {
+            alert('Failed to remove item: ' + e);
+        }
+    }
+
+    function handleCommitSuccess(data) {
+        if (window.voiceOrb) window.voiceOrb.setState('confirmed');
+        const card = document.getElementById('preCommitConfirmationCard');
+        if (card) card.classList.add('d-none');
+
+        const summaryCard = document.getElementById('summaryCard');
+        if (summaryCard) {
+            summaryCard.style.display = 'block';
+            const venueEl = document.getElementById('summaryVenue');
+            if (venueEl && currentDraftPlan) venueEl.textContent = `${currentDraftPlan.venue.name} (${currentDraftPlan.headcount} pax)`;
+            const titleEl = document.getElementById('summaryTitle');
+            if (titleEl) titleEl.textContent = `Event '${currentDraftPlan ? currentDraftPlan.event_name : "Campus Event"}' Successfully Allocated & Locked!`;
+        }
+
+        // Pillar 6: Render Stakeholder Outbox Broadcast Feed
+        const dispatch = data.stakeholder_dispatch;
+        const noticesContainer = document.getElementById('summaryStakeholderNotices');
+        const countBadge = document.getElementById('summaryStakeholderCount');
+        if (dispatch && noticesContainer) {
+            noticesContainer.innerHTML = '';
+            if (countBadge) countBadge.textContent = `${dispatch.total_dispatched} Notices Dispatched`;
+            (dispatch.records || []).forEach(rec => {
+                const row = document.createElement('div');
+                row.className = 'd-flex justify-content-between align-items-center p-2 rounded bg-light border small';
+                const roleBadge = rec.stakeholder_type === 'dean' ?
+                    '<span class="badge bg-danger-subtle text-danger border border-danger">🏛️ Dean</span>' :
+                    (rec.stakeholder_type === 'organiser' ?
+                        '<span class="badge bg-success-subtle text-success border border-success">📋 Organiser</span>' :
+                        '<span class="badge bg-primary-subtle text-primary border border-primary">🎓 Student</span>');
+                row.innerHTML = `
+                    <div class="d-flex align-items-center gap-2">
+                        ${roleBadge}
+                        <div>
+                            <strong class="d-block text-dark" style="font-size:0.75rem;">${rec.subject}</strong>
+                            <span class="text-muted" style="font-size:0.7rem;">To: ${rec.recipient}</span>
+                        </div>
+                    </div>
+                    <span class="badge bg-success" style="font-size:0.68rem;">✓ Outbox Sent</span>
+                `;
+                noticesContainer.appendChild(row);
+            });
+        }
+
+        if (autopilotVoice) {
+            autopilotVoice.speakAssistantVoice(data.verbal_ack || "Lock kar diya! Dean, Organiser aur students ko notification bhej diya gaya hai.");
+        }
+        loadMemoryBadge();
+    }
+
+    async function executeAutopilotPlan(entities) {
         const btn = document.getElementById('btnRunAgent');
         const container = document.getElementById('timelineContainer');
         const statusContainer = document.getElementById('statusBadgeContainer');
         const summaryCard = document.getElementById('summaryCard');
 
-        if (!budgetInput.value || !Number.isFinite(budget) || budget <= 0) {
-            budgetInput.reportValidity();
-            return;
-        }
+        const prompt = entities.raw_prompt || document.getElementById('agentPrompt').value;
+        const finalDate = entities.target_date || document.getElementById('agentDate').value || '2026-11-28';
+        const budgetEl = document.getElementById('agentBudget');
+        const finalBudget = entities.budget_limit || ((budgetEl && Number(budgetEl.value) > 0) ? Number(budgetEl.value) : null);
 
         btn.disabled = true;
         btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Agent Running...`;
         statusContainer.innerHTML = `<span class="badge bg-warning text-dark"><span class="spinner-grow spinner-grow-sm me-1"></span> Executing Tools</span>`;
-        container.innerHTML = '';
-        summaryCard.style.display = 'none';
 
         try {
             const response = await fetch('/api/autopilot/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: prompt, date: targetDate, budget: budget })
+                body: JSON.stringify({ prompt: prompt, date: finalDate, budget: finalBudget })
             });
 
             const result = await response.json();
@@ -199,6 +1235,7 @@
             fallbackReasonRow.hidden = !result.fallback_reason;
             document.getElementById('fallbackReason').textContent = result.fallback_reason || '';
 
+            container.innerHTML = '';
             if (result.timeline && result.timeline.length > 0) {
                 result.timeline.forEach((step, idx) => {
                     const isSuccess = step.status === 'committed' || step.status === 'completed';
@@ -228,6 +1265,10 @@
                 document.getElementById('summaryTitle').innerText = result.event_name;
                 document.getElementById('summaryVenue').innerText = result.venue;
                 summaryCard.style.display = 'block';
+                loadMemoryBadge();
+                if (autopilotVoice) {
+                    autopilotVoice.speakAssistantVoice("Event successfully booked in " + (result.venue || "designated campus hall") + ". Notices staged to Outbox.");
+                }
             } else {
                 statusContainer.innerHTML = `<span class="badge bg-danger">Kavach Invariant Triggered</span>`;
                 const errDiv = document.createElement('div');
@@ -239,13 +1280,222 @@
                 `;
                 container.appendChild(errDiv);
             }
-
         } catch (err) {
             btn.disabled = false;
             btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
             statusContainer.innerHTML = `<span class="badge bg-danger">System Error</span>`;
             alert('Failed to execute autopilot run: ' + err);
         }
+    }
+
+    function renderActionProposalCard(proposal) {
+        const container = document.getElementById('timelineContainer');
+        const statusContainer = document.getElementById('statusBadgeContainer');
+        statusContainer.innerHTML = `<span class="badge bg-warning text-dark"><i class="bi bi-shield-lock-fill me-1"></i> Awaiting Your Approval</span>`;
+
+        container.innerHTML = `
+            <div class="card border-warning shadow-sm mb-4 rounded-3" id="liveProposalBox">
+                <div class="card-header bg-warning bg-opacity-10 border-bottom border-warning d-flex justify-content-between align-items-center py-2 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-warning text-dark fw-bold"><i class="bi bi-lightning-charge-fill me-1"></i> ${proposal.action_type}</span>
+                        <strong class="text-dark">${proposal.title}</strong>
+                    </div>
+                    <span class="badge bg-success-subtle text-success border border-success"><i class="bi bi-check2-circle me-1"></i> Kavach Verified</span>
+                </div>
+                <div class="card-body p-3">
+                    <p class="text-secondary small mb-3">${proposal.description}</p>
+                    <h6 class="small fw-bold text-dark text-uppercase mb-2"><i class="bi bi-list-check me-1"></i> Staged Operations (Visual Diff):</h6>
+                    <ul class="list-group list-group-flush small mb-3 border rounded">
+                        ${proposal.diff_summary.map(d => `<li class="list-group-item py-2 px-3"><i class="bi bi-arrow-right-short text-primary fs-6 me-1"></i><b>${d.split(':')[0]}:</b> ${d.split(':').slice(1).join(':')}</li>`).join('')}
+                    </ul>
+                    <div class="alert alert-light border small py-2 px-3 mb-3">
+                        <strong class="text-success"><i class="bi bi-shield-check me-1"></i> Kavach Safety Guarantees:</strong>
+                        <div class="text-muted mt-1">Zero overlaps • Capacity within physical limits • Outbox held until authorization</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success fw-bold px-4 shadow-sm" id="btnExecuteProposal">
+                            <i class="bi bi-check-circle-fill me-1"></i> Approve &amp; Execute
+                        </button>
+                        <button class="btn btn-outline-danger px-3" id="btnRejectProposal">
+                            <i class="bi bi-x-circle me-1"></i> Reject &amp; Discard
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('btnExecuteProposal').addEventListener('click', async () => {
+            const execBtn = document.getElementById('btnExecuteProposal');
+            execBtn.disabled = true;
+            execBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Executing Staged Actions...`;
+
+            try {
+                const confResp = await fetch('/api/agent/confirm-action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ proposal_id: proposal.proposal_id })
+                });
+                const confData = await confResp.json();
+                if (confData.success) {
+                    statusContainer.innerHTML = `<span class="badge bg-success">Committed &amp; Dispatched</span>`;
+                    document.getElementById('liveProposalBox').innerHTML = `
+                        <div class="card-body p-4 text-center">
+                            <div class="text-success fs-1 mb-2"><i class="bi bi-check-circle-fill"></i></div>
+                            <h5 class="fw-bold text-dark mb-1">Autonomous Operation Executed Successfully!</h5>
+                            <p class="text-muted small mb-3">${proposal.title} has been committed inside Kavach transactional sandbox.</p>
+                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                ${confData.action_urls ? `
+                                    <a href="${confData.action_urls.flyer_url}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-richtext me-1"></i> Flyer</a>
+                                    <a href="${confData.action_urls.register_url}" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-qr-code me-1"></i> Registration &amp; Pass</a>
+                                    <a href="${confData.action_urls.schedule_url}" class="btn btn-sm btn-outline-primary"><i class="bi bi-calendar3 me-1"></i> Timetable</a>
+                                    <a href="${confData.action_urls.outbox_url}" class="btn btn-sm btn-dark"><i class="bi bi-inbox me-1"></i> Outbox Notices</a>
+                                ` : `
+                                    <a href="/schedule" class="btn btn-sm btn-outline-primary"><i class="bi bi-calendar3 me-1"></i> View Schedule</a>
+                                    <a href="/outbox" class="btn btn-sm btn-dark"><i class="bi bi-inbox me-1"></i> View Outbox</a>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                    if (autopilotVoice) {
+                        autopilotVoice.speakAssistantVoice("Action authorized and executed successfully.");
+                    }
+                } else {
+                    alert('Error executing proposal: ' + (confData.error || 'Unknown error'));
+                    execBtn.disabled = false;
+                    execBtn.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> Approve &amp; Execute`;
+                }
+            } catch (e) {
+                alert('Execution failed: ' + e);
+                execBtn.disabled = false;
+                execBtn.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> Approve &amp; Execute`;
+            }
+        });
+
+        document.getElementById('btnRejectProposal').addEventListener('click', async () => {
+            await fetch('/api/agent/reject-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ proposal_id: proposal.proposal_id })
+            });
+            statusContainer.innerHTML = `<span class="badge bg-secondary">Cancelled</span>`;
+            document.getElementById('liveProposalBox').remove();
+        });
+    }
+
+    document.getElementById('btnRunAgent').addEventListener('click', async () => {
+        const prompt = document.getElementById('agentPrompt').value;
+        const targetDate = document.getElementById('agentDate').value || '2026-11-28';
+        const budgetInput = document.getElementById('agentBudget');
+        const budget = (budgetInput && Number(budgetInput.value) > 0) ? Number(budgetInput.value) : null;
+        const btn = document.getElementById('btnRunAgent');
+        const container = document.getElementById('timelineContainer');
+        const statusContainer = document.getElementById('statusBadgeContainer');
+        const summaryCard = document.getElementById('summaryCard');
+        const diagBox = document.getElementById('agentDialogueBox');
+        const thread = document.getElementById('dialogueThread');
+
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Understanding Brief...`;
+        statusContainer.innerHTML = `<span class="badge bg-info text-dark"><span class="spinner-grow spinner-grow-sm me-1"></span> Analyzing Intent</span>`;
+        container.innerHTML = '';
+        summaryCard.style.display = 'none';
+        if (thread) thread.innerHTML = '';
+        const banner = document.getElementById('assumptionsBanner');
+        if (banner) banner.classList.add('d-none');
+
+        const pLower = (prompt || '').toLowerCase();
+        const isOperationalIncident = ['replace speaker', 'emergency', 'substitute', 'cancel speaker', 'waitlist', 'promote', 'certificate', 'praman patra'].some(k => pLower.includes(k));
+
+        if (isOperationalIncident) {
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Preparing Action Proposal...`;
+            statusContainer.innerHTML = `<span class="badge bg-warning text-dark"><span class="spinner-grow spinner-grow-sm me-1"></span> Proposal Ready</span>`;
+
+            try {
+                const propResp = await fetch('/api/agent/propose-action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+                const propData = await propResp.json();
+                btn.disabled = false;
+                btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
+
+                if (propData.success && propData.proposal) {
+                    renderActionProposalCard(propData.proposal);
+                    return;
+                }
+            } catch (err) {
+                console.warn('Fallback to standard session intake:', err);
+            }
+        }
+
+        try {
+            // Step A: Start interactive dialogue session (Pillar 2)
+            const startResp = await fetch('/api/autopilot/session/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: prompt,
+                    target_date: targetDate,
+                    budget_limit: budget,
+                    voice_mode: true
+                })
+            });
+
+            const startData = await startResp.json();
+
+            if (!startResp.ok) {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
+                statusContainer.innerHTML = `<span class="badge bg-danger">Server Error</span>`;
+                const msg = startData.detail || startData.error || ('Server error (' + startResp.status + ')');
+                alert(msg);
+                return;
+            }
+
+            if (startData.is_safe === false) {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
+                statusContainer.innerHTML = `<span class="badge bg-danger">Safety Blocked</span>`;
+                alert(startData.error || 'Request was blocked by safety policy.');
+                if (autopilotVoice) autopilotVoice.speakAssistantVoice('This command was blocked by safety policy.');
+                return;
+            }
+
+            activeDialogueSessionId = startData.session_id;
+            fetchAndRenderRecommendations(startData.entities ? startData.entities.event_type : 'general', startData.entities ? startData.entities.estimated_headcount : 100);
+
+            // If critical details are missing, enter interactive dialogue mode!
+            if (!startData.is_ready_for_planning) {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
+                statusContainer.innerHTML = `<span class="badge bg-warning text-dark">Clarification Needed</span>`;
+
+                if (diagBox) {
+                    diagBox.classList.remove('d-none');
+                    const turnBadge = document.getElementById('dialogueTurnBadge');
+                    if (turnBadge) turnBadge.textContent = `Turn ${startData.turn_count} of ${startData.max_turns}`;
+                    appendDialogueBubble('agent', startData.current_question || 'Kripya event ki details clarify karein.');
+                    renderQuickReplies(startData.quick_replies);
+                }
+
+                if (autopilotVoice && startData.tts_response) {
+                    autopilotVoice.speakAssistantVoice(startData.tts_response);
+                }
+                return;
+            }
+
+            // All details ready from prompt! Proceed directly to execution.
+            if (diagBox) diagBox.classList.add('d-none');
+            executeAutopilotPlan(startData.entities);
+
+        } catch (err) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Run Autopilot Agent`;
+            statusContainer.innerHTML = `<span class="badge bg-danger">System Error</span>`;
+            alert('Failed to start session: ' + err);
+        }
     });
+
 </script>
 {% endblock %}

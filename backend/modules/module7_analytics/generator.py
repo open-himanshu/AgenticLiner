@@ -6,10 +6,9 @@ Implements:
 3. Automated verifiable PDF Certificate generator with embedded verification QR code.
 """
 
-import os
 import uuid
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 import qrcode
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.lib import colors
@@ -62,7 +61,7 @@ class EventAnalyticsEngine:
             # Feedbacks & Ratings
             cur.execute("SELECT avg(rating) as avg_rating, count(*) as count FROM feedback WHERE event_id = ?", (event_id,))
             fb_row = cur.fetchone()
-            avg_rating = round(fb_row["avg_rating"] or 4.5, 2)
+            avg_rating = round(fb_row["avg_rating"] or 0.0, 2)
             total_feedbacks = fb_row["count"] or 0
 
             cur.execute(
@@ -334,3 +333,4 @@ class EventAnalyticsEngine:
 
         doc.build(elements)
         return str(report_path)
+

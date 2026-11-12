@@ -17,10 +17,9 @@ from __future__ import annotations
 import json
 import os
 import re
-import time
 import uuid
 from datetime import date as CalendarDate, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from backend.core.planner.call_llm import call_llm, get_provider_config, ProviderError
 from backend.core.planner.tools import (
@@ -29,11 +28,10 @@ from backend.core.planner.tools import (
     tool_recommend_from_history,
     tool_requisition_campus_resources,
 )
-from backend.core.safety.kavach import KavachEngine
 
 MAX_STEPS = 8
 MAX_ASK_USER = 2
-DEFAULT_BUDGET = 25000
+DEFAULT_BUDGET = 100000.0
 RECIPIENT_CAP = 500
 
 # Patterns that indicate destructive intent — blocked before the LLM even runs.
@@ -223,10 +221,10 @@ def _build_system_prompt(budget: float, today: str, next_friday: str) -> str:
 
 def run_agent_mode(
     prompt: str,
-    date: str = "2026-11-25",
-    start_time: str = "09:00:00",
-    end_time: str = "17:00:00",
-    budget: float = DEFAULT_BUDGET,
+    date: Optional[str] = None,
+    start_time: Optional[str] = None,
+    end_time: Optional[str] = None,
+    budget: Optional[float] = None,
     call_llm_fn=None,
 ) -> Dict[str, Any]:
     """
@@ -280,7 +278,8 @@ def run_agent_mode(
     total_tokens: Dict[str, int] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
     ask_user_count = 0
 
-    system_prompt = _build_system_prompt(budget, today, next_friday)
+    effective_budget = float(budget) if budget is not None else float(DEFAULT_BUDGET)
+    system_prompt = _build_system_prompt(effective_budget, today, next_friday)
     messages: List[Dict[str, Any]] = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": prompt},
@@ -307,6 +306,8 @@ def run_agent_mode(
                 "content": final_text,
                 "tool_calls": response.get("tool_calls", []),
             }
+            if response.get("raw_content") is not None:
+                assistant_msg["raw_content"] = response["raw_content"]
             messages.append(assistant_msg)
 
             tool_calls = response.get("tool_calls", [])
@@ -335,7 +336,7 @@ def run_agent_mode(
                     tool_status = "completed"
                 elif name == "requisition":
                     # Enforce budget in code before calling Kavach.
-                    result = _execute_requisition(arguments, event_id, budget)
+                    result = _execute_requisition(arguments, event_id, effective_budget)
                     tool_status = "committed" if result.get("status") == "committed" else "rolled_back"
                 elif name in TOOL_DISPATCH:
                     try:
@@ -423,10 +424,10 @@ def _summarize_result(tool_name: str, result: Any) -> str:
 
 def run_autopilot_with_fallback(
     prompt: str,
-    date: str = "2026-11-25",
-    start_time: str = "09:00:00",
-    end_time: str = "17:00:00",
-    budget: float = DEFAULT_BUDGET,
+    date: Optional[str] = None,
+    start_time: Optional[str] = None,
+    end_time: Optional[str] = None,
+    budget: Optional[float] = None,
     call_llm_fn=None,
 ) -> Dict[str, Any]:
     """
