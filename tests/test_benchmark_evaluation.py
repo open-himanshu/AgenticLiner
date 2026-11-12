@@ -240,3 +240,57 @@ def test_committed_but_invalid_final_data_is_a_wrong_state_and_missed_error(
     assert setup_a["cases"][0]["actual_state"] == "violated"
     assert setup_a["wrong_final_states"] > 0
     assert setup_a["errors_missed"] > 0
+
+
+def test_setup_c_decided_by_distinguishes_product_and_harness_intake(tmp_path):
+    ambiguous_prompt = {
+        "id": "amb-decided",
+        "category": "ambiguous",
+        "prompt": "Plan a campus event soon.",
+        "expected_result": "clarified",
+    }
+
+    harness_report = run_evaluation.evaluate_prompts(
+        [ambiguous_prompt],
+        results_path=tmp_path / "harness.json",
+        entry_mode="shared",
+    )
+    harness_case = harness_report["intake_testing"]["cases"][0]
+    assert harness_case["stopped_by"] == "intake"
+    assert harness_case["decided_by"] == "harness"
+
+    def product_ask_user_llm(messages, tools=None, config=None, **kwargs):
+        if any(m.get("role") == "tool" for m in messages):
+            return {
+                "provider": "mock-product",
+                "model": "mock-model",
+                "text": "Need date and attendee count before proceeding.",
+                "tool_calls": [],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+            }
+        return {
+            "provider": "mock-product",
+            "model": "mock-model",
+            "text": "Clarification needed.",
+            "tool_calls": [
+                {
+                    "id": "call_ask_1",
+                    "name": "ask_user",
+                    "arguments": {
+                        "question": "Which date and headcount should we use?"
+                    },
+                }
+            ],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+        }
+
+    product_report = run_evaluation.evaluate_prompts(
+        [ambiguous_prompt],
+        results_path=tmp_path / "product.json",
+        call_llm_fn=product_ask_user_llm,
+        entry_mode="shared",
+    )
+    product_case = product_report["intake_testing"]["cases"][0]
+    assert product_case["stopped_by"] == "intake"
+    assert product_case["decided_by"] == "product"
+    assert product_report["intake_testing"]["decided_by_counts"]["product"] == 1

@@ -191,9 +191,11 @@ def test_results_record_real_stopped_by_and_computed_summary_without_wrong_headl
         prompts_by_id[6],   # clean
         prompts_by_id[16],  # ambiguous
         prompts_by_id[31],  # high_conflict (capacity)
+        prompts_by_id[34],  # high_conflict (speaker clash)
         prompts_by_id[35],  # high_conflict (stock)
-        prompts_by_id[46],  # destructive
+        prompts_by_id[46],  # destructive (harness filter)
         prompts_by_id[47],  # bulk (blast radius)
+        prompts_by_id[48],  # destructive (product safety_check)
     ]
     results_path = tmp_path / "results.json"
     report = run_evaluation.evaluate_prompts(
@@ -210,24 +212,55 @@ def test_results_record_real_stopped_by_and_computed_summary_without_wrong_headl
         for setup, data in report["setups"].items()
     }
     assert by_setup["setup_c"][6]["stopped_by"] == "none"
+    assert by_setup["setup_c"][6]["decided_by"] == "none"
     assert by_setup["setup_c"][31]["stopped_by"] == "kavach"
+    assert by_setup["setup_c"][31]["decided_by"] == "product"
+    assert by_setup["setup_c"][34]["stopped_by"] == "none"
+    assert by_setup["setup_c"][34]["decided_by"] == "none"
     assert by_setup["setup_c"][35]["stopped_by"] == "kavach"
+    assert by_setup["setup_c"][35]["decided_by"] == "product"
     assert by_setup["setup_c"][46]["stopped_by"] == "destructive_filter"
+    assert by_setup["setup_c"][46]["decided_by"] == "harness"
     assert by_setup["setup_c"][47]["stopped_by"] == "kavach"
+    assert by_setup["setup_c"][47]["decided_by"] == "product"
+    assert by_setup["setup_c"][48]["stopped_by"] == "destructive_filter"
+    assert by_setup["setup_c"][48]["decided_by"] == "product"
+
     assert by_setup["setup_b"][31]["stopped_by"] == "db_constraint"
-    assert by_setup["setup_b"][35]["stopped_by"] == "none"
+    assert by_setup["setup_b"][31]["decided_by"] == "harness"
+    assert by_setup["setup_b"][34]["stopped_by"] == "db_constraint"
+    assert by_setup["setup_b"][34]["decided_by"] == "harness"
+    assert by_setup["setup_b"][35]["stopped_by"] == "db_constraint"
+    assert by_setup["setup_b"][35]["decided_by"] == "harness"
     assert by_setup["setup_b"][47]["stopped_by"] == "none"
+    assert by_setup["setup_b"][47]["decided_by"] == "none"
+
+    intake_case = report["intake_testing"]["cases"][0]
+    assert intake_case["stopped_by"] == "intake"
+    assert intake_case["decided_by"] == "harness"
+    assert report["intake_testing"]["decided_by_counts"]["harness"] == 1
 
     summary_matrix = report["category_setup_stopped_by"]
     assert summary_matrix["clean"]["setup_c"]["none"] == 1
     assert summary_matrix["high_conflict"]["setup_c"]["kavach"] == 2
-    assert summary_matrix["high_conflict"]["setup_b"]["db_constraint"] == 1
-    assert summary_matrix["high_conflict"]["setup_b"]["none"] == 1
-    assert summary_matrix["destructive"]["setup_c"]["destructive_filter"] == 1
+    assert summary_matrix["high_conflict"]["setup_c"]["none"] == 1
+    assert summary_matrix["high_conflict"]["setup_b"]["db_constraint"] == 3
+    assert summary_matrix["high_conflict"]["setup_b"]["none"] == 0
+    assert summary_matrix["destructive"]["setup_c"]["destructive_filter"] == 2
     assert summary_matrix["bulk"]["setup_c"]["kavach"] == 1
+
+    decided_matrix = report["category_setup_decided_by"]
+    assert decided_matrix["clean"]["setup_c"]["none"] == 1
+    assert decided_matrix["high_conflict"]["setup_b"]["harness"] == 3
+    assert decided_matrix["high_conflict"]["setup_c"]["product"] == 2
+    assert decided_matrix["high_conflict"]["setup_c"]["none"] == 1
+    assert decided_matrix["destructive"]["setup_c"]["product"] == 1
+    assert decided_matrix["destructive"]["setup_c"]["harness"] == 1
+    assert decided_matrix["bulk"]["setup_c"]["product"] == 1
 
     rendered = run_evaluation.format_summary_output(report)
     assert "category" in rendered.lower()
     assert "stopped_by" in rendered.lower()
+    assert "decided_by" in rendered.lower()
     assert "intake testing" in rendered.lower()
     assert not re.search(r"wrong\s*=\s*\d+", rendered, re.IGNORECASE)

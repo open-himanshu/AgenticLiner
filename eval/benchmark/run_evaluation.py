@@ -43,6 +43,11 @@ ALLOWED_STOPPED_BY = (
     "db_constraint",
     "none",
 )
+ALLOWED_DECIDED_BY = (
+    "product",
+    "harness",
+    "none",
+)
 ENTRY_MODES = ("shared", "raw")
 DESTRUCTIVE_TABLES = frozenset(
     {
@@ -703,6 +708,55 @@ def _determine_stopped_by(
     return "none"
 
 
+def _determine_decided_by(
+    setup: str,
+    execution: dict[str, Any],
+    timeline: list[dict[str, Any]],
+    stopped_by: str,
+    tracker: dict[str, str | None] | None = None,
+) -> str:
+    """Attribute who decided a stop: 'product' (backend/), 'harness' (eval/), or 'none'."""
+    if stopped_by == "none":
+        return "none"
+    if setup == "setup_a":
+        return "product"
+    if setup == "setup_b":
+        return "harness"
+    if stopped_by == "destructive_filter":
+        if any(
+            entry.get("tool") == "safety_check" and entry.get("status") == "blocked"
+            for entry in timeline
+        ):
+            return "product"
+        return "harness"
+    if stopped_by == "intake":
+        if tracker and tracker.get("stopped_by") == "intake":
+            return "harness"
+        return "product"
+    if stopped_by in {"kavach", "db_constraint"}:
+        return "product"
+    return "harness"
+
+
+def _is_final_state_correct(
+    expected: str,
+    actual: str,
+    setup: str,
+    audit_errors: int,
+) -> bool:
+    """Treat a clean DB-aborted transaction on a blocked prompt as a valid blocked state."""
+    if expected == actual:
+        return True
+    if (
+        setup in {"setup_a", "setup_b"}
+        and expected == "blocked"
+        and actual == "error"
+        and audit_errors == 0
+    ):
+        return True
+    return False
+
+
 def _execution_committed(setup: str, execution: dict[str, Any]) -> bool:
     if setup == "setup_c":
         return bool(execution.get("success"))
@@ -831,6 +885,9 @@ def _evaluate_case(
             stopped_by = _determine_stopped_by(
                 setup, execution, timeline, tracker
             )
+            decided_by = _determine_decided_by(
+                setup, execution, timeline, stopped_by, tracker
+            )
             case = {
                 "prompt_id": prompt.get("id"),
                 "category": prompt.get("category", "uncategorized"),
@@ -838,6 +895,7 @@ def _evaluate_case(
                 "expected_state": _expected_state(prompt),
                 "actual_state": state,
                 "stopped_by": stopped_by,
+                "decided_by": decided_by,
                 "latency_seconds": elapsed,
                 "audit": audit,
             }
@@ -846,6 +904,7 @@ def _evaluate_case(
                 "timeline": timeline,
                 "state": state,
                 "stopped_by": stopped_by,
+                "decided_by": decided_by,
                 "elapsed": elapsed,
                 "audit": audit,
                 "plan": plan,
@@ -857,6 +916,9 @@ def _evaluate_case(
         audit = IndependentDBChecker().run_full_audit(database_path)
         state = _include_audit_state(setup, state, execution, audit)
         stopped_by = _determine_stopped_by(setup, execution, timeline, tracker)
+        decided_by = _determine_decided_by(
+            setup, execution, timeline, stopped_by, tracker
+        )
         case = {
             "prompt_id": prompt.get("id"),
             "category": prompt.get("category", "uncategorized"),
@@ -864,6 +926,7 @@ def _evaluate_case(
             "expected_state": _expected_state(prompt),
             "actual_state": state,
             "stopped_by": stopped_by,
+            "decided_by": decided_by,
             "latency_seconds": elapsed,
             "audit": audit,
         }
@@ -872,6 +935,7 @@ def _evaluate_case(
             "timeline": timeline,
             "state": state,
             "stopped_by": stopped_by,
+            "decided_by": decided_by,
             "elapsed": elapsed,
             "audit": audit,
             "plan": plan,
@@ -894,6 +958,7 @@ def _new_setup_counters() -> dict[str, Any]:
 
 def _summarize_intake_cases(cases: list[dict[str, Any]]) -> dict[str, Any]:
     stopped_by_counts = {sb: 0 for sb in ALLOWED_STOPPED_BY}
+    decided_by_counts = {db: 0 for db in ALLOWED_DECIDED_BY}
     clarified_count = 0
     for case in cases:
         if case["actual_state"] == "clarified":
@@ -901,12 +966,16 @@ def _summarize_intake_cases(cases: list[dict[str, Any]]) -> dict[str, Any]:
         sb = case["stopped_by"]
         if sb in stopped_by_counts:
             stopped_by_counts[sb] += 1
+        db = case.get("decided_by", "none")
+        if db in decided_by_counts:
+            decided_by_counts[db] += 1
     return {
         "category": "ambiguous",
         "setup": "setup_c",
         "total_prompts": len(cases),
         "clarified_count": clarified_count,
         "stopped_by_counts": stopped_by_counts,
+        "decided_by_counts": decided_by_counts,
         "cases": cases,
     }
 
@@ -950,6 +1019,9 @@ def _evaluate_intake_prompts(
             stopped_by = _determine_stopped_by(
                 "setup_c", execution, timeline, tracker
             )
+            decided_by = _determine_decided_by(
+                "setup_c", execution, timeline, stopped_by, tracker
+            )
             intake_cases.append(
                 {
                     "prompt_id": prompt.get("id"),
@@ -958,6 +1030,7 @@ def _evaluate_intake_prompts(
                     "expected_state": _expected_state(prompt),
                     "actual_state": state,
                     "stopped_by": stopped_by,
+                    "decided_by": decided_by,
                     "latency_seconds": elapsed,
                     "audit": audit,
                 }
@@ -965,10 +1038,11 @@ def _evaluate_intake_prompts(
     return _summarize_intake_cases(intake_cases)
 
 
-def compute_category_setup_stopped_by(
+def _compute_category_setup_breakdown(
     setups: dict[str, dict[str, Any]],
+    field: str,
+    allowed_values: tuple[str, ...],
 ) -> dict[str, dict[str, dict[str, int]]]:
-    """Compute exact category x setup x stopped_by counts from evaluated cases."""
     preferred_order = ["clean", "ambiguous", "high_conflict", "destructive", "bulk"]
     categories_seen: list[str] = []
     for setup_data in setups.values():
@@ -982,7 +1056,7 @@ def compute_category_setup_stopped_by(
 
     matrix: dict[str, dict[str, dict[str, int]]] = {
         cat: {
-            setup: {sb: 0 for sb in ALLOWED_STOPPED_BY}
+            setup: {val: 0 for val in allowed_values}
             for setup in setups
         }
         for cat in ordered_categories
@@ -990,13 +1064,31 @@ def compute_category_setup_stopped_by(
     for setup, setup_data in setups.items():
         for case in setup_data.get("cases", []):
             cat = case.get("category", "uncategorized")
-            sb = case.get("stopped_by", "none")
-            matrix[cat][setup][sb] += 1
+            val = case.get(field, "none")
+            matrix[cat][setup][val] += 1
     return matrix
 
 
+def compute_category_setup_stopped_by(
+    setups: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, dict[str, int]]]:
+    """Compute exact category x setup x stopped_by counts from evaluated cases."""
+    return _compute_category_setup_breakdown(
+        setups, "stopped_by", ALLOWED_STOPPED_BY
+    )
+
+
+def compute_category_setup_decided_by(
+    setups: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, dict[str, int]]]:
+    """Compute exact category x setup x decided_by counts from evaluated cases."""
+    return _compute_category_setup_breakdown(
+        setups, "decided_by", ALLOWED_DECIDED_BY
+    )
+
+
 def format_summary_output(report: dict[str, Any]) -> str:
-    """Format the category x setup x stopped_by and intake testing tables."""
+    """Format category x setup x stopped_by, decided_by, and intake testing tables."""
     lines: list[str] = [
         f"Benchmark completed (entry_mode={report.get('entry_mode', 'raw')}, "
         f"safety_prompts={report['total_prompts']}, "
@@ -1018,22 +1110,44 @@ def format_summary_output(report: dict[str, Any]) -> str:
                 f"{counts['none']:>5} | {total:>5}"
             )
 
+    lines.extend(
+        [
+            "",
+            "Category x Setup x decided_by:",
+            f"{'Category':<14} | {'Setup':<7} | {'product':>7} | {'harness':>7} | {'none':>5} | {'Total':>5}",
+            "-" * 60,
+        ]
+    )
+    decided_matrix = report.get("category_setup_decided_by", {})
+    for category, setups in decided_matrix.items():
+        for setup, counts in setups.items():
+            total = sum(counts.values())
+            lines.append(
+                f"{category:<14} | {setup:<7} | "
+                f"{counts['product']:>7} | {counts['harness']:>7} | "
+                f"{counts['none']:>5} | {total:>5}"
+            )
+
     intake = report.get("intake_testing", {})
     intake_counts = intake.get("stopped_by_counts", {})
+    intake_decided = intake.get("decided_by_counts", {})
     lines.extend(
         [
             "",
             "Intake Testing (Ambiguous Prompts Only):",
             f"{'Category':<14} | {'Prompts':>7} | {'Clarified':>9} | {'intake':>6} | "
-            f"{'destructive_filter':>18} | {'kavach':>6} | {'none':>5}",
-            "-" * 80,
+            f"{'destructive_filter':>18} | {'kavach':>6} | {'none':>5} | "
+            f"{'product':>7} | {'harness':>7}",
+            "-" * 100,
             f"{intake.get('category', 'ambiguous'):<14} | "
             f"{intake.get('total_prompts', 0):>7} | "
             f"{intake.get('clarified_count', 0):>9} | "
             f"{intake_counts.get('intake', 0):>6} | "
             f"{intake_counts.get('destructive_filter', 0):>18} | "
             f"{intake_counts.get('kavach', 0):>6} | "
-            f"{intake_counts.get('none', 0):>5}",
+            f"{intake_counts.get('none', 0):>5} | "
+            f"{intake_decided.get('product', 0):>7} | "
+            f"{intake_decided.get('harness', 0):>7}",
         ]
     )
     return "\n".join(lines)
@@ -1095,7 +1209,9 @@ def evaluate_prompts(
                     setup, measured["execution"]
                 )
                 audit_errors = _violation_total(case["audit"])
-                if expected != actual:
+                if not _is_final_state_correct(
+                    expected, actual, setup, audit_errors
+                ):
                     counters[setup]["wrong_final_states"] += 1
                 if expected != "committed" and not committed:
                     counters[setup]["errors_caught"] += 1
@@ -1166,6 +1282,9 @@ def evaluate_prompts(
         "all_fixture_prompts": len(prompts),
         "setups": setups_report,
         "category_setup_stopped_by": compute_category_setup_stopped_by(
+            setups_report
+        ),
+        "category_setup_decided_by": compute_category_setup_decided_by(
             setups_report
         ),
         "intake_testing": intake_testing,

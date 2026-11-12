@@ -420,3 +420,174 @@ BEGIN
           AND NEW.expected_attendance > r.capacity
     );
 END;
+
+-- Rule: Reject inserting a confirmed resource booking whose concurrent quantity exceeds available resource stock.
+CREATE TRIGGER IF NOT EXISTS trg_baseline_resource_stock_insert
+BEFORE INSERT ON bookings
+FOR EACH ROW
+WHEN NEW.resource_id IS NOT NULL
+ AND COALESCE(NEW.status, 'confirmed') = 'confirmed'
+BEGIN
+    SELECT RAISE(ABORT, 'Baseline SQL constraint: resource booking quantity exceeds available stock')
+    WHERE EXISTS (
+        SELECT 1
+        FROM resources AS r
+        WHERE r.id = NEW.resource_id
+          AND (
+              (
+                  (NEW.start_time IS NULL OR NEW.end_time IS NULL)
+                  AND COALESCE(NEW.quantity, 1) + (
+                      SELECT COALESCE(SUM(COALESCE(e.quantity, 1)), 0)
+                      FROM bookings AS e
+                      WHERE e.resource_id = NEW.resource_id
+                        AND e.status = 'confirmed'
+                  ) > r.stock
+              )
+              OR (
+                  NEW.start_time IS NOT NULL
+                  AND NEW.end_time IS NOT NULL
+                  AND (
+                      COALESCE(NEW.quantity, 1) + (
+                          SELECT COALESCE(SUM(COALESCE(e.quantity, 1)), 0)
+                          FROM bookings AS e
+                          WHERE e.resource_id = NEW.resource_id
+                            AND e.status = 'confirmed'
+                            AND (
+                                e.start_time IS NULL
+                                OR e.end_time IS NULL
+                                OR (e.start_time <= NEW.start_time AND e.end_time > NEW.start_time)
+                            )
+                      ) > r.stock
+                      OR EXISTS (
+                          SELECT 1
+                          FROM bookings AS anchor
+                          WHERE anchor.resource_id = NEW.resource_id
+                            AND anchor.status = 'confirmed'
+                            AND anchor.start_time IS NOT NULL
+                            AND anchor.start_time >= NEW.start_time
+                            AND anchor.start_time < NEW.end_time
+                            AND COALESCE(NEW.quantity, 1) + (
+                                SELECT COALESCE(SUM(COALESCE(e.quantity, 1)), 0)
+                                FROM bookings AS e
+                                WHERE e.resource_id = NEW.resource_id
+                                  AND e.status = 'confirmed'
+                                  AND (
+                                      e.start_time IS NULL
+                                      OR e.end_time IS NULL
+                                      OR (e.start_time <= anchor.start_time AND e.end_time > anchor.start_time)
+                                  )
+                            ) > r.stock
+                      )
+                  )
+              )
+          )
+    );
+END;
+
+-- Rule: Reject updating a confirmed resource booking when concurrent resource demand exceeds available stock.
+CREATE TRIGGER IF NOT EXISTS trg_baseline_resource_stock_update
+BEFORE UPDATE ON bookings
+FOR EACH ROW
+WHEN NEW.resource_id IS NOT NULL
+ AND COALESCE(NEW.status, 'confirmed') = 'confirmed'
+BEGIN
+    SELECT RAISE(ABORT, 'Baseline SQL constraint: resource booking quantity exceeds available stock')
+    WHERE EXISTS (
+        SELECT 1
+        FROM resources AS r
+        WHERE r.id = NEW.resource_id
+          AND (
+              (
+                  (NEW.start_time IS NULL OR NEW.end_time IS NULL)
+                  AND COALESCE(NEW.quantity, 1) + (
+                      SELECT COALESCE(SUM(COALESCE(e.quantity, 1)), 0)
+                      FROM bookings AS e
+                      WHERE e.id != NEW.id
+                        AND e.resource_id = NEW.resource_id
+                        AND e.status = 'confirmed'
+                  ) > r.stock
+              )
+              OR (
+                  NEW.start_time IS NOT NULL
+                  AND NEW.end_time IS NOT NULL
+                  AND (
+                      COALESCE(NEW.quantity, 1) + (
+                          SELECT COALESCE(SUM(COALESCE(e.quantity, 1)), 0)
+                          FROM bookings AS e
+                          WHERE e.id != NEW.id
+                            AND e.resource_id = NEW.resource_id
+                            AND e.status = 'confirmed'
+                            AND (
+                                e.start_time IS NULL
+                                OR e.end_time IS NULL
+                                OR (e.start_time <= NEW.start_time AND e.end_time > NEW.start_time)
+                            )
+                      ) > r.stock
+                      OR EXISTS (
+                          SELECT 1
+                          FROM bookings AS anchor
+                          WHERE anchor.id != NEW.id
+                            AND anchor.resource_id = NEW.resource_id
+                            AND anchor.status = 'confirmed'
+                            AND anchor.start_time IS NOT NULL
+                            AND anchor.start_time >= NEW.start_time
+                            AND anchor.start_time < NEW.end_time
+                            AND COALESCE(NEW.quantity, 1) + (
+                                SELECT COALESCE(SUM(COALESCE(e.quantity, 1)), 0)
+                                FROM bookings AS e
+                                WHERE e.id != NEW.id
+                                  AND e.resource_id = NEW.resource_id
+                                  AND e.status = 'confirmed'
+                                  AND (
+                                      e.start_time IS NULL
+                                      OR e.end_time IS NULL
+                                      OR (e.start_time <= anchor.start_time AND e.end_time > anchor.start_time)
+                                  )
+                            ) > r.stock
+                      )
+                  )
+              )
+          )
+    );
+END;
+
+-- Rule: Reject inserting a session whose speaker is already assigned to an overlapping session.
+CREATE TRIGGER IF NOT EXISTS trg_baseline_speaker_overlap_insert
+BEFORE INSERT ON sessions
+FOR EACH ROW
+WHEN NEW.speaker_id IS NOT NULL
+ AND NEW.start_time IS NOT NULL
+ AND NEW.end_time IS NOT NULL
+BEGIN
+    SELECT RAISE(ABORT, 'Baseline SQL constraint: speaker is already scheduled in an overlapping session')
+    WHERE EXISTS (
+        SELECT 1
+        FROM sessions AS existing
+        WHERE existing.speaker_id = NEW.speaker_id
+          AND existing.start_time IS NOT NULL
+          AND existing.end_time IS NOT NULL
+          AND existing.start_time < NEW.end_time
+          AND existing.end_time > NEW.start_time
+    );
+END;
+
+-- Rule: Reject updating a session when the speaker is already assigned to another overlapping session.
+CREATE TRIGGER IF NOT EXISTS trg_baseline_speaker_overlap_update
+BEFORE UPDATE ON sessions
+FOR EACH ROW
+WHEN NEW.speaker_id IS NOT NULL
+ AND NEW.start_time IS NOT NULL
+ AND NEW.end_time IS NOT NULL
+BEGIN
+    SELECT RAISE(ABORT, 'Baseline SQL constraint: speaker is already scheduled in an overlapping session')
+    WHERE EXISTS (
+        SELECT 1
+        FROM sessions AS existing
+        WHERE existing.id != NEW.id
+          AND existing.speaker_id = NEW.speaker_id
+          AND existing.start_time IS NOT NULL
+          AND existing.end_time IS NOT NULL
+          AND existing.start_time < NEW.end_time
+          AND existing.end_time > NEW.start_time
+    );
+END;

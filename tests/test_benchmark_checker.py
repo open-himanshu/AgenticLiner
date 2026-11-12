@@ -405,3 +405,200 @@ def test_setup_b_evaluate_case_blocks_overlap_and_capacity_without_orphans(tmp_p
         assert measured_b["execution"]["status"] == "error"
         assert case_b["audit"]["audit_passed"] is True
         assert case_b["audit"]["violations"]["orphan_events_count"] == 0
+
+
+def test_setup_b_triggers_reject_equipment_stock_oversell_and_speaker_overlap(tmp_path):
+    sql_text = BASELINE_SCHEMA_PATH.read_text(encoding="utf-8")
+    assert "kavach" not in sql_text.lower()
+    for trigger_name in (
+        "trg_baseline_resource_stock_insert",
+        "trg_baseline_resource_stock_update",
+        "trg_baseline_speaker_overlap_insert",
+        "trg_baseline_speaker_overlap_update",
+    ):
+        assert trigger_name in sql_text
+        idx = sql_text.index(trigger_name)
+        preceding_block = sql_text[max(0, idx - 220) : idx]
+        assert "-- Rule:" in preceding_block
+
+    db_path = tmp_path / "baseline-part3.sqlite3"
+    run_evaluation.create_scenario_database(db_path, setup="setup_b")
+
+    conn = sqlite3.connect(db_path)
+    conn.execute("PRAGMA foreign_keys = ON")
+    try:
+        stock_row = conn.execute(
+            "SELECT stock FROM resources WHERE id = 'res_mic_cordless'"
+        ).fetchone()
+        assert stock_row is not None and stock_row[0] == 12
+
+        # 1a. Single booking exceeding resource stock (80 > 12) must fail
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                """INSERT INTO bookings (
+                       id, event_id, resource_id, item_name, category,
+                       start_time, end_time, quantity, status
+                   )
+                   VALUES (
+                       'bk_mic_huge', 'ev_001', 'res_mic_cordless',
+                       'Wireless Handheld Mic Set (Pair)', 'equipment',
+                       '2026-12-15 09:00:00', '2026-12-15 11:00:00', 80, 'confirmed'
+                   )"""
+            )
+
+        # 1b. Non-overlapping slots using 8 + 8 <= 12 per slot must succeed
+        conn.execute(
+            """INSERT INTO bookings (
+                   id, event_id, resource_id, item_name, category,
+                   start_time, end_time, quantity, status
+               )
+               VALUES (
+                   'bk_mic_slot1', 'ev_001', 'res_mic_cordless',
+                   'Wireless Handheld Mic Set (Pair)', 'equipment',
+                   '2026-12-15 09:00:00', '2026-12-15 11:00:00', 8, 'confirmed'
+               )"""
+        )
+        conn.execute(
+            """INSERT INTO bookings (
+                   id, event_id, resource_id, item_name, category,
+                   start_time, end_time, quantity, status
+               )
+               VALUES (
+                   'bk_mic_slot2', 'ev_001', 'res_mic_cordless',
+                   'Wireless Handheld Mic Set (Pair)', 'equipment',
+                   '2026-12-15 11:00:00', '2026-12-15 13:00:00', 8, 'confirmed'
+               )"""
+        )
+
+        # 1c. Overlapping booking exceeding remaining stock (8 + 8 = 16 > 12) must fail
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                """INSERT INTO bookings (
+                       id, event_id, resource_id, item_name, category,
+                       start_time, end_time, quantity, status
+                   )
+                   VALUES (
+                       'bk_mic_overlap', 'ev_001', 'res_mic_cordless',
+                       'Wireless Handheld Mic Set (Pair)', 'equipment',
+                       '2026-12-15 10:00:00', '2026-12-15 12:00:00', 8, 'confirmed'
+                   )"""
+            )
+
+        # 1d. Reverse-order overlap where new window starts earlier than existing window
+        conn.execute(
+            """INSERT INTO bookings (
+                   id, event_id, resource_id, item_name, category,
+                   start_time, end_time, quantity, status
+               )
+               VALUES (
+                   'bk_mic_later', 'ev_001', 'res_mic_cordless',
+                   'Wireless Handheld Mic Set (Pair)', 'equipment',
+                   '2026-12-16 10:00:00', '2026-12-16 13:00:00', 8, 'confirmed'
+               )"""
+        )
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                """INSERT INTO bookings (
+                       id, event_id, resource_id, item_name, category,
+                       start_time, end_time, quantity, status
+                   )
+                   VALUES (
+                       'bk_mic_earlier_overlap', 'ev_001', 'res_mic_cordless',
+                       'Wireless Handheld Mic Set (Pair)', 'equipment',
+                       '2026-12-16 09:00:00', '2026-12-16 11:00:00', 8, 'confirmed'
+                   )"""
+            )
+
+        # 1e. UPDATE pushing concurrent total above stock must fail
+        conn.execute(
+            """INSERT INTO bookings (
+                   id, event_id, resource_id, item_name, category,
+                   start_time, end_time, quantity, status
+               )
+               VALUES (
+                   'bk_mic_small', 'ev_001', 'res_mic_cordless',
+                   'Wireless Handheld Mic Set (Pair)', 'equipment',
+                   '2026-12-15 09:30:00', '2026-12-15 10:30:00', 2, 'confirmed'
+               )"""
+        )
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "UPDATE bookings SET quantity = 6 WHERE id = 'bk_mic_small'"
+            )
+
+        # 2a. Speaker back-to-back sessions succeed, overlapping INSERT/UPDATE fails
+        conn.execute(
+            """INSERT INTO sessions (
+                   id, event_id, title, speaker_id, room_id,
+                   start_time, end_time, expected_attendance
+               )
+               VALUES (
+                   'ses_spk_1', 'ev_001', 'Morning Talk', 'spk_01', 'room_audi_a',
+                   '2026-12-17 09:30:00', '2026-12-17 11:00:00', 50
+               )"""
+        )
+        conn.execute(
+            """INSERT INTO sessions (
+                   id, event_id, title, speaker_id, room_id,
+                   start_time, end_time, expected_attendance
+               )
+               VALUES (
+                   'ses_spk_2', 'ev_001', 'Adjacent Talk', 'spk_01', 'room_conf_room',
+                   '2026-12-17 11:00:00', '2026-12-17 12:30:00', 20
+               )"""
+        )
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                """INSERT INTO sessions (
+                       id, event_id, title, speaker_id, room_id,
+                       start_time, end_time, expected_attendance
+                   )
+                   VALUES (
+                       'ses_spk_overlap', 'ev_001', 'Clashing Talk', 'spk_01', 'room_comp_lab',
+                       '2026-12-17 10:15:00', '2026-12-17 11:15:00', 20
+                   )"""
+            )
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                """UPDATE sessions
+                   SET start_time = '2026-12-17 10:30:00',
+                       end_time = '2026-12-17 12:00:00'
+                   WHERE id = 'ses_spk_2'"""
+            )
+    finally:
+        conn.close()
+
+
+def test_setup_b_db_aborted_prompt_expected_blocked_counts_as_correct(tmp_path):
+    prompts = [
+        {
+            "id": "b-overlap",
+            "category": "high_conflict",
+            "prompt": "Book Main Auditorium at the exact same hour as an already confirmed keynote.",
+            "expected_result": "rolled_back_overlap",
+        },
+        {
+            "id": "b-capacity",
+            "category": "high_conflict",
+            "prompt": "Book Computing Lab (capacity 45) for 250 students.",
+            "expected_result": "rolled_back_capacity",
+        },
+    ]
+
+    report = run_evaluation.evaluate_prompts(
+        prompts,
+        results_path=tmp_path / "results.json",
+        entry_mode="shared",
+    )
+
+    setup_b = report["setups"]["setup_b"]
+    assert len(setup_b["cases"]) == 2
+    for case in setup_b["cases"]:
+        assert case["expected_state"] == "blocked"
+        assert case["actual_state"] == "error"
+        assert case["stopped_by"] == "db_constraint"
+        assert case["decided_by"] == "harness"
+        assert case["audit"]["audit_passed"] is True
+    assert setup_b["wrong_final_states"] == 0
+    assert setup_b["errors_caught"] == 2
+    assert setup_b["errors_missed"] == 0
