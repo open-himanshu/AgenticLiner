@@ -35,7 +35,7 @@ The application includes workflows for **campus facility requisitions, inventory
 +---------------+                +-----------------+                +---------------+
 ```
 
-Event budgets are recorded on the event, cost estimation is not implemented for Autopilot bookings (`estimated_cost` stays `0.0`), and there is no payment step or wallet table. Resource estimates use Ridge regression when enough historical records are available; otherwise the module uses a rule-based baseline.
+Campus bookings allocate university venues and equipment inventory directly, and there is no payment step or wallet table. Resource estimates use Ridge regression when enough historical records are available; otherwise the module uses a rule-based baseline.
 
 ---
 

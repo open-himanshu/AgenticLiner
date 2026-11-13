@@ -322,7 +322,7 @@
                     <i class="bi bi-lightning-charge-fill"></i> <span>Autonomous Agent</span>
                 </span>
                 <div class="input-group input-group-sm">
-                    <input type="text" class="form-control text-white bg-dark border-secondary" id="universalAgentInput" placeholder="Command AgenticLiner (e.g. 'Organise 2-day Robotics & AI Summit for 200 students with dinner and 35k budget' or 'Add venue Kalam Hall with 400 seats')..." style="font-size: 0.85rem;">
+                    <input type="text" class="form-control text-white bg-dark border-secondary" id="universalAgentInput" placeholder="Command AgenticLiner (e.g. 'Organise 2-day Robotics & AI Summit for 200 students with dinner' or 'Add venue Kalam Hall with 400 seats')..." style="font-size: 0.85rem;">
                     <button class="btn btn-primary fw-bold px-3" type="button" id="btnUniversalAgentRun">
                         <i class="bi bi-send-fill me-1"></i> Execute
                     </button>
@@ -332,10 +332,10 @@
             <!-- Quick Demo Prompts Chips -->
             <div class="d-flex align-items-center gap-1 overflow-x-auto text-nowrap py-1">
                 <span class="text-white-50 small me-1" style="font-size: 0.75rem;">Quick Prompts:</span>
-                <button class="btn btn-sm btn-outline-secondary text-light py-0 px-2" style="font-size: 0.75rem;" onclick="setUniversalPrompt('Organise a 2-day campus AI & Robotics Hackathon for 200 students with coding workshops, dinner catering, stage mics and 35k budget.')">
+                <button class="btn btn-sm btn-outline-secondary text-light py-0 px-2" style="font-size: 0.75rem;" onclick="setUniversalPrompt('Organise a 2-day campus AI & Robotics Hackathon for 200 students with coding workshops, dinner catering, and stage mics.')">
                     🚀 AI Hackathon (200 pax)
                 </button>
-                <button class="btn btn-sm btn-outline-secondary text-light py-0 px-2" style="font-size: 0.75rem;" onclick="setUniversalPrompt('Organise an annual dance & cultural fest for 150 students with sound system, stage lights and 20k budget.')">
+                <button class="btn btn-sm btn-outline-secondary text-light py-0 px-2" style="font-size: 0.75rem;" onclick="setUniversalPrompt('Organise an annual dance & cultural fest for 150 students with sound system and stage lights.')">
                     🎭 Cultural Fest (150 pax)
                 </button>
                 <button class="btn btn-sm btn-outline-secondary text-light py-0 px-2" style="font-size: 0.75rem;" onclick="setUniversalPrompt('Add venue APJ Abdul Kalam Auditorium with 450 seats in Tech Block')">
@@ -408,8 +408,8 @@
                                 <div class="small text-muted" id="resEventVenue">Venue Name</div>
                             </div>
                             <div class="text-end">
-                                <span class="badge bg-primary fs-6" id="resEventBudget">Budget: ₹35,000</span>
-                                <div class="small text-muted mt-1" id="resEventSavings">Savings: ₹10,000</div>
+                                <span class="badge bg-primary fs-6" id="resEventLogisticsStatus">Logistics: Approved</span>
+                                <div class="small text-muted mt-1" id="resEventSavings">Campus Quota: Allocated</div>
                             </div>
                         </div>
 
@@ -516,7 +516,7 @@
                     eventResultCard.style.display = 'block';
                     document.getElementById('resEventTitle').innerText = data.event_name;
                     document.getElementById('resEventVenue').innerHTML = `<b>Venue:</b> ${data.venue.name} (${data.headcount} pax)`;
-                    document.getElementById('resEventBudget').innerText = `Campus Logistics: Approved`;
+                    document.getElementById('resEventLogisticsStatus').innerText = `Campus Logistics: Approved`;
                     document.getElementById('resEventSavings').innerText = `University Quota: Full Access`;
 
                     if (data.action_urls) {

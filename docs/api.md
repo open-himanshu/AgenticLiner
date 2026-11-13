@@ -14,7 +14,7 @@ API endpoints enforce server-side session checks and Role-Based Access Control (
 
 Certificate QR codes and the analytics-page "Verify QR" link use `GET /verify/{cert_id}`. Set `PUBLIC_BASE_URL` to the externally reachable application origin (e.g., `https://events.example.edu`); when unset, certificate generation uses the incoming request origin.
 
-All planner actions accept a numeric `budget` that is recorded on the event; cost estimation is not implemented for Autopilot booking rows (`estimated_cost` defaults to `0.0`), budget limits are not enforced automatically, and there is no payment step or wallet table. Kavach limits outbox recipients using `KAVACH_MAX_RECIPIENTS` (default `500`), and planner operations that fail invariants after retries queue into the supervisor-only `GET /api/human-review` response.
+All planner actions accept a numeric `budget` (optional, not used); cost estimation is not implemented for Autopilot booking rows (`estimated_cost` defaults to `0.0`), and there is no payment step or wallet table. Kavach limits outbox recipients using `KAVACH_MAX_RECIPIENTS` (default `500`), and planner operations that fail invariants after retries queue into the supervisor-only `GET /api/human-review` response.
 
 ---
 
@@ -27,13 +27,14 @@ All planner actions accept a numeric `budget` that is recorded on the event; cos
 - **Request Body:**
   ```json
   {
-    "prompt": "Organize a campus coding hackathon for 150 students with budget 45000",
+    "prompt": "Organize a campus coding hackathon for 150 students",
     "budget": 45000.0,
     "date": "2026-11-25",
     "start_time": "09:00:00",
     "end_time": "17:00:00"
   }
   ```
+  *(The `budget` parameter is optional, not used; bookings allocate internal campus venues and equipment).*
 - **Response (Agent Mode):**
   ```json
   {

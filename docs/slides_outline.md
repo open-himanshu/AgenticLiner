@@ -27,7 +27,7 @@
   3. **Transactional Safety Engine (Kavach)**:
      - SQLite `SAVEPOINT` isolation.
      - Application-level checks include capacity, room overlap, speaker clashes, resource stock, time windows, recipient limits, and blast radius.
-     - Event budgets are recorded (cost estimation is not implemented for Autopilot bookings, budget limits are not enforced, and there is no payment step); guarded operations can stage outbox records and roll back changes if an invariant fails.
+     - Guarded operations can stage outbox records and roll back changes if an invariant fails.
 
 ---
 
@@ -48,7 +48,7 @@
 - **How Kavach is used**:
   - In agent mode, a model can request tools; resource requisitions go through the Kavach-guarded tool.
   - Kavach wraps its guarded operations in SQLite `SAVEPOINT`s.
-  - Requisition checks include venue capacity and overlap, resource stock, and time-window rules (budget is recorded only; cost estimation is not implemented and there is no payment step).
+  - Requisition checks include venue capacity and overlap, resource stock, and time-window rules.
   - When a guarded operation raises an invariant violation, Kavach rolls that operation back and returns violation details.
 
 ---

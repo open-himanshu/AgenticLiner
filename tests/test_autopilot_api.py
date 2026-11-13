@@ -56,7 +56,7 @@ def test_autopilot_api_returns_agent_result_metadata(monkeypatch):
 
     assert response.status_code == 200
     assert page_response.status_code == 200
-    assert 'id="agentBudget"' in page_response.text
+    assert 'id="agentBudget"' not in page_response.text
     assert 'id="executionMetadata"' in page_response.text
     result = response.json()
     assert result["mode"] == "agent"

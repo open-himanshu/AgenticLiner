@@ -20,7 +20,7 @@
 
 **AgenticLiner** is a comprehensive academic operations and intelligent event management platform built for universities. It replaces fragmented paper requisitions and ad-hoc spreadsheets with:
 - **Autonomous Multi-Turn Tool Calling:** Models (Gemini, Groq, Ollama) dynamically discover campus venues, inspect logistics inventory, consult historical trends, and draft bookings.
-- **Kavach Safety & Invariant Sandboxing:** Guarded operations execute within isolated SQLite savepoints that enforce room capacity, time overlaps, and stock quotas. The event budget is recorded, cost estimation is not implemented for Autopilot booking rows, and there is no payment step or wallet table. Any checked violation instantly rolls back state.
+- **Kavach Safety & Invariant Sandboxing:** Guarded operations execute within isolated SQLite savepoints that enforce room capacity, time overlaps, and stock quotas. Any checked violation instantly rolls back state.
 - **7 End-to-End Operational Modules:** Brief parsing, conflict-free timetable scheduling (Google OR-Tools CP-SAT), Flipkart-seller style inventory management, TF-IDF personalized attendee matchmaking, grounded communications outbox, feedback sentiment analysis, and verifiable PDF certificates with QR codes.
 
 ---
@@ -103,7 +103,7 @@ The Autopilot engine operates in two coordinated modes with automatic fallback:
      - `recommend_from_history`: Synthesizes equipment needs from historical campus events.
      - `ask_user`: Clarifies missing facts (strictly capped at 2 questions).
      - `requisition`: Executes atomic room and resource allocation through Kavach.
-   * **In-Code Hard Limits:** Max 8 conversation steps, recorded event budget (cost estimation is not implemented for Autopilot bookings and there is no payment step), recipient limits, and instant blocking of destructive instructions (`cancel all`, `purge`, `delete all`).
+   * **In-Code Hard Limits:** Max 8 conversation steps, recipient limits, and instant blocking of destructive instructions (`cancel all`, `purge`, `delete all`).
    * **Multi-Provider Switcher (`call_llm.py`):** Leave `PROVIDER` unset/empty for offline mode (default), or set `PROVIDER=gemini|groq|ollama` with models from `GEMINI_MODEL`, `GROQ_MODEL`, or `OLLAMA_MODEL`. Unreplaced template placeholders (e.g., `your_gemini_api_key_here`) are treated as unset keys before making outbound requests. Features automatic exponential backoff on HTTP 429/503.
 
 2. **Offline Deterministic Pipeline (`agent.py`, `AutopilotAgent`):**
@@ -128,7 +128,7 @@ The Autopilot engine operates in two coordinated modes with automatic fallback:
 6. **Netflix / Flipkart-Style Historical Recommendation Engine (Pillar 4 - Recommendation Engine):**
    * **Netflix Past Blueprint Matching (`recommendation_engine.py`):** Mines `historical_events` for past successful campus events matching format and scale, computing multidimensional vector distance, match percentage badges (80%–98%), and student satisfaction ratings (4.5★–4.9★).
    * **Flipkart Frequently Booked Together (FBT):** Market Basket association matrix computing conditional item probabilities with social proof tags (*"Booked by 95% of campus hackathon organisers"*), dynamic headcount scaling, and duplicate deduction.
-   * **Curated Turnkey Logistics Bundles:** 1-click curated kits ("Hackathon Developer & Power Pack", "Cultural Stage & Audio Gala Pack", "Executive Keynote Kit", "Refreshment Pack") with UI draft budget comparison (`fits_budget: bool`); cost estimation is not implemented for Autopilot booking rows (`budget` is recorded only and there is no payment step).
+   * **Curated Turnkey Logistics Bundles:** 1-click curated kits ("Hackathon Developer & Power Pack", "Cultural Stage & Audio Gala Pack", "Executive Keynote Kit", "Refreshment Pack"); campus venue and equipment bookings allocate university inventory directly without payment steps.
    * **Conversational Dialogue & Natural Speech Integration:** Proactively surfaces bundles during clarification questions and detects natural language or voice requests (*"Please add the hackathon power bundle"*), merging resources into the brief.
    * **Interactive Autopilot UI (`autopilot.html`):** Renders `#recommendationSection` with Netflix blueprint match banners, match % badges, 1-click bundle cards (`[ + Add Bundle to Event ]`), and individual accessory carousels.
 
@@ -140,7 +140,7 @@ The Autopilot engine operates in two coordinated modes with automatic fallback:
 
 8. **Autonomous Multi-Stakeholder Notification & Outbox Dispatch (Pillar 6):**
    * **Tripartite Audience Dispatch (`notification_engine.py`):** Generates customized contextual notifications for all three campus constituencies in the step immediately following a confirmed booking:
-     - **University Dean / Supervisor (`admin@galgotias.edu`):** Executive briefing on venue, scale, and budget with approval call-to-action (`[Action Required: Dean Approval]`).
+     - **University Dean / Supervisor (`admin@galgotias.edu`):** Executive briefing on venue and scale with approval call-to-action (`[Action Required: Dean Approval]`).
      - **Event Manager / Organiser (`organiser@galgotias.edu`):** Itemized booking receipt, equipment pickup checklist, and direct timetable link (`/schedule`).
      - **Registered Students / Attendees:** Campus event invitation with dynamic Digital QR Gate Pass verification links (`/participant?event_id=...`).
    * **Direct Outbox Recording & Audit Trail:** After booking commit, `notification_engine.py` inserts stakeholder notices directly into SQLite `outbox` with `status='sent'` and logs `STAKEHOLDER_BROADCAST` in `audit_log`. If a requisition rolls back, the notification step is skipped and 0 notice rows are inserted.
@@ -149,7 +149,7 @@ The Autopilot engine operates in two coordinated modes with automatic fallback:
 
 9. **Kavach Transaction Sandboxing (`kavach.py`):**
    * Uses SQLite savepoints (`SAVEPOINT sp_...`) to isolate all changes during a planning or confirmation run.
-   * Enforces runtime campus invariants on bookings: valid time windows (`end > start`), no room overlaps, room capacity compliance, equipment stock availability, notification recipient limits, and agent blast-radius caps. The event `budget` is recorded on events, while cost estimation is not implemented for Autopilot bookings so `estimated_cost` stays `0.0`, and there is no payment step or wallet table. *(A `verify_speaker_clash` helper exists in `kavach.py`, but runtime booking routes do not invoke it.)*
+   * Enforces runtime campus invariants on bookings: valid time windows (`end > start`), no room overlaps, room capacity compliance, equipment stock availability, notification recipient limits, and agent blast-radius caps. *(A `verify_speaker_clash` helper exists in `kavach.py`, but runtime booking routes do not invoke it.)*
    * Within `tool_requisition_campus_resources`, a confirmation row is inserted with `status='held'` inside the savepoint so any invariant failure rolls back all state (leaving 0 notification rows) and logs the rejection in `audit_log`.
 
 ---
@@ -260,7 +260,6 @@ Open **[http://127.0.0.1:8000](http://127.0.0.1:8000)** in your browser.
 - **Templates:** Stored in `frontend/templates/`. Uses Jinja2 inheritance with `base.html`.
 - **Styling:** Bootstrap 5.3 + Bootstrap Icons (`bi-*`).
 - **Autopilot UI (`frontend/templates/autopilot.html`):**
-  - `#agentBudget` exists in the form inside a hidden container (`d-none`) and defaults to `100000` for university logistics mode.
   - `#executionMetadata` displays execution details after a run:
     - **Mode:** `agent`, `fixed`, or `fixed_fallback`
     - **Provider & Model:** e.g., `gemini` / `gemini-3.1-flash-lite` (when an LLM provider is enabled)
