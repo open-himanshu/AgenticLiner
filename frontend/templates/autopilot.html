@@ -424,12 +424,12 @@
 
             <!-- Kavach Mechanism Card -->
             <div class="card card-custom p-3 bg-white border-start border-4 border-primary">
-                <h6 class="fw-bold mb-2"><i class="bi bi-shield-lock text-primary me-1"></i> Kavach Campus Guarantees</h6>
+                <h6 class="fw-bold mb-2"><i class="bi bi-shield-lock text-primary me-1"></i> Kavach Safety Checks</h6>
                 <ul class="list-unstyled small mb-0 text-muted">
                     <li class="mb-1">✓ <b>Isolated Savepoint:</b> All DB mutations run inside a checkpoint.</li>
                     <li class="mb-1">✓ <b>No Overlap:</b> Instant conflict rejection on double booking.</li>
                     <li class="mb-1">✓ <b>Capacity Guard:</b> Rejects bookings where attendance > room seats.</li>
-                    <li>✓ <b>Outbox Staging:</b> No notification leaves campus until commit.</li>
+                    <li>✓ <b>Outbox Staging:</b> Notices are written after the booking commits.</li>
                 </ul>
             </div>
         </div>
@@ -1298,7 +1298,7 @@
                         ${proposal.diff_summary.map(d => `<li class="list-group-item py-2 px-3"><i class="bi bi-arrow-right-short text-primary fs-6 me-1"></i><b>${d.split(':')[0]}:</b> ${d.split(':').slice(1).join(':')}</li>`).join('')}
                     </ul>
                     <div class="alert alert-light border small py-2 px-3 mb-3">
-                        <strong class="text-success"><i class="bi bi-shield-check me-1"></i> Kavach Safety Guarantees:</strong>
+                        <strong class="text-success"><i class="bi bi-shield-check me-1"></i> Kavach Safety Checks:</strong>
                         <div class="text-muted mt-1">Zero overlaps • Capacity within physical limits • Outbox held until authorization</div>
                     </div>
                     <div class="d-flex gap-2">

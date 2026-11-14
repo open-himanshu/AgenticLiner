@@ -10,8 +10,8 @@ pytestmark = pytest.mark.anyio
 
 async def test_no_budget_in_rendered_autopilot_planner_and_organiser_pages():
     """Verify that rendered autopilot, planner, and organiser pages contain no budget input,
-
     label, placeholder, or visible word 'budget'.
+    Also verify rendered pages contain none of: "Diya's Module", "Guarantees", "Screen #".
     """
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
@@ -25,17 +25,28 @@ async def test_no_budget_in_rendered_autopilot_planner_and_organiser_pages():
         )
         assert login_res.status_code == 302
 
-        for endpoint in ["/autopilot", "/organiser/planner", "/organiser"]:
+        for endpoint in [
+            "/autopilot",
+            "/organiser/planner",
+            "/organiser",
+            "/attendees",
+            "/notices",
+        ]:
             res = await client.get(endpoint)
             assert res.status_code == 200, f"Failed to fetch {endpoint}"
-            html = res.text.lower()
+            html = res.text
 
             # Assert no budget input element or id
-            assert 'id="agentbudget"' not in html, f"Found agentBudget id in {endpoint}"
-            assert 'name="budget"' not in html, f"Found budget name in {endpoint}"
+            assert 'id="agentbudget"' not in html.lower(), f"Found agentBudget id in {endpoint}"
+            assert 'name="budget"' not in html.lower(), f"Found budget name in {endpoint}"
 
             # Assert no visible 'budget' word in rendered HTML
-            assert "budget" not in html, f"Found 'budget' in rendered HTML of {endpoint}"
+            assert "budget" not in html.lower(), f"Found 'budget' in rendered HTML of {endpoint}"
+
+            # Assert rendered pages contain none of: "Diya's Module", "Guarantees", "Screen #"
+            assert "Diya's Module" not in html, f"Found \"Diya's Module\" in {endpoint}"
+            assert "Guarantees" not in html, f"Found 'Guarantees' in {endpoint}"
+            assert "Screen #" not in html, f"Found 'Screen #' in {endpoint}"
 
 
 def test_no_budget_in_readme_and_user_docs():
