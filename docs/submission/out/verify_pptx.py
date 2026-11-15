@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 from pptx import Presentation
 
-pptx_path = Path("docs/submission/out/OPEN_OUTLIERS_AgenticLiner.pptx")
+pptx_path = Path("docs/submission/out/OPEN.OUTLIERS_AgenticLiner.pptx")
 prs = Presentation(str(pptx_path))
 
 slide_count = len(prs.slides)

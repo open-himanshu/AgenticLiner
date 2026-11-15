@@ -8,6 +8,7 @@
 - **Project Name:** AgenticLiner [READ: `README.md:1`]
 - **Competition Track:** Challenge 1 — AI-Powered Intelligent Event Planning and Management Platform [READ: `README.md:3`]
 - **Event:** SparkX 3.0 Innovation Challenge, Galgotias University [READ: `README.md:3`]
+- **Submission Date:** 15-11-2026
 - **Core Problem:** "Event organisers coordinate rooms, speakers, equipment, volunteers, schedules, registrations and notices mostly by hand. An LLM assistant placed directly on this work can double-book a room, exceed capacity, leave a multi-step change half-finished, or send participants a notice for a change that never happened." [READ: user specification]
 - **Core Objectives:** [READ: `backend/core/`]
   1. Plan from a plain-language brief (entity extraction for event type, headcount, time window, requirements).
@@ -34,7 +35,7 @@
 | **Autopilot (Agent Mode)** | Autonomous multi-turn booking via tool calling (intake, venue search, resource rec, commit). | LLM function calling (Gemini / Groq / Ollama) | `backend/core/planner/agent_mode.py` | `[TEST: test_agent_mode]` (asserts scripted multi-turn tool calling, rejection retries, step capping, and fixed fallback on provider failure) | Multi-tool responses without `thought_signature` trigger fixed fallback. |
 | **Autopilot (Fixed Pipeline)** | Deterministic 5-step fallback execution ensuring booking completion without an LLM. | Procedural Python workflow orchestration | `backend/core/planner/agent.py` | `[TEST: test_autopilot_api]` (asserts endpoint metadata output, fallback reason handling, budget blocking, and role checks) | Follows static step order; cannot alter parameters dynamically. |
 | **Kavach Safety Engine** | Enforces 5 active invariants (capacity, room clash, time windows, stock, blast radius); rolls back on error. | Savepoint transaction with rollback, plus an outbox written after commit | `backend/core/safety/kavach.py` | `[TEST: test_kavach]` (asserts invariant validation for capacity/overlap/blast radius, savepoint rollback on violation, and staged outbox commit) | `verify_speaker_clash` unit-tested but not wired to runtime booking tool. |
-| **Login & RBAC** | Authenticates 4 roles (`supervisor`, `organiser`, `data_manager`, `participant`) with session cookies. | Session cookies + PBKDF2 hashing | `backend/api/auth_routes.py`, `dependencies.py` | `[TEST: test_auth]` (asserts password hashing, policy validation, OTP checks, and RBAC route enforcement) | Firebase token validation requires live network; demo login disabled by default. |
+| **Login & RBAC** | Authenticates 4 roles (`supervisor`, `organiser`, `data_manager`, `participant`) with session cookies. | Session cookies + bcrypt hashing | `backend/api/auth_routes.py`, `dependencies.py` | `[TEST: test_auth]` (asserts password hashing, policy validation, OTP checks, and RBAC route enforcement) | Firebase token validation requires live network; demo login disabled by default. |
 
 ---
 
@@ -47,36 +48,39 @@
   - *Database:* SQLite 3 database (`agenticliner.db`), isolated per scenario in tests.
 - **Data Flow:** [READ: `backend/core/planner/`]
   - User brief -> Module 1 parsing -> Autopilot Agent generates tool calls (or Fixed Pipeline executes) -> Venue discovery -> Logistics recommendation -> Kavach pre-commit invariant checks -> Atomic commit or rollback -> Outbox notification staged -> Module 2 timetable / QR / Certificate issuance.
-- **Database Tables (14 Core Tables):** [READ: `backend/core/database/schema.sql`]
-  1. `events`: Primary event entity (id, name, brief, event_type, expected_participants, budget, status, created_at, organizer_id).
-  2. `rooms`: Campus venues and capacity constraints (id, name, capacity, building, floor, room_type, requires_approval, image_url).
-  3. `speakers`: Guest speakers and availability windows (id, name, topic, availability_window, email, phone, bio, image_url).
-  4. `resources`: Equipment, power, AV, hospitality stock (id, name, category, stock, unit, cost_per_unit, image_url).
-  5. `sessions`: Event timetable blocks (id, event_id, title, speaker_id, room_id, start_time, end_time, expected_attendance).
-  6. `bookings`: Venue and resource allocations (id, event_id, room_id, resource_id, item_name, category, start_time, end_time, quantity, estimated_cost, approval_status, status).
-  7. `students`: Campus student roster (id, name, email, department, year, interests_json, registered_sessions_json).
-  8. `registrations`: Attendee status and check-in (id, event_id, student_id, student_name, student_email, department, year, interests_json, status, registered_at, checked_in).
-  9. `feedback`: Ratings and sentiment analysis (id, event_id, student_id, rating, comment, sentiment_label, sentiment_score, themes_json, submitted_at).
-  10. `certificates`: Verifiable credentials (id, event_id, student_id, certificate_hash, student_name, event_name, issue_date, file_path).
-  11. `outbox`: Staged transactional notifications (id, event_id, recipient, message, type, status, channel, scheduled_for, created_at, sent_at, error_message).
-  12. `audit_log`: Append-only audit trail (id, event_id, action, status, details, actor, created_at).
-  13. `agent_memories`: Persistent organizer preferences (id, key, memory_type, content, confidence, created_at, updated_at).
-  14. `unresolved_requests`: Quarantine queue for human review (id, request_data, violation_reason, attempt_count, created_at, status).
+- **Database Tables (18 Tables):** [READ: `backend/core/database/schema.sql`]
+  1. `users`: Campus user accounts, roles, lockout protection, and credential hashes.
+  2. `otp_verifications`: One-time password verification tokens for signup and password resets.
+  3. `events`: Primary event entity (id, name, brief, event_type, expected_participants, budget, status, created_at, organizer_id).
+  4. `rooms`: Campus venues and capacity constraints (id, name, capacity, building, floor, room_type, requires_approval, image_url).
+  5. `speakers`: Guest speakers and availability windows (id, name, topic, availability_window, email, phone, bio, image_url).
+  6. `resources`: Equipment, power, AV, hospitality stock (id, name, category, stock, unit, cost_per_unit, image_url).
+  7. `sessions`: Event timetable blocks (id, event_id, title, speaker_id, room_id, start_time, end_time, expected_attendance).
+  8. `bookings`: Venue and resource allocations (id, event_id, room_id, resource_id, item_name, category, start_time, end_time, quantity, estimated_cost, approval_status, status).
+  9. `students`: Campus student roster (id, name, email, department, year, interests_json, registered_sessions_json).
+  10. `registrations`: Attendee status and check-in (id, event_id, student_id, student_name, student_email, department, year, interests_json, status, registered_at, checked_in).
+  11. `attendance`: Gate attendance records and student check-in audit stamps (id, event_id, student_id, marked_by, marked_at, device_info).
+  12. `feedback`: Ratings and sentiment analysis (id, event_id, student_id, rating, comment, sentiment_label, sentiment_score, themes_json, submitted_at).
+  13. `outbox`: Staged transactional notifications (id, event_id, recipient, message, type, status, channel, scheduled_for, created_at, sent_at, error_message).
+  14. `certificates`: Verifiable credentials (id, event_id, student_id, certificate_hash, student_name, event_name, issue_date, file_path).
+  15. `audit_log`: Append-only audit trail (id, event_id, action, status, details, actor, created_at).
+  16. `human_review_queue`: Quarantine queue for human review of failed or rejected requests.
+  17. `historical_events`: Past events for recommendation engine blueprints and frequently booked items.
+  18. `agent_memories`: Persistent organizer preferences (id, key, memory_type, content, confidence, created_at, updated_at).
 - **Route Count:** 70 total route endpoints registered in `app.routes` (65 unique path/method combinations across 25 page views and 40+ REST endpoints). [RAN: FastAPI route inspection]
 
 ---
 
 ## 4. Technology Versions (`requirements.txt`)
 
-All 32 dependencies pinned in `requirements.txt`: [READ: `requirements.txt`]
-- `fastapi==0.162.0` | `uvicorn==0.42.0` | `jinja2==3.1.6` | `python-multipart==0.0.22`
-- `pydantic==2.13.1` | `python-dotenv==1.2.2` | `itsdangerous==2.3.0` | `ortools==9.15.6755`
-- `scikit-learn==1.9.1` | `numpy==2.4.4` | `scipy==1.17.1` | `reportlab==5.1.0`
-- `qrcode==8.2` | `pillow==12.1.1` | `google-genai==2.34.0` | `groq==1.0.0`
-- `httpx==0.30.0` | `pytest==9.0.3` | `pytest-asyncio==1.3.0` | `passlib==1.7.4`
-- `bcrypt==5.0.0` | `pyotp==2.9.0` | `authlib==1.6.11` | `firebase-admin==7.1.0`
-- `pyngrok==7.5.4` | `psutil==7.2.2` | `fpdf2==2.8.7` | `matplotlib==3.10.8`
-- `pandas==3.0.1` | `google-auth==2.47.0` | `cryptography==46.0.7` | `requests==2.33.1`
+All 21 dependencies pinned in `requirements.txt`: [READ: `requirements.txt`]
+- `fastapi==0.162.0` | `uvicorn==0.54.0` | `starlette==1.10.0` | `pydantic==2.14.1`
+- `python-dotenv==1.2.4` | `jinja2==3.1.6` | `python-multipart==0.0.32` | `google-genai==2.34.0`
+- `ortools==9.15.6755` | `scikit-learn==1.9.1` | `pandas==3.1.0` | `numpy==2.5.4`
+- `reportlab==5.1.0` | `qrcode==8.2` | `pillow==13.0.0` | `bcrypt==5.0.0`
+- `itsdangerous==2.2.0` | `firebase-admin==7.7.0` | `pytest==9.2.0` | `httpx==0.28.1`
+- `anyio==4.15.1`
+- *Note:* Groq and Ollama are called over plain HTTP via `httpx` (no external SDK packages required).
 
 ---
 
@@ -228,7 +232,7 @@ Direct code inspection against current repository files: [READ]
 
 ## 10. Run Instructions (Verified Against `README.md`)
 
-Step-by-step reproduction instructions: [READ: `README.md:170-256`, `RELEASE_CHECK.md`]
+Step-by-step reproduction instructions: [READ: `README.md:170-256`, `docs/internal/RELEASE_CHECK.md`]
 ```bash
 # 1. Clone repository and navigate to directory
 git clone https://github.com/open-himanshu/AgenticLiner.git

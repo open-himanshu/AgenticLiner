@@ -403,7 +403,7 @@ endobj
 endobj
 46 0 obj
 <<
-/Author (\(anonymous\)) /CreationDate (D:20261115002120+05'00') /Creator (\(unspecified\)) /Keywords () /ModDate (D:20261115002120+05'00') /Producer (ReportLab PDF Library - \(opensource\)) 
+/Author (\(anonymous\)) /CreationDate (D:20261115143317+05'00') /Creator (\(unspecified\)) /Keywords () /ModDate (D:20261115143317+05'00') /Producer (ReportLab PDF Library - \(opensource\)) 
   /Subject (\(unspecified\)) /Title (\(anonymous\)) /Trapped /False
 >>
 endobj
@@ -583,7 +583,7 @@ q
 1 0 0 1 162 5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (14-11-2026) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (15-11-2026) Tj T* ET
 Q
 Q
 q
@@ -692,7 +692,7 @@ endstream
 endobj
 50 0 obj
 <<
-/Length 5669
+/Length 5639
 >>
 stream
 1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
@@ -743,7 +743,7 @@ Q
 q
 1 0 0 1 60 522 cm
 q
-BT 1 0 0 1 12 26 Tm -8 0 Td 11.5 TL /F1 8.5 Tf .117647 .160784 .231373 rg (- ) Tj /F3 8.5 Tf (6. Post-Event Feedback & Verifiable Credentials:) Tj /F1 8.5 Tf ( Analyze attendee feedback using rule-based sentiment classification and) Tj T* 8 0 Td (issue tamper-evident SHA-256 PDF certificates with a SHA-256 hash recorded in the database and checked on the verify page) Tj T* (\(a hash, not a digital signature\) and scannable QR verification.) Tj T* ET
+BT 1 0 0 1 12 26 Tm -8 0 Td 11.5 TL /F1 8.5 Tf .117647 .160784 .231373 rg (- ) Tj /F3 8.5 Tf (6. Post-Event Feedback & Verifiable Credentials:) Tj /F1 8.5 Tf ( Analyze attendee feedback with rule-based sentiment classification and) Tj T* 8 0 Td (issue certificates whose SHA-256 hash is recorded in the database and checked on the verify page \(a hash, not a digital) Tj T* (signature\), with a scannable QR code.) Tj T* ET
 Q
 Q
 q
@@ -922,7 +922,7 @@ endstream
 endobj
 52 0 obj
 <<
-/Length 15116
+/Length 11227
 >>
 stream
 1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
@@ -934,745 +934,518 @@ BT 1 0 0 1 0 4 Tm /F3 15 Tf 19 TL (5. Technologies Used) Tj T* ET
 Q
 Q
 q
-1 0 0 1 60 680 cm
+1 0 0 1 60 667.5 cm
 q
 .117647 .160784 .231373 rg
-BT 1 0 0 1 0 16 Tm /F1 9 Tf 12.5 TL (All software components in AgenticLiner are pinned to explicit dependency versions defined in `requirements.txt`. The) Tj T* (system requires Python 3.10 to 3.13 and operates entirely offline by default.) Tj T* ET
+BT 1 0 0 1 0 28.5 Tm /F1 9 Tf 12.5 TL (All 21 software dependencies in AgenticLiner are pinned to explicit versions defined in `requirements.txt`. The system) Tj T* (requires Python 3.10 to 3.13 and operates entirely offline by default. External LLM providers Groq and local Ollama are) Tj T* (called over plain HTTP via httpx, requiring no vendor-specific SDK packages.) Tj T* ET
 Q
 Q
 q
-1 0 0 1 60 670 cm
+1 0 0 1 60 657.5 cm
 Q
 q
-1 0 0 1 54 431.5 cm
+1 0 0 1 54 489 cm
 q
 .058824 .090196 .164706 rg
-n 0 238.5 504 -14.5 re f*
+n 0 168.5 504 -14.5 re f*
 0 0 0 rg
 BT /F1 10 Tf 12 TL ET
 q
-1 0 0 1 4 226.5 cm
-q
-1 1 1 rg
-BT 1 0 0 1 0 2 Tm /F3 7.5 Tf 9.5 TL (Package) Tj T* ET
-Q
-Q
-q
-1 0 0 1 69 226.5 cm
-q
-1 1 1 rg
-BT 1 0 0 1 0 2 Tm /F3 7.5 Tf 9.5 TL (Version) Tj T* ET
-Q
-Q
-q
-1 0 0 1 114 226.5 cm
-q
-1 1 1 rg
-BT 1 0 0 1 0 2 Tm /F3 7.5 Tf 9.5 TL (Role in Platform) Tj T* ET
-Q
-Q
-q
-1 0 0 1 256 226.5 cm
-q
-1 1 1 rg
-BT 1 0 0 1 0 2 Tm /F3 7.5 Tf 9.5 TL (Package) Tj T* ET
-Q
-Q
-q
-1 0 0 1 321 226.5 cm
-q
-1 1 1 rg
-BT 1 0 0 1 0 2 Tm /F3 7.5 Tf 9.5 TL (Version) Tj T* ET
-Q
-Q
-q
-1 0 0 1 366 226.5 cm
-q
-1 1 1 rg
-BT 1 0 0 1 0 2 Tm /F3 7.5 Tf 9.5 TL (Role in Platform) Tj T* ET
-Q
-Q
-q
-1 0 0 1 4 212.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (fastapi) Tj T* ET
-Q
-Q
-q
-1 0 0 1 69 212.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 6.824 0 Td (0.162.0) Tj T* -6.824 0 Td ET
-Q
-Q
-q
-1 0 0 1 114 212.5 cm
-q
-BT 1 0 0 1 0 2 Tm 9 TL /F1 7 Tf .058824 .090196 .164706 rg (Core ASGI REST API & SSR) Tj T* ET
-Q
-Q
-q
-1 0 0 1 256 212.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (httpx) Tj T* ET
-Q
-Q
-q
-1 0 0 1 321 212.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (0.30.0) Tj T* -8.77 0 Td ET
-Q
-Q
-q
-1 0 0 1 366 212.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Async HTTP client for LLM API) Tj T* ET
-Q
-Q
-q
-1 0 0 1 4 198.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (uvicorn) Tj T* ET
-Q
-Q
-q
-1 0 0 1 69 198.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (0.42.0) Tj T* -8.77 0 Td ET
-Q
-Q
-q
-1 0 0 1 114 198.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (High-performance ASGI server) Tj T* ET
-Q
-Q
-q
-1 0 0 1 256 198.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (pytest) Tj T* ET
-Q
-Q
-q
-1 0 0 1 321 198.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (9.0.3) Tj T* -10.716 0 Td ET
-Q
-Q
-q
-1 0 0 1 366 198.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Automated test framework) Tj T* ET
-Q
-Q
-q
-1 0 0 1 4 184.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (jinja2) Tj T* ET
-Q
-Q
-q
-1 0 0 1 69 184.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (3.1.6) Tj T* -10.716 0 Td ET
-Q
-Q
-q
-1 0 0 1 114 184.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Server-Side HTML template rendering) Tj T* ET
-Q
-Q
-q
-1 0 0 1 256 184.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (pytest-asyncio) Tj T* ET
-Q
-Q
-q
-1 0 0 1 321 184.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (1.3.0) Tj T* -10.716 0 Td ET
-Q
-Q
-q
-1 0 0 1 366 184.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Async endpoint test runner) Tj T* ET
-Q
-Q
-q
-1 0 0 1 4 170.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (python-multipart) Tj T* ET
-Q
-Q
-q
-1 0 0 1 69 170.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (0.0.22) Tj T* -8.77 0 Td ET
-Q
-Q
-q
-1 0 0 1 114 170.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (HTTP form and file upload parser) Tj T* ET
-Q
-Q
-q
-1 0 0 1 256 170.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (passlib) Tj T* ET
-Q
-Q
-q
-1 0 0 1 321 170.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (1.7.4) Tj T* -10.716 0 Td ET
-Q
-Q
-q
-1 0 0 1 366 170.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Password hashing utilities) Tj T* ET
-Q
-Q
-q
 1 0 0 1 4 156.5 cm
 q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (pydantic) Tj T* ET
+1 1 1 rg
+BT 1 0 0 1 0 2 Tm /F3 7.5 Tf 9.5 TL (Package) Tj T* ET
 Q
 Q
 q
 1 0 0 1 69 156.5 cm
 q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (2.13.1) Tj T* -8.77 0 Td ET
+1 1 1 rg
+BT 1 0 0 1 0 2 Tm /F3 7.5 Tf 9.5 TL (Version) Tj T* ET
 Q
 Q
 q
 1 0 0 1 114 156.5 cm
 q
-BT 1 0 0 1 0 2 Tm 9 TL /F1 7 Tf .058824 .090196 .164706 rg (Data schema validation & settings) Tj T* ET
+1 1 1 rg
+BT 1 0 0 1 0 2 Tm /F3 7.5 Tf 9.5 TL (Role in Platform) Tj T* ET
 Q
 Q
 q
 1 0 0 1 256 156.5 cm
 q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (bcrypt) Tj T* ET
+1 1 1 rg
+BT 1 0 0 1 0 2 Tm /F3 7.5 Tf 9.5 TL (Package) Tj T* ET
 Q
 Q
 q
 1 0 0 1 321 156.5 cm
 q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (5.0.0) Tj T* -10.716 0 Td ET
+1 1 1 rg
+BT 1 0 0 1 0 2 Tm /F3 7.5 Tf 9.5 TL (Version) Tj T* ET
 Q
 Q
 q
 1 0 0 1 366 156.5 cm
 q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Blowfish password cipher) Tj T* ET
+1 1 1 rg
+BT 1 0 0 1 0 2 Tm /F3 7.5 Tf 9.5 TL (Role in Platform) Tj T* ET
 Q
 Q
 q
 1 0 0 1 4 142.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (python-dotenv) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (fastapi) Tj T* ET
 Q
 Q
 q
 1 0 0 1 69 142.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (1.2.2) Tj T* -10.716 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 6.824 0 Td (0.162.0) Tj T* -6.824 0 Td ET
 Q
 Q
 q
 1 0 0 1 114 142.5 cm
 q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Environment configuration loader) Tj T* ET
+BT 1 0 0 1 0 2 Tm 9 TL /F1 7 Tf .058824 .090196 .164706 rg (Core ASGI REST API & SSR) Tj T* ET
 Q
 Q
 q
 1 0 0 1 256 142.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (pyotp) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (numpy) Tj T* ET
 Q
 Q
 q
 1 0 0 1 321 142.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (2.9.0) Tj T* -10.716 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (2.5.4) Tj T* -10.716 0 Td ET
 Q
 Q
 q
 1 0 0 1 366 142.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Time-based OTP token service) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Vector mathematics array engine) Tj T* ET
 Q
 Q
 q
 1 0 0 1 4 128.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (itsdangerous) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (uvicorn) Tj T* ET
 Q
 Q
 q
 1 0 0 1 69 128.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (2.3.0) Tj T* -10.716 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (0.54.0) Tj T* -8.77 0 Td ET
 Q
 Q
 q
 1 0 0 1 114 128.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Cryptographic cookie signing) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (High-performance ASGI server) Tj T* ET
 Q
 Q
 q
 1 0 0 1 256 128.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (authlib) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (reportlab) Tj T* ET
 Q
 Q
 q
 1 0 0 1 321 128.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (1.6.11) Tj T* -8.77 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (5.1.0) Tj T* -10.716 0 Td ET
 Q
 Q
 q
 1 0 0 1 366 128.5 cm
 q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (OAuth2 and OpenID protocol suite) Tj T* ET
+BT 1 0 0 1 0 2 Tm 9 TL /F1 7 Tf .058824 .090196 .164706 rg (Vector report & certificate engine) Tj T* ET
 Q
 Q
 q
 1 0 0 1 4 114.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (ortools) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (starlette) Tj T* ET
 Q
 Q
 q
 1 0 0 1 69 114.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 2.932 0 Td (9.15.6755) Tj T* -2.932 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (1.10.0) Tj T* -8.77 0 Td ET
 Q
 Q
 q
 1 0 0 1 114 114.5 cm
 q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Google CP-SAT constraint solver) Tj T* ET
+BT 1 0 0 1 0 2 Tm 9 TL /F1 7 Tf .058824 .090196 .164706 rg (ASGI toolkit & routing primitives) Tj T* ET
 Q
 Q
 q
 1 0 0 1 256 114.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (firebase-admin) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (qrcode) Tj T* ET
 Q
 Q
 q
 1 0 0 1 321 114.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (7.1.0) Tj T* -10.716 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 13.635 0 Td (8.2) Tj T* -13.635 0 Td ET
 Q
 Q
 q
 1 0 0 1 366 114.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Firebase token verification) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (2D Quick-Response code generator) Tj T* ET
 Q
 Q
 q
 1 0 0 1 4 100.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (scikit-learn) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (pydantic) Tj T* ET
 Q
 Q
 q
 1 0 0 1 69 100.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (1.9.1) Tj T* -10.716 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (2.14.1) Tj T* -8.77 0 Td ET
 Q
 Q
 q
 1 0 0 1 114 100.5 cm
 q
-BT 1 0 0 1 0 2 Tm 9 TL /F1 7 Tf .058824 .090196 .164706 rg (TF-IDF & Ridge logistics models) Tj T* ET
+BT 1 0 0 1 0 2 Tm 9 TL /F1 7 Tf .058824 .090196 .164706 rg (Data schema validation & settings) Tj T* ET
 Q
 Q
 q
 1 0 0 1 256 100.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (pyngrok) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (pillow) Tj T* ET
 Q
 Q
 q
 1 0 0 1 321 100.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (7.5.4) Tj T* -10.716 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (13.0.0) Tj T* -8.77 0 Td ET
 Q
 Q
 q
 1 0 0 1 366 100.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Tunneling for test webhooks) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Raster image manipulation library) Tj T* ET
 Q
 Q
 q
 1 0 0 1 4 86.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (numpy) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (python-dotenv) Tj T* ET
 Q
 Q
 q
 1 0 0 1 69 86.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (2.4.4) Tj T* -10.716 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (1.2.4) Tj T* -10.716 0 Td ET
 Q
 Q
 q
 1 0 0 1 114 86.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Vector mathematics array engine) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Environment configuration loader) Tj T* ET
 Q
 Q
 q
 1 0 0 1 256 86.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (psutil) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (bcrypt) Tj T* ET
 Q
 Q
 q
 1 0 0 1 321 86.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (7.2.2) Tj T* -10.716 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (5.0.0) Tj T* -10.716 0 Td ET
 Q
 Q
 q
 1 0 0 1 366 86.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Process and system monitor) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Blowfish password cipher) Tj T* ET
 Q
 Q
 q
 1 0 0 1 4 72.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (scipy) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (jinja2) Tj T* ET
 Q
 Q
 q
 1 0 0 1 69 72.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (1.17.1) Tj T* -8.77 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (3.1.6) Tj T* -10.716 0 Td ET
 Q
 Q
 q
 1 0 0 1 114 72.5 cm
 q
-BT 1 0 0 1 0 2 Tm 9 TL /F1 7 Tf .058824 .090196 .164706 rg (Sparse matrices & distance metrics) Tj T* ET
+.058824 .090196 .164706 rg
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Server-Side HTML template rendering) Tj T* ET
 Q
 Q
 q
 1 0 0 1 256 72.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (fpdf2) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (itsdangerous) Tj T* ET
 Q
 Q
 q
 1 0 0 1 321 72.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (2.8.7) Tj T* -10.716 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (2.2.0) Tj T* -10.716 0 Td ET
 Q
 Q
 q
 1 0 0 1 366 72.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Alternative PDF generation) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Cryptographic cookie signing) Tj T* ET
 Q
 Q
 q
 1 0 0 1 4 58.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (reportlab) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (python-multipart) Tj T* ET
 Q
 Q
 q
 1 0 0 1 69 58.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (5.1.0) Tj T* -10.716 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (0.0.32) Tj T* -8.77 0 Td ET
 Q
 Q
 q
 1 0 0 1 114 58.5 cm
 q
-BT 1 0 0 1 0 2 Tm 9 TL /F1 7 Tf .058824 .090196 .164706 rg (Vector report & certificate engine) Tj T* ET
+.058824 .090196 .164706 rg
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (HTTP form and file upload parser) Tj T* ET
 Q
 Q
 q
 1 0 0 1 256 58.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (matplotlib) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (firebase-admin) Tj T* ET
 Q
 Q
 q
 1 0 0 1 321 58.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (3.10.8) Tj T* -8.77 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (7.7.0) Tj T* -10.716 0 Td ET
 Q
 Q
 q
 1 0 0 1 366 58.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Static chart and plot renderer) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Firebase token verification) Tj T* ET
 Q
 Q
 q
 1 0 0 1 4 44.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (qrcode) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (google-genai) Tj T* ET
 Q
 Q
 q
 1 0 0 1 69 44.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 13.635 0 Td (8.2) Tj T* -13.635 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (2.34.0) Tj T* -8.77 0 Td ET
 Q
 Q
 q
 1 0 0 1 114 44.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (2D Quick-Response code generator) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Official Google Gemini SDK) Tj T* ET
 Q
 Q
 q
 1 0 0 1 256 44.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (pandas) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (pytest) Tj T* ET
 Q
 Q
 q
 1 0 0 1 321 44.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (3.0.1) Tj T* -10.716 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (9.2.0) Tj T* -10.716 0 Td ET
 Q
 Q
 q
 1 0 0 1 366 44.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Tabular CSV catalog sync engine) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Automated test framework) Tj T* ET
 Q
 Q
 q
 1 0 0 1 4 30.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (pillow) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (ortools) Tj T* ET
 Q
 Q
 q
 1 0 0 1 69 30.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (12.1.1) Tj T* -8.77 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 2.932 0 Td (9.15.6755) Tj T* -2.932 0 Td ET
 Q
 Q
 q
 1 0 0 1 114 30.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Raster image manipulation library) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Google CP-SAT constraint solver) Tj T* ET
 Q
 Q
 q
 1 0 0 1 256 30.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (google-auth) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (httpx) Tj T* ET
 Q
 Q
 q
 1 0 0 1 321 30.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (2.47.0) Tj T* -8.77 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (0.28.1) Tj T* -8.77 0 Td ET
 Q
 Q
 q
 1 0 0 1 366 30.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Google identity token library) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Async HTTP client for LLM API) Tj T* ET
 Q
 Q
 q
 1 0 0 1 4 16.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (google-genai) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (scikit-learn) Tj T* ET
 Q
 Q
 q
 1 0 0 1 69 16.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (2.34.0) Tj T* -8.77 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (1.9.1) Tj T* -10.716 0 Td ET
 Q
 Q
 q
 1 0 0 1 114 16.5 cm
 q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Official Google Gemini SDK) Tj T* ET
+BT 1 0 0 1 0 2 Tm 9 TL /F1 7 Tf .058824 .090196 .164706 rg (TF-IDF & Ridge logistics models) Tj T* ET
 Q
 Q
 q
 1 0 0 1 256 16.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (cryptography) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (anyio) Tj T* ET
 Q
 Q
 q
 1 0 0 1 321 16.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (46.0.7) Tj T* -8.77 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (4.15.1) Tj T* -8.77 0 Td ET
 Q
 Q
 q
 1 0 0 1 366 16.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Low-level cryptographic ciphers) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Asynchronous concurrency backend) Tj T* ET
 Q
 Q
 q
 1 0 0 1 4 2.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (groq) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (pandas) Tj T* ET
 Q
 Q
 q
 1 0 0 1 69 2.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (1.0.0) Tj T* -10.716 0 Td ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 10.716 0 Td (3.1.0) Tj T* -10.716 0 Td ET
 Q
 Q
 q
 1 0 0 1 114 2.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Groq LPU cloud client library) Tj T* ET
+BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Tabular CSV catalog sync engine) Tj T* ET
 Q
 Q
 q
 1 0 0 1 256 2.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F3 7 Tf 9 TL (requests) Tj T* ET
-Q
 Q
 q
 1 0 0 1 321 2.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL 8.77 0 Td (2.33.1) Tj T* -8.77 0 Td ET
-Q
 Q
 q
 1 0 0 1 366 2.5 cm
-q
-.058824 .090196 .164706 rg
-BT 1 0 0 1 0 2 Tm /F1 7 Tf 9 TL (Synchronous HTTP client library) Tj T* ET
-Q
 Q
 q
 1 J
 1 j
 .796078 .835294 .882353 RG
 .5 w
-n 0 238.5 m 504 238.5 l S
+n 0 168.5 m 504 168.5 l S
 n 0 0 m 504 0 l S
-n 0 0 m 0 238.5 l S
-n 504 0 m 504 238.5 l S
-n 0 224 m 504 224 l S
-n 0 210 m 504 210 l S
-n 0 196 m 504 196 l S
-n 0 182 m 504 182 l S
-n 0 168 m 504 168 l S
+n 0 0 m 0 168.5 l S
+n 504 0 m 504 168.5 l S
 n 0 154 m 504 154 l S
 n 0 140 m 504 140 l S
 n 0 126 m 504 126 l S
@@ -1684,51 +1457,51 @@ n 0 56 m 504 56 l S
 n 0 42 m 504 42 l S
 n 0 28 m 504 28 l S
 n 0 14 m 504 14 l S
-n 65 0 m 65 238.5 l S
-n 110 0 m 110 238.5 l S
-n 252 0 m 252 238.5 l S
-n 317 0 m 317 238.5 l S
-n 362 0 m 362 238.5 l S
+n 65 0 m 65 168.5 l S
+n 110 0 m 110 168.5 l S
+n 252 0 m 252 168.5 l S
+n 317 0 m 317 168.5 l S
+n 362 0 m 362 168.5 l S
 Q
 Q
 Q
 q
-1 0 0 1 60 419 cm
+1 0 0 1 60 476.5 cm
 q
 .278431 .333333 .411765 rg
 BT 1 0 0 1 0 2 Tm /F4 7.5 Tf 9.5 TL (Source: docs/submission/FACT_SHEET.md) Tj T* ET
 Q
 Q
 q
-1 0 0 1 60 409 cm
+1 0 0 1 60 466.5 cm
 Q
 q
-1 0 0 1 60 386 cm
+1 0 0 1 60 443.5 cm
 q
 .117647 .160784 .231373 rg
 BT 1 0 0 1 0 3.5 Tm /F3 11.5 Tf 15 TL (Key Technological Subsystems) Tj T* ET
 Q
 Q
 q
-1 0 0 1 60 358 cm
+1 0 0 1 60 415.5 cm
 q
-BT 1 0 0 1 12 14.5 Tm -8 0 Td 11.5 TL /F1 8.5 Tf .117647 .160784 .231373 rg (- ) Tj /F3 8.5 Tf (FastAPI Web Application:) Tj /F1 8.5 Tf ( Delivers asynchronous request handling across 70 registered endpoints. Session authentication) Tj T* 8 0 Td (uses session middleware with PBKDF2 password hashing.) Tj T* ET
+BT 1 0 0 1 12 14.5 Tm -8 0 Td 11.5 TL /F1 8.5 Tf .117647 .160784 .231373 rg (- ) Tj /F3 8.5 Tf (FastAPI Web Application:) Tj /F1 8.5 Tf ( Delivers asynchronous request handling across 70 registered endpoints. Session authentication) Tj T* 8 0 Td (uses session middleware with bcrypt password hashing.) Tj T* ET
 Q
 Q
 q
-1 0 0 1 60 332 cm
+1 0 0 1 60 389.5 cm
 q
 BT 1 0 0 1 12 14.5 Tm -8 0 Td 11.5 TL /F1 8.5 Tf .117647 .160784 .231373 rg (- ) Tj /F3 8.5 Tf (Google OR-Tools CP-SAT Solver:) Tj /F1 8.5 Tf ( Solves timetable allocations as mathematical constraint satisfaction problems, modeling) Tj T* 8 0 Td (room occupancy intervals, capacity thresholds, and prerequisite dependencies.) Tj T* ET
 Q
 Q
 q
-1 0 0 1 60 306 cm
+1 0 0 1 60 363.5 cm
 q
 BT 1 0 0 1 12 14.5 Tm -8 0 Td 11.5 TL /F1 8.5 Tf .117647 .160784 .231373 rg (- ) Tj /F3 8.5 Tf (Scikit-Learn Machine Learning:) Tj /F1 8.5 Tf ( Provides TF-IDF vectorization and cosine similarity calculations for participant track) Tj T* 8 0 Td (recommendations and historical Ridge regression for logistics estimates.) Tj T* ET
 Q
 Q
 q
-1 0 0 1 60 280 cm
+1 0 0 1 60 337.5 cm
 q
 BT 1 0 0 1 12 14.5 Tm -8 0 Td 11.5 TL /F1 8.5 Tf .117647 .160784 .231373 rg (- ) Tj /F3 8.5 Tf (ReportLab Document Engine:) Tj /F1 8.5 Tf ( Generates tamper-evident PDF digital credentials with a SHA-256 hash recorded in the) Tj T* 8 0 Td (database and checked on the verify page \(a hash, not a digital signature\) and a verification QR code.) Tj T* ET
 Q
@@ -1738,7 +1511,7 @@ endstream
 endobj
 53 0 obj
 <<
-/Length 6586
+/Length 6592
 >>
 stream
 1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
@@ -1953,7 +1726,7 @@ q
 BT /F3 9 Tf 10.8 TL ET
 BT /F3 9 Tf 10.8 TL ET
 .2 .254902 .333333 rg
-BT 1 0 0 1 112.212 17 Tm (Persistence Tier: SQLite Database \(14 Tables\), Outbox, Audit Log) Tj T* ET
+BT 1 0 0 1 112.212 17 Tm (Persistence Tier: SQLite Database \(18 Tables\), Outbox, Audit Log) Tj T* ET
 Q
 Q
 Q
@@ -1977,7 +1750,7 @@ Q
 q
 1 0 0 1 60 312.5 cm
 q
-BT 1 0 0 1 12 26 Tm -8 0 Td -0.060156 Tw 11.5 TL /F1 8.5 Tf .117647 .160784 .231373 rg (- ) Tj /F3 8.5 Tf (Tier 2: API Gateway & Security:) Tj /F1 8.5 Tf ( FastAPI ASGI application server managing session-based authentication and role-based route) Tj T* 0 Tw 8 0 Td (guards. Password verification utilizes PBKDF2-HMAC-SHA256. Public tunnel safeguards prohibit demo authentication when) Tj T* (public network ingress is detected.) Tj T* ET
+BT 1 0 0 1 12 26 Tm -8 0 Td -0.060156 Tw 11.5 TL /F1 8.5 Tf .117647 .160784 .231373 rg (- ) Tj /F3 8.5 Tf (Tier 2: API Gateway & Security:) Tj /F1 8.5 Tf ( FastAPI ASGI application server managing session-based authentication and role-based route) Tj T* 0 Tw 8 0 Td -0.065821 Tw (guards. Password verification utilizes bcrypt. Public tunnel safeguards prohibit demo authentication when public network ingress) Tj T* 0 Tw (is detected.) Tj T* ET
 Q
 Q
 q
@@ -2001,7 +1774,7 @@ Q
 q
 1 0 0 1 60 174 cm
 q
-BT 1 0 0 1 12 14.5 Tm -8 0 Td 11.5 TL /F1 8.5 Tf .117647 .160784 .231373 rg (- ) Tj /F3 8.5 Tf (Tier 6: Persistence & Audit Layer:) Tj /F1 8.5 Tf ( Embedded SQLite 3 database \(agenticliner.db\) structured across 14 relational tables.) Tj T* 8 0 Td (Outbox notifications and append-only audit log entries are recorded transactionally to ensure state traceability.) Tj T* ET
+BT 1 0 0 1 12 14.5 Tm -8 0 Td 11.5 TL /F1 8.5 Tf .117647 .160784 .231373 rg (- ) Tj /F3 8.5 Tf (Tier 6: Persistence & Audit Layer:) Tj /F1 8.5 Tf ( Embedded SQLite 3 database \(agenticliner.db\) structured across 18 relational tables.) Tj T* 8 0 Td (Outbox notifications and append-only audit log entries are recorded transactionally to ensure state traceability.) Tj T* ET
 Q
 Q
  
@@ -2463,7 +2236,7 @@ q
 1 0 0 1 193 2.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 11 Tm /F1 7 Tf 9 TL (Session cookies + PBKDF2) Tj T* (hashing) Tj T* ET
+BT 1 0 0 1 0 11 Tm /F1 7 Tf 9 TL (Session cookies + bcrypt) Tj T* (hashing) Tj T* ET
 Q
 Q
 q
@@ -4817,7 +4590,7 @@ endstream
 endobj
 61 0 obj
 <<
-/Length 3481
+/Length 3457
 >>
 stream
 1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
@@ -4831,7 +4604,7 @@ Q
 q
 1 0 0 1 60 680 cm
 q
-BT 1 0 0 1 0 16 Tm 12.5 TL /F1 9 Tf .117647 .160784 .231373 rg (AgenticLiner was developed by Team ) Tj /F3 9 Tf (OPEN.OUTLIERS) Tj /F1 9 Tf ( for the SparkX 3.0 Innovation Challenge at Galgotias University.) Tj T* (Team member roles and contributions are documented below directly from TEAM.md:) Tj T* ET
+BT 1 0 0 1 0 16 Tm 12.5 TL /F1 9 Tf .117647 .160784 .231373 rg (AgenticLiner was developed by Team ) Tj /F3 9 Tf (OPEN.OUTLIERS) Tj /F1 9 Tf ( for the SparkX 3.0 Innovation Challenge at Galgotias University.) Tj T* (Team member roles and contributions are outlined below:) Tj T* ET
 Q
 Q
 q
@@ -5794,7 +5567,7 @@ q
 1 0 0 1 324 345.5 cm
 q
 .058824 .090196 .164706 rg
-BT 1 0 0 1 0 11 Tm /F1 7 Tf 9 TL (Form authentication endpoint validating PBKDF2) Tj T* (password hashes) Tj T* ET
+BT 1 0 0 1 0 11 Tm /F1 7 Tf 9 TL (Form authentication endpoint validating bcrypt password) Tj T* (hashes) Tj T* ET
 Q
 Q
 q
@@ -6973,31 +6746,31 @@ xref
 0002135936 00000 n 
 0002139044 00000 n 
 0002143538 00000 n 
-0002149259 00000 n 
-0002154843 00000 n 
-0002170012 00000 n 
-0002176650 00000 n 
-0002187003 00000 n 
-0002196118 00000 n 
-0002203269 00000 n 
-0002225441 00000 n 
-0002231816 00000 n 
-0002236133 00000 n 
-0002239828 00000 n 
-0002243361 00000 n 
-0002248629 00000 n 
-0002249727 00000 n 
-0002250855 00000 n 
-0002251992 00000 n 
-0002253094 00000 n 
-0002254237 00000 n 
-0002255364 00000 n 
-0002256541 00000 n 
-0002268535 00000 n 
+0002149229 00000 n 
+0002154813 00000 n 
+0002166093 00000 n 
+0002172737 00000 n 
+0002183090 00000 n 
+0002192205 00000 n 
+0002199356 00000 n 
+0002221528 00000 n 
+0002227903 00000 n 
+0002232220 00000 n 
+0002235915 00000 n 
+0002239424 00000 n 
+0002244692 00000 n 
+0002245790 00000 n 
+0002246918 00000 n 
+0002248055 00000 n 
+0002249157 00000 n 
+0002250300 00000 n 
+0002251427 00000 n 
+0002252604 00000 n 
+0002264598 00000 n 
 trailer
 <<
 /ID 
-[<5c05847cce507d6dae026a00853e8770><5c05847cce507d6dae026a00853e8770>]
+[<efbb5303a9e7e70a3967fc8fd4319f0f><efbb5303a9e7e70a3967fc8fd4319f0f>]
 % ReportLab generated PDF document -- digest (opensource)
 
 /Info 46 0 R
@@ -7005,5 +6778,5 @@ trailer
 /Size 72
 >>
 startxref
-2280837
+2276900
 %%EOF

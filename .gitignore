@@ -40,4 +40,5 @@ Thumbs.db
 backend/data/generated_docs/
 
 eval/benchmark/results.json
+!eval/results/results.json
 status_run/

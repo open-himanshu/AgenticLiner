@@ -45,13 +45,10 @@ OUT_IMG_DIR = OUT_DIR / "img"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 OUT_IMG_DIR.mkdir(parents=True, exist_ok=True)
 
-PDF_OUTPUT_PATH = OUT_DIR / "OPEN_OUTLIERS_AgenticLiner.pdf"
-PDF_BACKUP_PATH = OUT_DIR / "OPEN.OUTLIERS_AgenticLiner.pdf"
+PDF_OUTPUT_PATH = OUT_DIR / "OPEN.OUTLIERS_AgenticLiner.pdf"
 
 FACT_SHEET_PATH = DOCS_SUBMISSION / "FACT_SHEET.md"
 RESULT_PATH = DOCS_SUBMISSION / "RESULTS_AND_LIMITATIONS.md"
-if not RESULT_PATH.exists():
-    RESULT_PATH = DOCS_SUBMISSION / "RESULT_AND_LIMITATION.md"
 TEAM_PATH = DOCS_SUBMISSION / "TEAM.md"
 SCREENSHOTS_DIR = ROOT / "docs" / "screenshots"
 
@@ -74,7 +71,6 @@ def extract_allowed_numbers() -> set[str]:
     sources = [
         FACT_SHEET_PATH,
         RESULT_PATH,
-        DOCS_SUBMISSION / "RESULT_AND_LIMITATION.md",
         TEAM_PATH,
     ]
     all_text = ""
@@ -416,7 +412,7 @@ def build_architecture_diagram() -> Drawing:
         String(
             252,
             17,
-            "Persistence Tier: SQLite Database (14 Tables), Outbox, Audit Log",
+            "Persistence Tier: SQLite Database (18 Tables), Outbox, Audit Log",
             textAnchor="middle",
             fontName="Helvetica-Bold",
             fontSize=9,
@@ -515,7 +511,7 @@ def build_pdf_flowables(styles, img_map: dict[str, Path]) -> list:
         ],
         [
             Paragraph("<b>Submission Date:</b>", styles["TableCellBold"]),
-            Paragraph("14-11-2026", styles["TableCell"]),
+            Paragraph("15-11-2026", styles["TableCell"]),
         ],
     ]
     t_meta = Table(meta_data, colWidths=[150, 354])
@@ -643,7 +639,7 @@ def build_pdf_flowables(styles, img_map: dict[str, Path]) -> list:
         ),
         (
             "6. Post-Event Feedback & Verifiable Credentials",
-            "Analyze attendee feedback using rule-based sentiment classification and issue tamper-evident SHA-256 PDF certificates with a SHA-256 hash recorded in the database and checked on the verify page (a hash, not a digital signature) and scannable QR verification.",
+            "Analyze attendee feedback with rule-based sentiment classification and issue certificates whose SHA-256 hash is recorded in the database and checked on the verify page (a hash, not a digital signature), with a scannable QR code.",
         ),
     ]
     for title, desc in objectives_list:
@@ -814,8 +810,9 @@ def build_pdf_flowables(styles, img_map: dict[str, Path]) -> list:
     story.append(Paragraph("5. Technologies Used", styles["Heading1"]))
     story.append(
         Paragraph(
-            "All software components in AgenticLiner are pinned to explicit dependency versions defined in `requirements.txt`. "
-            "The system requires Python 3.10 to 3.13 and operates entirely offline by default.",
+            "All 21 software dependencies in AgenticLiner are pinned to explicit versions defined in `requirements.txt`. "
+            "The system requires Python 3.10 to 3.13 and operates entirely offline by default. "
+            "External LLM providers Groq and local Ollama are called over plain HTTP via httpx, requiring no vendor-specific SDK packages.",
             styles["Body"],
         )
     )
@@ -834,129 +831,89 @@ def build_pdf_flowables(styles, img_map: dict[str, Path]) -> list:
             Paragraph("fastapi", styles["TableCellBold"]),
             Paragraph("0.162.0", styles["TableCellCenter"]),
             Paragraph("Core ASGI REST API & SSR", styles["TableCell"]),
-            Paragraph("httpx", styles["TableCellBold"]),
-            Paragraph("0.30.0", styles["TableCellCenter"]),
-            Paragraph("Async HTTP client for LLM API", styles["TableCell"]),
+            Paragraph("numpy", styles["TableCellBold"]),
+            Paragraph("2.5.4", styles["TableCellCenter"]),
+            Paragraph("Vector mathematics array engine", styles["TableCell"]),
         ],
         [
             Paragraph("uvicorn", styles["TableCellBold"]),
-            Paragraph("0.42.0", styles["TableCellCenter"]),
+            Paragraph("0.54.0", styles["TableCellCenter"]),
             Paragraph("High-performance ASGI server", styles["TableCell"]),
-            Paragraph("pytest", styles["TableCellBold"]),
-            Paragraph("9.0.3", styles["TableCellCenter"]),
-            Paragraph("Automated test framework", styles["TableCell"]),
+            Paragraph("reportlab", styles["TableCellBold"]),
+            Paragraph("5.1.0", styles["TableCellCenter"]),
+            Paragraph("Vector report & certificate engine", styles["TableCell"]),
         ],
         [
-            Paragraph("jinja2", styles["TableCellBold"]),
-            Paragraph("3.1.6", styles["TableCellCenter"]),
-            Paragraph("Server-Side HTML template rendering", styles["TableCell"]),
-            Paragraph("pytest-asyncio", styles["TableCellBold"]),
-            Paragraph("1.3.0", styles["TableCellCenter"]),
-            Paragraph("Async endpoint test runner", styles["TableCell"]),
-        ],
-        [
-            Paragraph("python-multipart", styles["TableCellBold"]),
-            Paragraph("0.0.22", styles["TableCellCenter"]),
-            Paragraph("HTTP form and file upload parser", styles["TableCell"]),
-            Paragraph("passlib", styles["TableCellBold"]),
-            Paragraph("1.7.4", styles["TableCellCenter"]),
-            Paragraph("Password hashing utilities", styles["TableCell"]),
+            Paragraph("starlette", styles["TableCellBold"]),
+            Paragraph("1.10.0", styles["TableCellCenter"]),
+            Paragraph("ASGI toolkit & routing primitives", styles["TableCell"]),
+            Paragraph("qrcode", styles["TableCellBold"]),
+            Paragraph("8.2", styles["TableCellCenter"]),
+            Paragraph("2D Quick-Response code generator", styles["TableCell"]),
         ],
         [
             Paragraph("pydantic", styles["TableCellBold"]),
-            Paragraph("2.13.1", styles["TableCellCenter"]),
+            Paragraph("2.14.1", styles["TableCellCenter"]),
             Paragraph("Data schema validation & settings", styles["TableCell"]),
+            Paragraph("pillow", styles["TableCellBold"]),
+            Paragraph("13.0.0", styles["TableCellCenter"]),
+            Paragraph("Raster image manipulation library", styles["TableCell"]),
+        ],
+        [
+            Paragraph("python-dotenv", styles["TableCellBold"]),
+            Paragraph("1.2.4", styles["TableCellCenter"]),
+            Paragraph("Environment configuration loader", styles["TableCell"]),
             Paragraph("bcrypt", styles["TableCellBold"]),
             Paragraph("5.0.0", styles["TableCellCenter"]),
             Paragraph("Blowfish password cipher", styles["TableCell"]),
         ],
         [
-            Paragraph("python-dotenv", styles["TableCellBold"]),
-            Paragraph("1.2.2", styles["TableCellCenter"]),
-            Paragraph("Environment configuration loader", styles["TableCell"]),
-            Paragraph("pyotp", styles["TableCellBold"]),
-            Paragraph("2.9.0", styles["TableCellCenter"]),
-            Paragraph("Time-based OTP token service", styles["TableCell"]),
-        ],
-        [
+            Paragraph("jinja2", styles["TableCellBold"]),
+            Paragraph("3.1.6", styles["TableCellCenter"]),
+            Paragraph("Server-Side HTML template rendering", styles["TableCell"]),
             Paragraph("itsdangerous", styles["TableCellBold"]),
-            Paragraph("2.3.0", styles["TableCellCenter"]),
+            Paragraph("2.2.0", styles["TableCellCenter"]),
             Paragraph("Cryptographic cookie signing", styles["TableCell"]),
-            Paragraph("authlib", styles["TableCellBold"]),
-            Paragraph("1.6.11", styles["TableCellCenter"]),
-            Paragraph("OAuth2 and OpenID protocol suite", styles["TableCell"]),
         ],
         [
-            Paragraph("ortools", styles["TableCellBold"]),
-            Paragraph("9.15.6755", styles["TableCellCenter"]),
-            Paragraph("Google CP-SAT constraint solver", styles["TableCell"]),
+            Paragraph("python-multipart", styles["TableCellBold"]),
+            Paragraph("0.0.32", styles["TableCellCenter"]),
+            Paragraph("HTTP form and file upload parser", styles["TableCell"]),
             Paragraph("firebase-admin", styles["TableCellBold"]),
-            Paragraph("7.1.0", styles["TableCellCenter"]),
+            Paragraph("7.7.0", styles["TableCellCenter"]),
             Paragraph("Firebase token verification", styles["TableCell"]),
-        ],
-        [
-            Paragraph("scikit-learn", styles["TableCellBold"]),
-            Paragraph("1.9.1", styles["TableCellCenter"]),
-            Paragraph("TF-IDF & Ridge logistics models", styles["TableCell"]),
-            Paragraph("pyngrok", styles["TableCellBold"]),
-            Paragraph("7.5.4", styles["TableCellCenter"]),
-            Paragraph("Tunneling for test webhooks", styles["TableCell"]),
-        ],
-        [
-            Paragraph("numpy", styles["TableCellBold"]),
-            Paragraph("2.4.4", styles["TableCellCenter"]),
-            Paragraph("Vector mathematics array engine", styles["TableCell"]),
-            Paragraph("psutil", styles["TableCellBold"]),
-            Paragraph("7.2.2", styles["TableCellCenter"]),
-            Paragraph("Process and system monitor", styles["TableCell"]),
-        ],
-        [
-            Paragraph("scipy", styles["TableCellBold"]),
-            Paragraph("1.17.1", styles["TableCellCenter"]),
-            Paragraph("Sparse matrices & distance metrics", styles["TableCell"]),
-            Paragraph("fpdf2", styles["TableCellBold"]),
-            Paragraph("2.8.7", styles["TableCellCenter"]),
-            Paragraph("Alternative PDF generation", styles["TableCell"]),
-        ],
-        [
-            Paragraph("reportlab", styles["TableCellBold"]),
-            Paragraph("5.1.0", styles["TableCellCenter"]),
-            Paragraph("Vector report & certificate engine", styles["TableCell"]),
-            Paragraph("matplotlib", styles["TableCellBold"]),
-            Paragraph("3.10.8", styles["TableCellCenter"]),
-            Paragraph("Static chart and plot renderer", styles["TableCell"]),
-        ],
-        [
-            Paragraph("qrcode", styles["TableCellBold"]),
-            Paragraph("8.2", styles["TableCellCenter"]),
-            Paragraph("2D Quick-Response code generator", styles["TableCell"]),
-            Paragraph("pandas", styles["TableCellBold"]),
-            Paragraph("3.0.1", styles["TableCellCenter"]),
-            Paragraph("Tabular CSV catalog sync engine", styles["TableCell"]),
-        ],
-        [
-            Paragraph("pillow", styles["TableCellBold"]),
-            Paragraph("12.1.1", styles["TableCellCenter"]),
-            Paragraph("Raster image manipulation library", styles["TableCell"]),
-            Paragraph("google-auth", styles["TableCellBold"]),
-            Paragraph("2.47.0", styles["TableCellCenter"]),
-            Paragraph("Google identity token library", styles["TableCell"]),
         ],
         [
             Paragraph("google-genai", styles["TableCellBold"]),
             Paragraph("2.34.0", styles["TableCellCenter"]),
             Paragraph("Official Google Gemini SDK", styles["TableCell"]),
-            Paragraph("cryptography", styles["TableCellBold"]),
-            Paragraph("46.0.7", styles["TableCellCenter"]),
-            Paragraph("Low-level cryptographic ciphers", styles["TableCell"]),
+            Paragraph("pytest", styles["TableCellBold"]),
+            Paragraph("9.2.0", styles["TableCellCenter"]),
+            Paragraph("Automated test framework", styles["TableCell"]),
         ],
         [
-            Paragraph("groq", styles["TableCellBold"]),
-            Paragraph("1.0.0", styles["TableCellCenter"]),
-            Paragraph("Groq LPU cloud client library", styles["TableCell"]),
-            Paragraph("requests", styles["TableCellBold"]),
-            Paragraph("2.33.1", styles["TableCellCenter"]),
-            Paragraph("Synchronous HTTP client library", styles["TableCell"]),
+            Paragraph("ortools", styles["TableCellBold"]),
+            Paragraph("9.15.6755", styles["TableCellCenter"]),
+            Paragraph("Google CP-SAT constraint solver", styles["TableCell"]),
+            Paragraph("httpx", styles["TableCellBold"]),
+            Paragraph("0.28.1", styles["TableCellCenter"]),
+            Paragraph("Async HTTP client for LLM API", styles["TableCell"]),
+        ],
+        [
+            Paragraph("scikit-learn", styles["TableCellBold"]),
+            Paragraph("1.9.1", styles["TableCellCenter"]),
+            Paragraph("TF-IDF & Ridge logistics models", styles["TableCell"]),
+            Paragraph("anyio", styles["TableCellBold"]),
+            Paragraph("4.15.1", styles["TableCellCenter"]),
+            Paragraph("Asynchronous concurrency backend", styles["TableCell"]),
+        ],
+        [
+            Paragraph("pandas", styles["TableCellBold"]),
+            Paragraph("3.1.0", styles["TableCellCenter"]),
+            Paragraph("Tabular CSV catalog sync engine", styles["TableCell"]),
+            Paragraph("", styles["TableCell"]),
+            Paragraph("", styles["TableCellCenter"]),
+            Paragraph("", styles["TableCell"]),
         ],
     ]
     t_tech = Table(tech_data, colWidths=[65, 45, 142, 65, 45, 142])
@@ -980,7 +937,7 @@ def build_pdf_flowables(styles, img_map: dict[str, Path]) -> list:
     story.append(
         Paragraph(
             "- <b>FastAPI Web Application:</b> Delivers asynchronous request handling across 70 registered endpoints. "
-            "Session authentication uses session middleware with PBKDF2 password hashing.",
+            "Session authentication uses session middleware with bcrypt password hashing.",
             styles["Bullet"],
         )
     )
@@ -1034,7 +991,7 @@ def build_pdf_flowables(styles, img_map: dict[str, Path]) -> list:
         (
             "Tier 2: API Gateway & Security",
             "FastAPI ASGI application server managing session-based authentication and role-based route guards. "
-            "Password verification utilizes PBKDF2-HMAC-SHA256. Public tunnel safeguards prohibit demo authentication when public network ingress is detected.",
+            "Password verification utilizes bcrypt. Public tunnel safeguards prohibit demo authentication when public network ingress is detected.",
         ),
         (
             "Tier 3: Autopilot Orchestration",
@@ -1053,7 +1010,7 @@ def build_pdf_flowables(styles, img_map: dict[str, Path]) -> list:
         ),
         (
             "Tier 6: Persistence & Audit Layer",
-            "Embedded SQLite 3 database (agenticliner.db) structured across 14 relational tables. Outbox notifications and append-only audit "
+            "Embedded SQLite 3 database (agenticliner.db) structured across 18 relational tables. Outbox notifications and append-only audit "
             "log entries are recorded transactionally to ensure state traceability.",
         ),
     ]
@@ -1280,7 +1237,7 @@ def build_pdf_flowables(styles, img_map: dict[str, Path]) -> list:
                 "Authenticates 4 roles via session cookies", styles["TableCell"]
             ),
             Paragraph(
-                "Session cookies + PBKDF2 hashing", styles["TableCell"]
+                "Session cookies + bcrypt hashing", styles["TableCell"]
             ),
             Paragraph("auth_routes.py", styles["CodeText"]),
             Paragraph(
@@ -2203,7 +2160,7 @@ def build_pdf_flowables(styles, img_map: dict[str, Path]) -> list:
     story.append(
         Paragraph(
             "AgenticLiner was developed by Team <b>OPEN.OUTLIERS</b> for the SparkX 3.0 Innovation Challenge at Galgotias University. "
-            "Team member roles and contributions are documented below directly from TEAM.md:",
+            "Team member roles and contributions are outlined below:",
             styles["Body"],
         )
     )
@@ -2479,7 +2436,7 @@ def build_pdf_flowables(styles, img_map: dict[str, Path]) -> list:
             Paragraph("POST", styles["TableCellCenter"]),
             Paragraph("/login", styles["CodeText"]),
             Paragraph("Public (Unauthenticated)", styles["TableCell"]),
-            Paragraph("Form authentication endpoint validating PBKDF2 password hashes", styles["TableCell"]),
+            Paragraph("Form authentication endpoint validating bcrypt password hashes", styles["TableCell"]),
         ],
         [
             Paragraph("GET", styles["TableCellCenter"]),
@@ -2845,9 +2802,6 @@ def main():
     story = build_pdf_flowables(styles, img_map)
     doc.build(story)
     print(f"  PDF generated at: {PDF_OUTPUT_PATH}")
-
-    # Also copy to backup filename if needed
-    shutil.copy2(PDF_OUTPUT_PATH, PDF_BACKUP_PATH)
 
     # 3. Analyze PDF
     print("Step 3: Extracting PDF text and running strict validation...")

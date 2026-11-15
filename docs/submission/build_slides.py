@@ -1,7 +1,7 @@
 """Build the presentation as a 16:9 PPTX using only docs/submission/FACT_SHEET.md,
-docs/submission/RESULT_AND_LIMITATION.md and docs/submission/TEAM.md.
+docs/submission/RESULTS_AND_LIMITATIONS.md and docs/submission/TEAM.md.
 
-Output: docs/submission/out/OPEN_OUTLIERS_AgenticLiner.pptx (16:9, max 14 slides, under 8 MB)
+Output: docs/submission/out/OPEN.OUTLIERS_AgenticLiner.pptx (16:9, max 14 slides, under 8 MB)
 """
 
 from __future__ import annotations
@@ -26,11 +26,10 @@ OUT_IMG_DIR = OUT_DIR / "img"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 OUT_IMG_DIR.mkdir(parents=True, exist_ok=True)
 
-PPTX_OUTPUT_PATH = OUT_DIR / "OPEN_OUTLIERS_AgenticLiner.pptx"
-PPTX_ALT_OUTPUT_PATH = OUT_DIR / "OPEN.OUTLIERS_AgenticLiner.pptx"
+PPTX_OUTPUT_PATH = OUT_DIR / "OPEN.OUTLIERS_AgenticLiner.pptx"
 
 FACT_SHEET_PATH = DOCS_SUBMISSION / "FACT_SHEET.md"
-RESULT_PATH = DOCS_SUBMISSION / "RESULT_AND_LIMITATION.md"
+RESULT_PATH = DOCS_SUBMISSION / "RESULTS_AND_LIMITATIONS.md"
 TEAM_PATH = DOCS_SUBMISSION / "TEAM.md"
 SCREENSHOTS_DIR = ROOT / "docs" / "screenshots"
 
@@ -213,7 +212,7 @@ def build_presentation():
         s3,
         "The project established six functional objectives to span the full lifecycle of campus event organization from initial brief to post-event credentials. "
         "These goals prioritize deterministic physical invariants and transactional safety over unconstrained conversational flexibility. "
-        "The platform implements structured parsing, constraint-based timetable scheduling, grounded retrieval, and cryptographic certificate issuance. "
+        "The platform implements structured parsing, constraint-based timetable scheduling, grounded retrieval, and certificate issuance with a SHA-256 hash. "
         "A major caveat is that while these six objectives are implemented, financial cost tracking and commercial transactions were excluded from scope as campus facilities carry no monetary rental fee. "
         "Each objective is backed by dedicated automated unit and integration tests."
     )
@@ -306,7 +305,7 @@ def build_presentation():
         "Frontend: Jinja2 SSR templates with Bootstrap 5.3 and Bootstrap Icons",
         "Application Server: FastAPI with signed session cookies and 70 route endpoints",
         "Core Engines: 7 domain modules, Autopilot planner, and Kavach safety layer",
-        "Database: SQLite 3 with 14 relational tables and isolated test scenarios",
+        "Database: SQLite 3 with 18 relational tables and isolated test scenarios",
         "Outbox Pattern: Notices are written only after the booking commits (email delivery not verified)",
     ]
     for i, line in enumerate(lines_s5):
@@ -321,7 +320,7 @@ def build_presentation():
         s5,
         "AgenticLiner uses a three-tier architecture designed for rapid local deployment without heavy external infrastructure dependencies. "
         "The server-rendered Jinja2 frontend connects to a FastAPI application server exposing 70 distinct route endpoints across four role-based access levels. "
-        "All persistent application state resides in an embedded SQLite database structured across 14 relational tables. "
+        "All persistent application state resides in an embedded SQLite database structured across 18 relational tables. "
         "The outbox pattern ensures notices are written only after the primary booking transaction commits. "
         "An architectural limitation is that SQLite file-level locking bounds write throughput under high concurrent attendee registrations."
     )
@@ -702,10 +701,9 @@ def build_presentation():
         "A key disclosure is that AI coding assistants wrote most of the source code under the direct supervision of the team lead."
     )
 
-    # Save to both requested path and alternate path
+    # Save to final output path
     prs.save(str(PPTX_OUTPUT_PATH))
-    prs.save(str(PPTX_ALT_OUTPUT_PATH))
-    print(f"Presentation saved to {PPTX_OUTPUT_PATH} and {PPTX_ALT_OUTPUT_PATH}")
+    print(f"Presentation saved to {PPTX_OUTPUT_PATH}")
 
 
 def extract_all_text_from_pptx(pptx_path: Path) -> dict[str, list[str]]:
@@ -856,7 +854,6 @@ def validate_presentation(pptx_path: Path):
 def main():
     build_presentation()
     validate_presentation(PPTX_OUTPUT_PATH)
-    validate_presentation(PPTX_ALT_OUTPUT_PATH)
 
 
 if __name__ == "__main__":

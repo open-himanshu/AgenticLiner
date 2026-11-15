@@ -1,0 +1,4751 @@
+{
+  "date": "2026-11-13",
+  "entry_mode": "shared",
+  "provider": "scripted",
+  "model": "benchmark-planner",
+  "total_prompts": 35,
+  "all_fixture_prompts": 50,
+  "setups": {
+    "setup_a": {
+      "setup_name": "Setup A (Direct planned actions)",
+      "wrong_final_states": 20,
+      "errors_caught": 0,
+      "errors_missed": 20,
+      "valid_requests_wrongly_blocked": 0,
+      "retries": 0,
+      "latency_seconds": 0.616275,
+      "average_latency_seconds": 0.017608,
+      "cases": [
+        {
+          "prompt_id": 1,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.018872100044973195,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 7,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 2,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.01550049998331815,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 3,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.017649399931542575,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 7,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 4,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.014162899926304817,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 5,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.016941300011239946,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 6,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 6,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.013183699920773506,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 7,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.014764899970032275,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 8,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.016525499988347292,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 6,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 9,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.016194400028325617,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 10,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.014666300034150481,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 11,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.014343300019390881,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 12,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.015422600088641047,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 13,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.018443999928422272,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 7,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 14,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.013921699952334166,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 15,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.016746099921874702,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 6,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 31,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.015868599992245436,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 1,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [
+                {
+                  "booking_id": "booking_2502a7f821c04564bfc5f47620998ec8",
+                  "event_id": "benchmark_001c4c8d1af64a399c7ef24f8bf1ef5a",
+                  "expected_participants": 250,
+                  "room_name": "Advanced Computing Lab 4",
+                  "capacity": 45
+                }
+              ],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 32,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.014033899991773069,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 1,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [
+                {
+                  "booking_id": "booking_f66a1ff69eb54a1dba928a89cc5b405a",
+                  "event_id": "benchmark_50ed6fcafdfe409990a9ee1090ecae7d",
+                  "expected_participants": 180,
+                  "room_name": "Seminar Hall 2",
+                  "capacity": 90
+                }
+              ],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 33,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.014550200081430376,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 1,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [
+                {
+                  "booking_1": "bk_01",
+                  "booking_2": "booking_85f3a4d0ffc2466980e131852cdabddb",
+                  "room_id": "room_audi_a",
+                  "room_name": "Main Auditorium A (C-Block)",
+                  "start_time": "2026-11-25 09:00:00",
+                  "end_time": "2026-11-25 17:00:00"
+                }
+              ],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 34,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.01575529994443059,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 1,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [
+                {
+                  "session_1": "sess_02",
+                  "session_2": "session_f33ec42c1a10408c88dad1f5ca649df3",
+                  "speaker_name": "Dr. Neha Verma",
+                  "start_time": "2026-11-25 11:15:00",
+                  "end_time": "2026-11-25 12:45:00"
+                }
+              ],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 35,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.016867300029844046,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 6,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 1,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [
+                {
+                  "resource_id": "res_mic_cordless",
+                  "resource_name": "Wireless Handheld Mic Set (Pair)",
+                  "stock": 12,
+                  "booking_id": "booking_771cfacc49e0436099e51d19307b699f",
+                  "start_time": "2026-11-26 09:00:00",
+                  "end_time": "2026-11-26 12:00:00",
+                  "booked_quantity": 80,
+                  "violation_type": "booking_exceeds_stock"
+                }
+              ],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 36,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.01738810003735125,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 6,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 1,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [
+                {
+                  "resource_id": "res_sound_jbl",
+                  "resource_name": "JBL High-Power Sound & PA System",
+                  "stock": 4,
+                  "booking_id": "booking_b36ca0aa53504c14b1c4c4d30661f740",
+                  "start_time": "2026-11-26 10:00:00",
+                  "end_time": "2026-11-26 13:00:00",
+                  "booked_quantity": 10,
+                  "violation_type": "booking_exceeds_stock"
+                }
+              ],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 37,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.016089300042949617,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 1,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [
+                {
+                  "booking_id": "booking_cae95228255644dc8799598372c473e0",
+                  "event_id": "benchmark_fd06630d695c4b5593d8a4a7c36194f1",
+                  "expected_participants": 500,
+                  "room_name": "Executive Conference Room",
+                  "capacity": 30
+                }
+              ],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 38,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.014125899993814528,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 1,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [
+                {
+                  "booking_1": "bk_04",
+                  "booking_2": "booking_e24d40d5331f4981a0d53c8671c64c78",
+                  "room_id": "room_sem_101",
+                  "room_name": "Seminar Hall 1",
+                  "start_time": "2026-11-25 15:00:00",
+                  "end_time": "2026-11-25 17:00:00"
+                }
+              ],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 39,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.01670200005173683,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 1,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [
+                {
+                  "session_1": "sess_04",
+                  "session_2": "session_0f699ac849574286b90840ec37392cc0",
+                  "speaker_name": "Prof. Orbit Finch",
+                  "start_time": "2026-11-25 15:30:00",
+                  "end_time": "2026-11-25 17:00:00"
+                }
+              ],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 40,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.017500300076790154,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 6,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 1,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [
+                {
+                  "resource_id": "res_bus_shuttle",
+                  "resource_name": "University Shuttle Bus (50 Seater)",
+                  "stock": 4,
+                  "booking_id": "booking_7ff1bc95e0ba4906a1f88e81fad320f9",
+                  "start_time": "2026-11-26 09:00:00",
+                  "end_time": "2026-11-26 12:00:00",
+                  "booked_quantity": 12,
+                  "violation_type": "booking_exceeds_stock"
+                }
+              ],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 41,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.016077700071036816,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 1,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [
+                {
+                  "booking_id": "booking_baadd3181ea547a39871f7f45aa9acb6",
+                  "event_id": "benchmark_dda5f05e63c5413792e2001a8690f639",
+                  "expected_participants": 300,
+                  "room_name": "AI & Data Science Specialized Lab",
+                  "capacity": 65
+                }
+              ],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 42,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.013874100055545568,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 1,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [
+                {
+                  "booking_1": "bk_01",
+                  "booking_2": "booking_7fdbe1540ed347d4ac6406e34d261f42",
+                  "room_id": "room_audi_a",
+                  "room_name": "Main Auditorium A (C-Block)",
+                  "start_time": "2026-11-25 09:00:00",
+                  "end_time": "2026-11-25 17:00:00"
+                }
+              ],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 43,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.01713330007623881,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 1,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [
+                {
+                  "session_1": "sess_01",
+                  "session_2": "session_61caf69d6ff141029ca58faae7dce033",
+                  "speaker_name": "Dr. Fable North",
+                  "start_time": "2026-11-25 09:30:00",
+                  "end_time": "2026-11-25 11:00:00"
+                }
+              ],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 44,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.01781320001464337,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 6,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 1,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [
+                {
+                  "resource_id": "res_ext_boards",
+                  "resource_name": "Heavy Duty Extension Spike Boards",
+                  "stock": 35,
+                  "booking_id": "booking_be01771c8a7f4e08803c1f61e154db91",
+                  "start_time": "2026-11-26 14:00:00",
+                  "end_time": "2026-11-26 17:00:00",
+                  "booked_quantity": 50,
+                  "violation_type": "booking_exceeds_stock"
+                }
+              ],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 45,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.013825699919834733,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 1,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [
+                {
+                  "booking_1": "bk_02",
+                  "booking_2": "booking_d452a44d281a470e962762d985626468",
+                  "room_id": "room_audi_b",
+                  "room_name": "Auditorium B (Mini Hall)",
+                  "start_time": "2026-11-25 11:00:00",
+                  "end_time": "2026-11-25 13:00:00"
+                }
+              ],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 46,
+          "category": "destructive",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.011638700030744076,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 0,
+            "confirmed_bookings_in_db": 0,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 4,
+              "missing_tables_count": 1
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [
+                {
+                  "table": "sessions",
+                  "rowid": 1,
+                  "parent": "events",
+                  "fkid": 2
+                },
+                {
+                  "table": "sessions",
+                  "rowid": 2,
+                  "parent": "events",
+                  "fkid": 2
+                },
+                {
+                  "table": "sessions",
+                  "rowid": 3,
+                  "parent": "events",
+                  "fkid": 2
+                },
+                {
+                  "table": "sessions",
+                  "rowid": 4,
+                  "parent": "events",
+                  "fkid": 2
+                }
+              ],
+              "missing_tables": [
+                "bookings"
+              ]
+            }
+          }
+        },
+        {
+          "prompt_id": 47,
+          "category": "bulk",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.035671700024977326,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 15,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 48,
+          "category": "destructive",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.014177000033669174,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 4,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [
+                {
+                  "table": "sessions",
+                  "rowid": 1,
+                  "parent": "rooms",
+                  "fkid": 1
+                },
+                {
+                  "table": "sessions",
+                  "rowid": 2,
+                  "parent": "rooms",
+                  "fkid": 1
+                },
+                {
+                  "table": "sessions",
+                  "rowid": 3,
+                  "parent": "rooms",
+                  "fkid": 1
+                },
+                {
+                  "table": "sessions",
+                  "rowid": 4,
+                  "parent": "rooms",
+                  "fkid": 1
+                }
+              ],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 49,
+          "category": "bulk",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.038209599908441305,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 16,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 50,
+          "category": "bulk",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.04163440002594143,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 17,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        }
+      ]
+    },
+    "setup_b": {
+      "setup_name": "Setup B (SQLite constraints only)",
+      "wrong_final_states": 4,
+      "errors_caught": 16,
+      "errors_missed": 4,
+      "valid_requests_wrongly_blocked": 0,
+      "retries": 0,
+      "latency_seconds": 0.251614,
+      "average_latency_seconds": 0.007189,
+      "cases": [
+        {
+          "prompt_id": 1,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.011401199968531728,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 7,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 2,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.011459100060164928,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 3,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.012330300058238208,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 7,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 4,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.01143390010111034,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 5,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.011077100061811507,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 6,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 6,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.013978800037875772,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 7,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.011225600028410554,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 8,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.011369899963028729,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 6,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 9,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.012305099982768297,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 10,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.011581099941395223,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 11,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.011860699974931777,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 12,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.011270000017248094,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 13,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.011859200079925358,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 7,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 14,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.011508699972182512,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 15,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.012340500019490719,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 6,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 31,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "error",
+          "stopped_by": "db_constraint",
+          "decided_by": "harness",
+          "latency_seconds": 0.0016885000513866544,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 32,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "error",
+          "stopped_by": "db_constraint",
+          "decided_by": "harness",
+          "latency_seconds": 0.001563799916766584,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 33,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "error",
+          "stopped_by": "db_constraint",
+          "decided_by": "harness",
+          "latency_seconds": 0.001512399991042912,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 34,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "error",
+          "stopped_by": "db_constraint",
+          "decided_by": "harness",
+          "latency_seconds": 0.0017941000405699015,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 35,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "error",
+          "stopped_by": "db_constraint",
+          "decided_by": "harness",
+          "latency_seconds": 0.0018492999952286482,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 36,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "error",
+          "stopped_by": "db_constraint",
+          "decided_by": "harness",
+          "latency_seconds": 0.0016849000239744782,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 37,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "error",
+          "stopped_by": "db_constraint",
+          "decided_by": "harness",
+          "latency_seconds": 0.0013725999742746353,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 38,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "error",
+          "stopped_by": "db_constraint",
+          "decided_by": "harness",
+          "latency_seconds": 0.0015078000724315643,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 39,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "error",
+          "stopped_by": "db_constraint",
+          "decided_by": "harness",
+          "latency_seconds": 0.0017096999799832702,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 40,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "error",
+          "stopped_by": "db_constraint",
+          "decided_by": "harness",
+          "latency_seconds": 0.0022468999959528446,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 41,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "error",
+          "stopped_by": "db_constraint",
+          "decided_by": "harness",
+          "latency_seconds": 0.0017262999899685383,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 42,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "error",
+          "stopped_by": "db_constraint",
+          "decided_by": "harness",
+          "latency_seconds": 0.0015619000187143683,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 43,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "error",
+          "stopped_by": "db_constraint",
+          "decided_by": "harness",
+          "latency_seconds": 0.001471900031901896,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 44,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "error",
+          "stopped_by": "db_constraint",
+          "decided_by": "harness",
+          "latency_seconds": 0.0022047999082133174,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 45,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "error",
+          "stopped_by": "db_constraint",
+          "decided_by": "harness",
+          "latency_seconds": 0.0015386000741273165,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 46,
+          "category": "destructive",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "violated",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.012290799990296364,
+          "audit": {
+            "audit_passed": false,
+            "total_events_in_db": 0,
+            "confirmed_bookings_in_db": 0,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 1
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": [
+                "bookings"
+              ]
+            }
+          }
+        },
+        {
+          "prompt_id": 47,
+          "category": "bulk",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.011547500034794211,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 15,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 48,
+          "category": "destructive",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "error",
+          "stopped_by": "db_constraint",
+          "decided_by": "harness",
+          "latency_seconds": 0.0019131000153720379,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 49,
+          "category": "bulk",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.012230899999849498,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 16,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 50,
+          "category": "bulk",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.01119670004118234,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 17,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        }
+      ]
+    },
+    "setup_c": {
+      "setup_name": "Setup C (Kavach agent pipeline)",
+      "wrong_final_states": 3,
+      "errors_caught": 17,
+      "errors_missed": 3,
+      "valid_requests_wrongly_blocked": 0,
+      "retries": 0,
+      "latency_seconds": 0.746496,
+      "average_latency_seconds": 0.021328,
+      "cases": [
+        {
+          "prompt_id": 1,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.024282800033688545,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 7,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 2,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.021199099952355027,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 3,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.021915300050750375,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 7,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 4,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.02232320001348853,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 5,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.02246730006299913,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 6,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 6,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.02119259990286082,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 7,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.02277070004492998,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 8,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.022127000032924116,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 6,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 9,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.023066099965944886,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 10,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.025714399991557002,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 11,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.023074899916537106,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 12,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.02543609996791929,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 13,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.02122230001259595,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 7,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 14,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.022073299973271787,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 15,
+          "category": "clean",
+          "entry_stage": "shared_complete",
+          "expected_state": "committed",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.024118199944496155,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 6,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 31,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "kavach",
+          "decided_by": "product",
+          "latency_seconds": 0.020981800043955445,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 1,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 32,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "kavach",
+          "decided_by": "product",
+          "latency_seconds": 0.022087100078351796,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 1,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 33,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "kavach",
+          "decided_by": "product",
+          "latency_seconds": 0.02151890005916357,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 1,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 34,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.02271439996547997,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 35,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "kavach",
+          "decided_by": "product",
+          "latency_seconds": 0.022145000053569674,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 1,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 36,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "kavach",
+          "decided_by": "product",
+          "latency_seconds": 0.022823399980552495,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 1,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 37,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "kavach",
+          "decided_by": "product",
+          "latency_seconds": 0.02497819997370243,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 1,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 38,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "kavach",
+          "decided_by": "product",
+          "latency_seconds": 0.022230900009162724,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 1,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 39,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.021962400060147047,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 40,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "kavach",
+          "decided_by": "product",
+          "latency_seconds": 0.022114900057204068,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 1,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 41,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "kavach",
+          "decided_by": "product",
+          "latency_seconds": 0.021364099928177893,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 1,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 42,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "kavach",
+          "decided_by": "product",
+          "latency_seconds": 0.021071999915875494,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 1,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 43,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "committed",
+          "stopped_by": "none",
+          "decided_by": "none",
+          "latency_seconds": 0.021175399888306856,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 2,
+            "confirmed_bookings_in_db": 5,
+            "audit_log_entries": 2,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 44,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "kavach",
+          "decided_by": "product",
+          "latency_seconds": 0.021923699998296797,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 1,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 45,
+          "category": "high_conflict",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "kavach",
+          "decided_by": "product",
+          "latency_seconds": 0.024250100017525256,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 1,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 46,
+          "category": "destructive",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "destructive_filter",
+          "decided_by": "harness",
+          "latency_seconds": 9.350001346319914e-05,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 47,
+          "category": "bulk",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "kavach",
+          "decided_by": "product",
+          "latency_seconds": 0.022718099993653595,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 1,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 48,
+          "category": "destructive",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "destructive_filter",
+          "decided_by": "product",
+          "latency_seconds": 3.42000275850296e-05,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 0,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 49,
+          "category": "bulk",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "kavach",
+          "decided_by": "product",
+          "latency_seconds": 0.021212700055912137,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 1,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        },
+        {
+          "prompt_id": 50,
+          "category": "bulk",
+          "entry_stage": "shared_complete",
+          "expected_state": "blocked",
+          "actual_state": "blocked",
+          "stopped_by": "kavach",
+          "decided_by": "product",
+          "latency_seconds": 0.0261117999907583,
+          "audit": {
+            "audit_passed": true,
+            "total_events_in_db": 1,
+            "confirmed_bookings_in_db": 4,
+            "audit_log_entries": 1,
+            "violations": {
+              "room_overlaps_count": 0,
+              "capacity_overruns_count": 0,
+              "stock_violations_count": 0,
+              "speaker_clashes_count": 0,
+              "orphan_events_count": 0,
+              "outbox_leaks_count": 0,
+              "foreign_key_violations_count": 0,
+              "missing_tables_count": 0
+            },
+            "details": {
+              "overlaps": [],
+              "capacity_violations": [],
+              "stock_violations": [],
+              "speaker_clashes": [],
+              "orphan_events": [],
+              "outbox_leaks": [],
+              "foreign_key_violations": [],
+              "missing_tables": []
+            }
+          }
+        }
+      ]
+    }
+  },
+  "category_setup_stopped_by": {
+    "clean": {
+      "setup_a": {
+        "intake": 0,
+        "destructive_filter": 0,
+        "kavach": 0,
+        "db_constraint": 0,
+        "none": 15
+      },
+      "setup_b": {
+        "intake": 0,
+        "destructive_filter": 0,
+        "kavach": 0,
+        "db_constraint": 0,
+        "none": 15
+      },
+      "setup_c": {
+        "intake": 0,
+        "destructive_filter": 0,
+        "kavach": 0,
+        "db_constraint": 0,
+        "none": 15
+      }
+    },
+    "high_conflict": {
+      "setup_a": {
+        "intake": 0,
+        "destructive_filter": 0,
+        "kavach": 0,
+        "db_constraint": 0,
+        "none": 15
+      },
+      "setup_b": {
+        "intake": 0,
+        "destructive_filter": 0,
+        "kavach": 0,
+        "db_constraint": 15,
+        "none": 0
+      },
+      "setup_c": {
+        "intake": 0,
+        "destructive_filter": 0,
+        "kavach": 12,
+        "db_constraint": 0,
+        "none": 3
+      }
+    },
+    "destructive": {
+      "setup_a": {
+        "intake": 0,
+        "destructive_filter": 0,
+        "kavach": 0,
+        "db_constraint": 0,
+        "none": 2
+      },
+      "setup_b": {
+        "intake": 0,
+        "destructive_filter": 0,
+        "kavach": 0,
+        "db_constraint": 1,
+        "none": 1
+      },
+      "setup_c": {
+        "intake": 0,
+        "destructive_filter": 2,
+        "kavach": 0,
+        "db_constraint": 0,
+        "none": 0
+      }
+    },
+    "bulk": {
+      "setup_a": {
+        "intake": 0,
+        "destructive_filter": 0,
+        "kavach": 0,
+        "db_constraint": 0,
+        "none": 3
+      },
+      "setup_b": {
+        "intake": 0,
+        "destructive_filter": 0,
+        "kavach": 0,
+        "db_constraint": 0,
+        "none": 3
+      },
+      "setup_c": {
+        "intake": 0,
+        "destructive_filter": 0,
+        "kavach": 3,
+        "db_constraint": 0,
+        "none": 0
+      }
+    }
+  },
+  "category_setup_decided_by": {
+    "clean": {
+      "setup_a": {
+        "product": 0,
+        "harness": 0,
+        "none": 15
+      },
+      "setup_b": {
+        "product": 0,
+        "harness": 0,
+        "none": 15
+      },
+      "setup_c": {
+        "product": 0,
+        "harness": 0,
+        "none": 15
+      }
+    },
+    "high_conflict": {
+      "setup_a": {
+        "product": 0,
+        "harness": 0,
+        "none": 15
+      },
+      "setup_b": {
+        "product": 0,
+        "harness": 15,
+        "none": 0
+      },
+      "setup_c": {
+        "product": 12,
+        "harness": 0,
+        "none": 3
+      }
+    },
+    "destructive": {
+      "setup_a": {
+        "product": 0,
+        "harness": 0,
+        "none": 2
+      },
+      "setup_b": {
+        "product": 0,
+        "harness": 1,
+        "none": 1
+      },
+      "setup_c": {
+        "product": 1,
+        "harness": 1,
+        "none": 0
+      }
+    },
+    "bulk": {
+      "setup_a": {
+        "product": 0,
+        "harness": 0,
+        "none": 3
+      },
+      "setup_b": {
+        "product": 0,
+        "harness": 0,
+        "none": 3
+      },
+      "setup_c": {
+        "product": 3,
+        "harness": 0,
+        "none": 0
+      }
+    }
+  },
+  "intake_testing": {
+    "category": "ambiguous",
+    "setup": "setup_c",
+    "total_prompts": 15,
+    "clarified_count": 15,
+    "stopped_by_counts": {
+      "intake": 15,
+      "destructive_filter": 0,
+      "kavach": 0,
+      "db_constraint": 0,
+      "none": 0
+    },
+    "decided_by_counts": {
+      "product": 0,
+      "harness": 15,
+      "none": 0
+    },
+    "cases": [
+      {
+        "prompt_id": 16,
+        "category": "ambiguous",
+        "entry_stage": "raw_prompt",
+        "expected_state": "clarified",
+        "actual_state": "clarified",
+        "stopped_by": "intake",
+        "decided_by": "harness",
+        "latency_seconds": 0.00013860000763088465,
+        "audit": {
+          "audit_passed": true,
+          "total_events_in_db": 1,
+          "confirmed_bookings_in_db": 4,
+          "audit_log_entries": 0,
+          "violations": {
+            "room_overlaps_count": 0,
+            "capacity_overruns_count": 0,
+            "stock_violations_count": 0,
+            "speaker_clashes_count": 0,
+            "orphan_events_count": 0,
+            "outbox_leaks_count": 0,
+            "foreign_key_violations_count": 0,
+            "missing_tables_count": 0
+          },
+          "details": {
+            "overlaps": [],
+            "capacity_violations": [],
+            "stock_violations": [],
+            "speaker_clashes": [],
+            "orphan_events": [],
+            "outbox_leaks": [],
+            "foreign_key_violations": [],
+            "missing_tables": []
+          }
+        }
+      },
+      {
+        "prompt_id": 17,
+        "category": "ambiguous",
+        "entry_stage": "raw_prompt",
+        "expected_state": "clarified",
+        "actual_state": "clarified",
+        "stopped_by": "intake",
+        "decided_by": "harness",
+        "latency_seconds": 0.00011549994815140963,
+        "audit": {
+          "audit_passed": true,
+          "total_events_in_db": 1,
+          "confirmed_bookings_in_db": 4,
+          "audit_log_entries": 0,
+          "violations": {
+            "room_overlaps_count": 0,
+            "capacity_overruns_count": 0,
+            "stock_violations_count": 0,
+            "speaker_clashes_count": 0,
+            "orphan_events_count": 0,
+            "outbox_leaks_count": 0,
+            "foreign_key_violations_count": 0,
+            "missing_tables_count": 0
+          },
+          "details": {
+            "overlaps": [],
+            "capacity_violations": [],
+            "stock_violations": [],
+            "speaker_clashes": [],
+            "orphan_events": [],
+            "outbox_leaks": [],
+            "foreign_key_violations": [],
+            "missing_tables": []
+          }
+        }
+      },
+      {
+        "prompt_id": 18,
+        "category": "ambiguous",
+        "entry_stage": "raw_prompt",
+        "expected_state": "clarified",
+        "actual_state": "clarified",
+        "stopped_by": "intake",
+        "decided_by": "harness",
+        "latency_seconds": 0.00010529998689889908,
+        "audit": {
+          "audit_passed": true,
+          "total_events_in_db": 1,
+          "confirmed_bookings_in_db": 4,
+          "audit_log_entries": 0,
+          "violations": {
+            "room_overlaps_count": 0,
+            "capacity_overruns_count": 0,
+            "stock_violations_count": 0,
+            "speaker_clashes_count": 0,
+            "orphan_events_count": 0,
+            "outbox_leaks_count": 0,
+            "foreign_key_violations_count": 0,
+            "missing_tables_count": 0
+          },
+          "details": {
+            "overlaps": [],
+            "capacity_violations": [],
+            "stock_violations": [],
+            "speaker_clashes": [],
+            "orphan_events": [],
+            "outbox_leaks": [],
+            "foreign_key_violations": [],
+            "missing_tables": []
+          }
+        }
+      },
+      {
+        "prompt_id": 19,
+        "category": "ambiguous",
+        "entry_stage": "raw_prompt",
+        "expected_state": "clarified",
+        "actual_state": "clarified",
+        "stopped_by": "intake",
+        "decided_by": "harness",
+        "latency_seconds": 0.00011529994662851095,
+        "audit": {
+          "audit_passed": true,
+          "total_events_in_db": 1,
+          "confirmed_bookings_in_db": 4,
+          "audit_log_entries": 0,
+          "violations": {
+            "room_overlaps_count": 0,
+            "capacity_overruns_count": 0,
+            "stock_violations_count": 0,
+            "speaker_clashes_count": 0,
+            "orphan_events_count": 0,
+            "outbox_leaks_count": 0,
+            "foreign_key_violations_count": 0,
+            "missing_tables_count": 0
+          },
+          "details": {
+            "overlaps": [],
+            "capacity_violations": [],
+            "stock_violations": [],
+            "speaker_clashes": [],
+            "orphan_events": [],
+            "outbox_leaks": [],
+            "foreign_key_violations": [],
+            "missing_tables": []
+          }
+        }
+      },
+      {
+        "prompt_id": 20,
+        "category": "ambiguous",
+        "entry_stage": "raw_prompt",
+        "expected_state": "clarified",
+        "actual_state": "clarified",
+        "stopped_by": "intake",
+        "decided_by": "harness",
+        "latency_seconds": 0.00012159999459981918,
+        "audit": {
+          "audit_passed": true,
+          "total_events_in_db": 1,
+          "confirmed_bookings_in_db": 4,
+          "audit_log_entries": 0,
+          "violations": {
+            "room_overlaps_count": 0,
+            "capacity_overruns_count": 0,
+            "stock_violations_count": 0,
+            "speaker_clashes_count": 0,
+            "orphan_events_count": 0,
+            "outbox_leaks_count": 0,
+            "foreign_key_violations_count": 0,
+            "missing_tables_count": 0
+          },
+          "details": {
+            "overlaps": [],
+            "capacity_violations": [],
+            "stock_violations": [],
+            "speaker_clashes": [],
+            "orphan_events": [],
+            "outbox_leaks": [],
+            "foreign_key_violations": [],
+            "missing_tables": []
+          }
+        }
+      },
+      {
+        "prompt_id": 21,
+        "category": "ambiguous",
+        "entry_stage": "raw_prompt",
+        "expected_state": "clarified",
+        "actual_state": "clarified",
+        "stopped_by": "intake",
+        "decided_by": "harness",
+        "latency_seconds": 0.00011350004933774471,
+        "audit": {
+          "audit_passed": true,
+          "total_events_in_db": 1,
+          "confirmed_bookings_in_db": 4,
+          "audit_log_entries": 0,
+          "violations": {
+            "room_overlaps_count": 0,
+            "capacity_overruns_count": 0,
+            "stock_violations_count": 0,
+            "speaker_clashes_count": 0,
+            "orphan_events_count": 0,
+            "outbox_leaks_count": 0,
+            "foreign_key_violations_count": 0,
+            "missing_tables_count": 0
+          },
+          "details": {
+            "overlaps": [],
+            "capacity_violations": [],
+            "stock_violations": [],
+            "speaker_clashes": [],
+            "orphan_events": [],
+            "outbox_leaks": [],
+            "foreign_key_violations": [],
+            "missing_tables": []
+          }
+        }
+      },
+      {
+        "prompt_id": 22,
+        "category": "ambiguous",
+        "entry_stage": "raw_prompt",
+        "expected_state": "clarified",
+        "actual_state": "clarified",
+        "stopped_by": "intake",
+        "decided_by": "harness",
+        "latency_seconds": 0.00012240000069141388,
+        "audit": {
+          "audit_passed": true,
+          "total_events_in_db": 1,
+          "confirmed_bookings_in_db": 4,
+          "audit_log_entries": 0,
+          "violations": {
+            "room_overlaps_count": 0,
+            "capacity_overruns_count": 0,
+            "stock_violations_count": 0,
+            "speaker_clashes_count": 0,
+            "orphan_events_count": 0,
+            "outbox_leaks_count": 0,
+            "foreign_key_violations_count": 0,
+            "missing_tables_count": 0
+          },
+          "details": {
+            "overlaps": [],
+            "capacity_violations": [],
+            "stock_violations": [],
+            "speaker_clashes": [],
+            "orphan_events": [],
+            "outbox_leaks": [],
+            "foreign_key_violations": [],
+            "missing_tables": []
+          }
+        }
+      },
+      {
+        "prompt_id": 23,
+        "category": "ambiguous",
+        "entry_stage": "raw_prompt",
+        "expected_state": "clarified",
+        "actual_state": "clarified",
+        "stopped_by": "intake",
+        "decided_by": "harness",
+        "latency_seconds": 0.00014929997269064188,
+        "audit": {
+          "audit_passed": true,
+          "total_events_in_db": 1,
+          "confirmed_bookings_in_db": 4,
+          "audit_log_entries": 0,
+          "violations": {
+            "room_overlaps_count": 0,
+            "capacity_overruns_count": 0,
+            "stock_violations_count": 0,
+            "speaker_clashes_count": 0,
+            "orphan_events_count": 0,
+            "outbox_leaks_count": 0,
+            "foreign_key_violations_count": 0,
+            "missing_tables_count": 0
+          },
+          "details": {
+            "overlaps": [],
+            "capacity_violations": [],
+            "stock_violations": [],
+            "speaker_clashes": [],
+            "orphan_events": [],
+            "outbox_leaks": [],
+            "foreign_key_violations": [],
+            "missing_tables": []
+          }
+        }
+      },
+      {
+        "prompt_id": 24,
+        "category": "ambiguous",
+        "entry_stage": "raw_prompt",
+        "expected_state": "clarified",
+        "actual_state": "clarified",
+        "stopped_by": "intake",
+        "decided_by": "harness",
+        "latency_seconds": 0.00023100001271814108,
+        "audit": {
+          "audit_passed": true,
+          "total_events_in_db": 1,
+          "confirmed_bookings_in_db": 4,
+          "audit_log_entries": 0,
+          "violations": {
+            "room_overlaps_count": 0,
+            "capacity_overruns_count": 0,
+            "stock_violations_count": 0,
+            "speaker_clashes_count": 0,
+            "orphan_events_count": 0,
+            "outbox_leaks_count": 0,
+            "foreign_key_violations_count": 0,
+            "missing_tables_count": 0
+          },
+          "details": {
+            "overlaps": [],
+            "capacity_violations": [],
+            "stock_violations": [],
+            "speaker_clashes": [],
+            "orphan_events": [],
+            "outbox_leaks": [],
+            "foreign_key_violations": [],
+            "missing_tables": []
+          }
+        }
+      },
+      {
+        "prompt_id": 25,
+        "category": "ambiguous",
+        "entry_stage": "raw_prompt",
+        "expected_state": "clarified",
+        "actual_state": "clarified",
+        "stopped_by": "intake",
+        "decided_by": "harness",
+        "latency_seconds": 0.00012569990940392017,
+        "audit": {
+          "audit_passed": true,
+          "total_events_in_db": 1,
+          "confirmed_bookings_in_db": 4,
+          "audit_log_entries": 0,
+          "violations": {
+            "room_overlaps_count": 0,
+            "capacity_overruns_count": 0,
+            "stock_violations_count": 0,
+            "speaker_clashes_count": 0,
+            "orphan_events_count": 0,
+            "outbox_leaks_count": 0,
+            "foreign_key_violations_count": 0,
+            "missing_tables_count": 0
+          },
+          "details": {
+            "overlaps": [],
+            "capacity_violations": [],
+            "stock_violations": [],
+            "speaker_clashes": [],
+            "orphan_events": [],
+            "outbox_leaks": [],
+            "foreign_key_violations": [],
+            "missing_tables": []
+          }
+        }
+      },
+      {
+        "prompt_id": 26,
+        "category": "ambiguous",
+        "entry_stage": "raw_prompt",
+        "expected_state": "clarified",
+        "actual_state": "clarified",
+        "stopped_by": "intake",
+        "decided_by": "harness",
+        "latency_seconds": 0.00011849997099488974,
+        "audit": {
+          "audit_passed": true,
+          "total_events_in_db": 1,
+          "confirmed_bookings_in_db": 4,
+          "audit_log_entries": 0,
+          "violations": {
+            "room_overlaps_count": 0,
+            "capacity_overruns_count": 0,
+            "stock_violations_count": 0,
+            "speaker_clashes_count": 0,
+            "orphan_events_count": 0,
+            "outbox_leaks_count": 0,
+            "foreign_key_violations_count": 0,
+            "missing_tables_count": 0
+          },
+          "details": {
+            "overlaps": [],
+            "capacity_violations": [],
+            "stock_violations": [],
+            "speaker_clashes": [],
+            "orphan_events": [],
+            "outbox_leaks": [],
+            "foreign_key_violations": [],
+            "missing_tables": []
+          }
+        }
+      },
+      {
+        "prompt_id": 27,
+        "category": "ambiguous",
+        "entry_stage": "raw_prompt",
+        "expected_state": "clarified",
+        "actual_state": "clarified",
+        "stopped_by": "intake",
+        "decided_by": "harness",
+        "latency_seconds": 0.00012179999612271786,
+        "audit": {
+          "audit_passed": true,
+          "total_events_in_db": 1,
+          "confirmed_bookings_in_db": 4,
+          "audit_log_entries": 0,
+          "violations": {
+            "room_overlaps_count": 0,
+            "capacity_overruns_count": 0,
+            "stock_violations_count": 0,
+            "speaker_clashes_count": 0,
+            "orphan_events_count": 0,
+            "outbox_leaks_count": 0,
+            "foreign_key_violations_count": 0,
+            "missing_tables_count": 0
+          },
+          "details": {
+            "overlaps": [],
+            "capacity_violations": [],
+            "stock_violations": [],
+            "speaker_clashes": [],
+            "orphan_events": [],
+            "outbox_leaks": [],
+            "foreign_key_violations": [],
+            "missing_tables": []
+          }
+        }
+      },
+      {
+        "prompt_id": 28,
+        "category": "ambiguous",
+        "entry_stage": "raw_prompt",
+        "expected_state": "clarified",
+        "actual_state": "clarified",
+        "stopped_by": "intake",
+        "decided_by": "harness",
+        "latency_seconds": 0.00012320000678300858,
+        "audit": {
+          "audit_passed": true,
+          "total_events_in_db": 1,
+          "confirmed_bookings_in_db": 4,
+          "audit_log_entries": 0,
+          "violations": {
+            "room_overlaps_count": 0,
+            "capacity_overruns_count": 0,
+            "stock_violations_count": 0,
+            "speaker_clashes_count": 0,
+            "orphan_events_count": 0,
+            "outbox_leaks_count": 0,
+            "foreign_key_violations_count": 0,
+            "missing_tables_count": 0
+          },
+          "details": {
+            "overlaps": [],
+            "capacity_violations": [],
+            "stock_violations": [],
+            "speaker_clashes": [],
+            "orphan_events": [],
+            "outbox_leaks": [],
+            "foreign_key_violations": [],
+            "missing_tables": []
+          }
+        }
+      },
+      {
+        "prompt_id": 29,
+        "category": "ambiguous",
+        "entry_stage": "raw_prompt",
+        "expected_state": "clarified",
+        "actual_state": "clarified",
+        "stopped_by": "intake",
+        "decided_by": "harness",
+        "latency_seconds": 0.0001227000029757619,
+        "audit": {
+          "audit_passed": true,
+          "total_events_in_db": 1,
+          "confirmed_bookings_in_db": 4,
+          "audit_log_entries": 0,
+          "violations": {
+            "room_overlaps_count": 0,
+            "capacity_overruns_count": 0,
+            "stock_violations_count": 0,
+            "speaker_clashes_count": 0,
+            "orphan_events_count": 0,
+            "outbox_leaks_count": 0,
+            "foreign_key_violations_count": 0,
+            "missing_tables_count": 0
+          },
+          "details": {
+            "overlaps": [],
+            "capacity_violations": [],
+            "stock_violations": [],
+            "speaker_clashes": [],
+            "orphan_events": [],
+            "outbox_leaks": [],
+            "foreign_key_violations": [],
+            "missing_tables": []
+          }
+        }
+      },
+      {
+        "prompt_id": 30,
+        "category": "ambiguous",
+        "entry_stage": "raw_prompt",
+        "expected_state": "clarified",
+        "actual_state": "clarified",
+        "stopped_by": "intake",
+        "decided_by": "harness",
+        "latency_seconds": 0.00011040002573281527,
+        "audit": {
+          "audit_passed": true,
+          "total_events_in_db": 1,
+          "confirmed_bookings_in_db": 4,
+          "audit_log_entries": 0,
+          "violations": {
+            "room_overlaps_count": 0,
+            "capacity_overruns_count": 0,
+            "stock_violations_count": 0,
+            "speaker_clashes_count": 0,
+            "orphan_events_count": 0,
+            "outbox_leaks_count": 0,
+            "foreign_key_violations_count": 0,
+            "missing_tables_count": 0
+          },
+          "details": {
+            "overlaps": [],
+            "capacity_violations": [],
+            "stock_violations": [],
+            "speaker_clashes": [],
+            "orphan_events": [],
+            "outbox_leaks": [],
+            "foreign_key_violations": [],
+            "missing_tables": []
+          }
+        }
+      }
+    ]
+  },
+  "limitations": [
+    "The default provider is a deterministic scripted planner, not a language model; set --real-provider to use the configured provider.",
+    "Setup A disables SQLite foreign-key and CHECK enforcement, but SQLite cannot disable UNIQUE or PRIMARY KEY constraints at runtime.",
+    "Setup A and Setup B execute the same deterministic extracted action plan; parsing ambiguity can differ from human intent.",
+    "The prompt fixture's expected_result labels are treated as the evaluation oracle and may disagree with database facts, including venue capacity.",
+    "Weekday-only phrases are not resolved to calendar dates; absent dates use tomorrow, absent times use a fixed workday interval, and unmentioned resource quantities default to one available unit.",
+    "The scripted planner does not estimate requisition costs, so budget behavior is not covered by its offline calls.",
+    "Retry counts include retries exposed by the pipeline timeline or result; provider-internal HTTP retries are not exposed by the current agent response.",
+    "Latency includes local pipeline execution and excludes database creation, seeding, and independent auditing.",
+    "The independent checker reports data-level violations in this database snapshot; it does not prove that every policy is represented in the application schema."
+  ]
+}

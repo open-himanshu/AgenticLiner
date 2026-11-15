@@ -175,12 +175,14 @@ All operational routes enforce server-side session checks via signed cookies. Th
 
 ### 2. Clone & Environment Setup
 
-**Windows (PowerShell):**
-```powershell
+```bash
 # 1. Clone repository and navigate to root
 git clone https://github.com/open-himanshu/AgenticLiner.git
 cd AgenticLiner
+```
 
+**Windows (PowerShell):**
+```powershell
 # 2. Create and activate a clean virtual environment
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -194,10 +196,6 @@ copy .env.example .env
 
 **macOS / Linux (`bash` / `zsh`):**
 ```bash
-# 1. Clone repository and navigate to root
-git clone https://github.com/open-himanshu/AgenticLiner.git
-cd AgenticLiner
-
 # 2. Create and activate a clean virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
@@ -274,7 +272,7 @@ Open **[http://127.0.0.1:8000](http://127.0.0.1:8000)** in your browser.
 All tests run offline without making external network or LLM API calls (using deterministic mocked callers and isolated temporary SQLite databases):
 
 ```bash
-# Run the entire test suite (305 tests, offline SQLite isolation)
+# Run the entire test suite (343 tests, offline SQLite isolation)
 python -m pytest -q
 
 # Run specific functional test suites
@@ -283,5 +281,8 @@ python -m pytest tests/test_autopilot_api.py -q       # Autopilot API endpoint i
 python -m pytest tests/test_auth.py -q                # Authentication, sessions & RBAC tests
 python -m pytest tests/safety/test_kavach.py -q       # Kavach invariant transaction tests
 ```
+
+To update or benchmark results in `eval/results/results.json`:
+python eval/benchmark/run_evaluation.py regenerates it
 
 **Test console (dev only):** Set `TEST_CONSOLE=1` on localhost and sign in at `/dev/login` with default dev credentials `admin` / `admin` (`TEST_ADMIN_USER` / `TEST_ADMIN_PASSWORD`) to switch roles at `/dev`; keep `TEST_CONSOLE` unset or `0` outside local dev.
